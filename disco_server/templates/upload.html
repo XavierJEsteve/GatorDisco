@@ -1,0 +1,10 @@
+{% extends 'base.html' %}
+
+{% block content_upload %}
+    <h3>Extending base... Here's the Upload form</h3>
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <input type="file" name="audio_file">
+        <button type="submit">Upload Audio</button>
+    </form>
+{% endblock %}
