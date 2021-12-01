@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+
+{% block content_index %}
+    <h2>Uploaded files</h2>
+    <table style="width: 30%" class= "table table-sm">
+        <thead class="thead-dark">
+            <tr>
+                <th style="width: 30%">Audio Name</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for audio in audio_files %}
+                <tr>
+                    <td>{{ audio.name }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <table style="width: 30%" class= "table table-sm">
+        <thead class="thead-dark">
+            <tr>
+                <th>Config Name</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for synth in synth_files %}
+                <tr>
+                    <td>{{ synth.name }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}

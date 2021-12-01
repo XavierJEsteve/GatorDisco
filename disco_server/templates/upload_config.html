@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+
+{% block content_upload %}
+    <h1> Upload Synth Settings</h1>
+    <div class="div-forms">
+        <div class="div-form">
+            <p>Synth Settings</p>
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                {{ synthform }}
+                <button type="submit">Upload Synth Settings</button>
+            </form>
+        </div>
+    </div>
+    
+{% endblock %}

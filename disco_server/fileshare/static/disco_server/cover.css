@@ -2,7 +2,7 @@
  * Globals
  */
 
-
+/* {% load static %} */
 /* Custom default button */
 .btn-secondary,
 .btn-secondary:hover,
@@ -15,34 +15,48 @@
 /*
  * Base structure
  */
- .container {
-  display: grid; 
-  grid-template-columns: 1.1fr 1.6fr 1.6fr; 
-  grid-template-rows: 0.2fr 2fr 1.2fr; 
-  gap: 20px 20px; 
-  grid-template-areas: 
-    ". HEADER ."
-    ". UPLOAD-BOX ."
-    ". . ."; 
+body {
+  background-color: rgb(160, 4, 4);
 }
-.HEADER { grid-area: HEADER; }
-.UPLOAD-BOX { grid-area: UPLOAD-BOX; }
+#main-wrapper {
+  background-color: grey;
+  background-image: url('./eq-background.png');
+  background-repeat: no-repeat;
+  background-position: top;
+}
 
-/* body {
-  text-shadow: 0 .05rem .1rem rgba(0, 0, 0, .5);
-  box-shadow: inset 0 0 5rem rgba(0, 0, 0, .5);
-} */
+.div-forms {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-gap: 20px;
+}
+
+.div-form {
+  padding: 10px;
+  border: 5px solid rgba(243, 159, 33);
+  fill: rgba(243, 159, 33, 0.946);
+  position: relative;
+  padding-bottom: 10px;
+}
 
 /*
  * Header
  */
-
-.nav-masthead .nav-link {
+ h1 {
+  padding: .25rem 0;
+  font-weight: 700;
+  color: rgb(40, 22, 202);
+  background-color: transparent;
+  border-bottom: .25rem solid transparent;
+  text-align: center;
+}
+ .nav-masthead .nav-link {
   padding: .25rem 0;
   font-weight: 700;
   color: rgba(255, 255, 255, .5);
   background-color: transparent;
   border-bottom: .25rem solid transparent;
+  text-align: center;
 }
 
 .nav-masthead .nav-link:hover,
@@ -58,3 +72,10 @@
   color: #fff;
   border-bottom-color: #fff;
 }
+
+/* 
+ * FORMS
+ */
+ form {
+   align-items: center;
+ }
