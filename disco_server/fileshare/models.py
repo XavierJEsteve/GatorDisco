@@ -6,6 +6,9 @@ class AudioModel(Model):
     name = models.CharField(null=True, max_length=16)
     file = models.FileField()
 
+    def __str__(self):
+        return self.name
+
 class SynthModel(Model):
     name        = models.CharField(null=True, max_length=16)
     octave      = models.DecimalField(max_digits=3, decimal_places=2)

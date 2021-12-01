@@ -1,8 +1,9 @@
-from django.shortcuts import render
+from os import name
+from django.shortcuts import redirect, render
 from django.http import HttpResponse
 from django.core.files.storage import FileSystemStorage
 from django.utils.datastructures import MultiValueDictKeyError
-from .forms import SynthForm
+from .forms import AudioForm, SynthForm
 from .models import AudioModel, SynthModel
 
 # Create your views here.
@@ -36,15 +37,26 @@ def upload_config(request):
 
 def upload_audio(request):
 
-        if request.method == 'POST':
 
+        if request.method == 'POST':
+                audioform = AudioForm(request.POST, request.FILES)
+                if audioform.is_valid():
+                        audioform.save()
                 try:
+                        # Save audio file to media folder
                         uploaded_file = request.FILES['file'] # Dictionary key is based on HTML form <input name=*****> \
                         fs = FileSystemStorage()
                         fs.save(uploaded_file.name, uploaded_file)
-
+                        print(uploaded_file.name, uploaded_file)
+                        # Save audio file to db
+                        return redirect('index')
+                        
                 except MultiValueDictKeyError:
                         print("Bad audio file")
+        else:
+                audioform = AudioForm()
 
-        return render(request, 'upload_audio.html',)
+        return render(request, 'upload_audio.html',{
+                'audioform': audioform
+        })
         
