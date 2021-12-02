@@ -20,10 +20,9 @@ The Webserver will be accessible from any machine on the same network following 
 1. VVerify ip address of the pi by checking 'ip a' or ipconfig on windows.
 2. Change directy to disco_server/
 3. $ pip3 install -r requiremnets.txt
-4. $ python3 manage.py runserver 0.0.0.0:8000
-  a. Any unused port can be used instead of 8000.
-4. Django should report if the service is running.
-5. Visit the ip address and port of the pi from another machine. An example may be 10.192.192.63:<PORT>
+4. $ python3 manage.py runserver 0.0.0.0:<PORT#> 
+6. Django should report if the service is running.
+7. Visit the ip address and port of the pi from another machine. An example may be 10.192.192.63:<PORT>
 
   
   
