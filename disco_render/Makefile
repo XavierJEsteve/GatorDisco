@@ -115,7 +115,7 @@ endif
 # This is not currently used by src/Makefile. Not sure of its origin or usage. Refer to wiki.
 # TODO: update install: target in src/Makefile for RPI, consider relation to LINUX.
 ifeq ($(PLATFORM),PLATFORM_RPI)
-    RAYLIB_PATH        ?= /home/pi/tools/raylib
+    RAYLIB_PATH        ?= /home/pi/raylib
 endif
 ifeq ($(PLATFORM),PLATFORM_DRM)
     RAYLIB_PATH        ?= /home/pi/raylib
@@ -496,7 +496,7 @@ SHADERS = \
     shaders/shaders_hot_reloading \
     shaders/shaders_mesh_instancing \
     shaders/shaders_multi_sample2d
-
+ 
 AUDIO = \
     audio/audio_module_playing \
     audio/audio_music_stream \
@@ -511,9 +511,8 @@ PHYSICS = \
     physics/physics_restitution \
     physics/physics_shatter
 
-DISCO = \
-    disco/main
-
+WIP = \
+	WIP/main
 CURRENT_MAKEFILE = $(lastword $(MAKEFILE_LIST))
 
 # Default target entry
@@ -527,7 +526,7 @@ models: $(MODELS)
 shaders: $(SHADERS)
 audio: $(AUDIO)
 physics: $(PHYSICS)
-disco: $(DISCO)
+
 # Generic compilation pattern
 # NOTE: Examples must be ready for Android compilation!
 %: %.c

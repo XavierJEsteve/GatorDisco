@@ -1,1 +1,9 @@
 media/
+disco_render/.idea/
+disco_render/.vscode/
+disco_render/.vs/
+disco_render/cmake-build-debug/
+disco_render/bin/
+disco_render/build/
+disco_render/out/
+disco_render/CMakeSettings.json
