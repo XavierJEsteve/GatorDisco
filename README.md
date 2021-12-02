@@ -1,3 +1,7 @@
+# Gator Disco
+## By Xavier Esteve, Luke Jones, and Evan Rives
+### This is a **prototype** for our 2021-2022 Senior Design capstone project
+
 This application is currently comprised of a pre-compiled rayliub library and main.c source file to run the synthesizer, located in disco_render.
 
 There is also a web server framework built on Django that can be found in disco_server.
