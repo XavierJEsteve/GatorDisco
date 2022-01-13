@@ -399,7 +399,7 @@ void main() {
         if(IsAudioStreamProcessed(synthStream)){
             UpdateAudioStream(synthStream, buffer, STREAM_BUFFER_SIZE);
             processInput();
-            updateSignal(buffer, sample_duration);
+            //updateSignal(buffer, sample_duration);
             drawGUI();
         }
     }
