@@ -7,7 +7,7 @@
 
 // channel is the wiringPi name for the chip select (or chip enable) pin.
 // Set this to 0 or 1, depending on how it's connected.
-static const int CHANNEL = 1;
+static const int CHANNEL = 0;
 
 #define SAMPLE_RATE 44100
 #define STREAM_BUFFER_SIZE 1024
