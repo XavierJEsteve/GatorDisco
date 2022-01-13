@@ -1,9 +1,11 @@
 #include "AIC23.h"
+#include "SPIB.h"
 #include <F2837xD_device.h>
 #include <F28x_Project.h>
 #include <math.h>
 
 interrupt void Mcbspb_RxINTB_ISR(void);
+interrupt void Spi_RxINTB_ISR(void);
 
 #define SAMPLE_RATE 32000
 #define STREAM_BUFFER_SIZE 1
@@ -14,6 +16,9 @@ interrupt void Mcbspb_RxINTB_ISR(void);
 int updateSignalCounter = 0;
 int bufferSwitchCounter = 0;
 float* params[10];
+int paramSelection = 0;
+int keySelection = -1;
+float frequencies[17];
 typedef struct{
     float phase;
     float phaseStride;
@@ -156,6 +161,13 @@ void initOscADSR(){
     params[6] = &adsr.sustain;
     params[7] = &adsr.release;
 }
+void buildKeys(){
+    float tempFreq = 261.6;
+    for(int i = 0; i < 17; i++){
+        frequencies[i] = tempFreq;
+        tempFreq *= 1.059463;
+    }
+}
 int main() {
     //LaunchPad init functions
     InitSysCtrl();
@@ -164,13 +176,14 @@ int main() {
         EALLOW;
         InitSPIA();
         InitAIC23_2();
-        EALLOW;
-        I2C_O2O_Master_Init(0x27, 200, 100);    //Initialize LCD
+        SPIB_Slave_Init();
         EALLOW;
         PieVectTable.MCBSPB_RX_INT = &Mcbspb_RxINTB_ISR;
+        PieVectTable.SPIB_RX_INT = &Spi_RxINTB_ISR;
         DINT;
         PieCtrlRegs.PIECTRL.bit.ENPIE = 1;
         PieCtrlRegs.PIEIER6.bit.INTx7 = 1;
+        PieCtrlRegs.PIEIER6.bit.INTx3 = 1;
         EALLOW;
         IER |= 32;
         EINT;
@@ -178,9 +191,9 @@ int main() {
 
 
     //synth init functions
-    masterInput.keyPressed = true;
+    masterInput.keyPressed = false;
     initOscADSR();
-    //buildKeys();
+    buildKeys();
     getSliderParams();
     updateSignal(ping_buffer, sample_duration);
     updateSignal(pong_buffer, sample_duration);
@@ -225,3 +238,35 @@ interrupt void Mcbspb_RxINTB_ISR(void)
     EALLOW;
     PieCtrlRegs.PIEACK.all = PIEACK_GROUP6;
 }
+interrupt void Spi_RxINTB_ISR(void){
+    EALLOW;
+    SpibRegs.SPISTS.bit.INT_FLAG = 0;
+    Uint16 data = SpibRegs.SPIRXBUF & 255;
+    SpibRegs.SPITXBUF = data;
+    if(data >> 7 == 1){
+        paramSelection = data & 127;
+    }
+    else{
+        if(paramSelection > 1){
+            float val = (float)data / 128.0;
+            *params[paramSelection - 2] = val;
+        }
+        else{
+            if(paramSelection == 0){
+                if(data == 0){
+                    masterInput.keyPressed = false;
+                }
+                else{
+                    masterInput.keyPressed = true;
+                }
+            }
+            else if(paramSelection == 1){
+                if(data >= 0 && data < 17){
+                    osc.frequency = frequencies[data];
+                }
+            }
+        }
+    }
+    PieCtrlRegs.PIEACK.all = PIEACK_GROUP6;
+}
+
