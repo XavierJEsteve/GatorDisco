@@ -1,8 +1,6 @@
 #include "AIC23.h"
 #include <F2837xD_device.h>
 #include <F28x_Project.h>
-#include <SRAMDriver.h>
-#include <OneToOneI2CDriver.h>
 #include <math.h>
 
 interrupt void Mcbspb_RxINTB_ISR(void);
