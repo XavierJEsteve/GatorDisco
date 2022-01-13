@@ -294,9 +294,8 @@ void clearKeyPress(){
             printf("00000000\n");
             */
             spi_buffer[0] = 128;
-            wiringPiSPIDataRW(CHANNEL, spi_buffer, 1);
-            spi_buffer[0] = 0;
-            wiringPiSPIDataRW(CHANNEL, spi_buffer, 1);
+            spi_buffer[1] = 0;
+            wiringPiSPIDataRW(CHANNEL, spi_buffer, 2);
         }
         masterInput.keyPressed = false;
     }
@@ -314,9 +313,8 @@ void processInput(){
                 printf("00000001\n");
                 */
                 spi_buffer[0] = 128;
-                wiringPiSPIDataRW(CHANNEL, spi_buffer, 1);
-                spi_buffer[0] = 1;
-                wiringPiSPIDataRW(CHANNEL, spi_buffer, 1);
+                spi_buffer[1] = 1;
+                wiringPiSPIDataRW(CHANNEL, spi_buffer, 2);
             }
             masterInput.keyPressed = true;
             bool checkBlack = false;
@@ -359,9 +357,8 @@ void processInput(){
                 printf("%d\n", keyIndex);
                 */
                 spi_buffer[0] = 129;
-                wiringPiSPIDataRW(CHANNEL, spi_buffer, 1);
-                spi_buffer[0] = keyIndex;
-                wiringPiSPIDataRW(CHANNEL, spi_buffer, 1);
+                spi_buffer[1] = keyIndex;
+                wiringPiSPIDataRW(CHANNEL, spi_buffer, 2);
                 keySelection = keyIndex;
             }
             keys[keyIndex].pressed = true;
@@ -380,9 +377,8 @@ void processInput(){
                     int output = 127*tempSlider.value;
                     //printf("%d\n", output);
                     spi_buffer[0] = 128 | (i+2);
-                    wiringPiSPIDataRW(CHANNEL, spi_buffer, 1);
-                    spi_buffer[0] = output;
-                    wiringPiSPIDataRW(CHANNEL, spi_buffer, 1);
+                    spi_buffer[1] = output;
+                    wiringPiSPIDataRW(CHANNEL, spi_buffer, 2);
                 }
             }
         }
