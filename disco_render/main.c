@@ -1,6 +1,13 @@
 #include <stdio.h>
 #include "raylib.h"
 #include <math.h>
+#include <errno.h>
+#include <wiringPiSPI.h>
+#include <unistd.h>
+
+// channel is the wiringPi name for the chip select (or chip enable) pin.
+// Set this to 0 or 1, depending on how it's connected.
+static const int CHANNEL = 1;
 
 #define SAMPLE_RATE 44100
 #define STREAM_BUFFER_SIZE 1024
@@ -55,6 +62,7 @@ typedef struct{
 
 Key keys[17];
 Slider sliders[8];
+unsigned char spi_buffer[100];
 Oscillator osc;
 ADSR_Control adsr;
 Input masterInput;
@@ -280,9 +288,14 @@ void clearKeyPress(){
             keys[i].pressed = false;
         }
         if(masterInput.keyPressed == true){
+            /*
             printf("SPI COMMAND\n");
             printf("00000000 (Keypressed)\n");
             printf("00000000\n");
+            */
+            spi_buffer[0] = 128;
+            spi_buffer[1] = 0;
+            wiringPiSPIDataRW(CHANNEL, spi_buffer, 2);
         }
         masterInput.keyPressed = false;
     }
@@ -294,9 +307,14 @@ void processInput(){
     if(IsMouseButtonDown(0)){
         if(masterInput.y > (3*SCREEN_HEIGHT / 4)){
             if(masterInput.keyPressed == false){
+                /*
                 printf("SPI COMMAND\n");
                 printf("00000000 (Keypressed)\n");
                 printf("00000001\n");
+                */
+                spi_buffer[0] = 128;
+                spi_buffer[1] = 1;
+                wiringPiSPIDataRW(CHANNEL, spi_buffer, 2);
             }
             masterInput.keyPressed = true;
             bool checkBlack = false;
@@ -333,9 +351,14 @@ void processInput(){
             }
             osc.frequency = keys[keyIndex].frequency;
             if(keyIndex != keySelection){
+                /*
                 printf("SPI COMMAND\n");
                 printf("00000001 (Key Selection)\n");
                 printf("%d\n", keyIndex);
+                */
+                spi_buffer[0] = 129;
+                spi_buffer[1] = keyIndex;
+                wiringPiSPIDataRW(CHANNEL, spi_buffer, 2);
                 keySelection = keyIndex;
             }
             keys[keyIndex].pressed = true;
@@ -349,10 +372,13 @@ void processInput(){
                     tempSlider.value = (float)(tempSlider.yPos + SLIDER_HEIGHT - masterInput.y)/SLIDER_HEIGHT;
                     *tempSlider.param = tempSlider.value;
                     sliders[i] = tempSlider;
-                    printf("SPI COMMAND\n");
-                    printf("%d (%s)\n", i+2,tempSlider.name);
+                    //printf("SPI COMMAND\n");
+                    //printf("%d (%s)\n", i+2,tempSlider.name);
                     int output = 127*tempSlider.value;
-                    printf("%d\n", output);
+                    //printf("%d\n", output);
+                    spi_buffer[0] = 128 | (i+2);
+                    spi_buffer[1] = output;
+                    wiringPiSPIDataRW(CHANNEL, spi_buffer, 2);
                 }
             }
         }
@@ -383,10 +409,11 @@ void initOscADSR(){
 void main() {
     InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Synth");
     SetTargetFPS(60);
-    InitAudioDevice();
+    //InitAudioDevice();
     initOscADSR();
     buildKeys();
     buildSliders();
+    /*
     SetAudioStreamBufferSizeDefault(1024);
     AudioStream synthStream = LoadAudioStream(SAMPLE_RATE,
         32 ,
@@ -394,15 +421,33 @@ void main() {
     );
     SetAudioStreamVolume(synthStream, 0.25f);
     PlayAudioStream(synthStream);
+    */
+    //spi config
+    int fd, result;
+
+    //cout << "Initializing" << endl ;
+
+    // Configure the interface.
+    // CHANNEL insicates chip select,
+    // 500000 indicates bus speed.
+    fd = wiringPiSPISetup(CHANNEL, 500000);
+
+    //cout << "Init result: " << fd << endl;
+
+    // clear display
+    spi_buffer[0] = 0x76;
+    wiringPiSPIDataRW(CHANNEL, spi_buffer, 1);
+
+    //sleep(5);
     while(WindowShouldClose() == false)
     {
-        if(IsAudioStreamProcessed(synthStream)){
-            UpdateAudioStream(synthStream, buffer, STREAM_BUFFER_SIZE);
+        //if(IsAudioStreamProcessed(synthStream)){
+            //UpdateAudioStream(synthStream, buffer, STREAM_BUFFER_SIZE);
             processInput();
             //updateSignal(buffer, sample_duration);
             drawGUI();
-        }
+        //}
     }
-    CloseAudioDevice();
+    //CloseAudioDevice();
     CloseWindow();
 }
