@@ -60,6 +60,7 @@ ADSR_Control adsr;
 Input masterInput;
 float buffer[1024];
 float sample_duration;
+int keySelection = -1;
 float calculateAmp(){
     if(masterInput.keyPressed){
         if(!adsr.decayPhase){
@@ -278,6 +279,11 @@ void clearKeyPress(){
         for(int i = 0; i < 17; i++){
             keys[i].pressed = false;
         }
+        if(masterInput.keyPressed == true){
+            printf("SPI COMMAND\n");
+            printf("00000000 (Keypressed)\n");
+            printf("00000000\n");
+        }
         masterInput.keyPressed = false;
     }
 }
@@ -287,6 +293,11 @@ void processInput(){
     
     if(IsMouseButtonDown(0)){
         if(masterInput.y > (3*SCREEN_HEIGHT / 4)){
+            if(masterInput.keyPressed == false){
+                printf("SPI COMMAND\n");
+                printf("00000000 (Keypressed)\n");
+                printf("00000001\n");
+            }
             masterInput.keyPressed = true;
             bool checkBlack = false;
             bool foundKey = false;
@@ -321,6 +332,12 @@ void processInput(){
                 }
             }
             osc.frequency = keys[keyIndex].frequency;
+            if(keyIndex != keySelection){
+                printf("SPI COMMAND\n");
+                printf("00000001 (Key Selection)\n");
+                printf("%d\n", keyIndex);
+                keySelection = keyIndex;
+            }
             keys[keyIndex].pressed = true;
         }
         else{
@@ -332,6 +349,10 @@ void processInput(){
                     tempSlider.value = (float)(tempSlider.yPos + SLIDER_HEIGHT - masterInput.y)/SLIDER_HEIGHT;
                     *tempSlider.param = tempSlider.value;
                     sliders[i] = tempSlider;
+                    printf("SPI COMMAND\n");
+                    printf("%d (%s)\n", i+2,tempSlider.name);
+                    int output = 127*tempSlider.value;
+                    printf("%d\n", output);
                 }
             }
         }
