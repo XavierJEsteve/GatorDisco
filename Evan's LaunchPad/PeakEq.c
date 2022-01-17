@@ -29,7 +29,7 @@ void GPIO_INIT();
 void InitTimer1(void);
 void InitAdca(void);
 
-#define PI2 6.2832
+#define PI2 6.283185307179
 
 int16 sample_L = 0;
 int16 sample_R = 0;
@@ -53,7 +53,7 @@ int16 sampleOut = 0;
 float32 b0,b1,b2,a0,a1,a2 = 0.0;
 
 //delay samples
-int16 xd1,xd2,yd1,yd2 = 0;
+int16 xd1,xd2,yd1,yd2,z1,z2 = 0;
 
 //adc data
 Uint16 adcDataCh0, adcDataCh1,adcDataCh2 = 0;
@@ -184,6 +184,17 @@ int main(void)
         xd1 = sampleIn;
         yd2 = yd1;
         yd1 = sampleOut;
+
+        //TRANSPOSED DIRECT FORM 2 
+        // y[n] = a[0]*x[n] + d[0];
+        // d[0] = a[1]*x[n] - b[1]*y[n] + d[1];
+        // d[1] = a[2]*x[n] - b[2]*y[n] + d[2];
+
+        //sampleOut = (b0/a0)*sampleIn + d1;
+        //d1 = (b1/a0)*sampleIn - (a1/a0)sampleOut + d2;
+        //d2 = (b2/a0)*sampleIn - (a2/a0)*sampleOut; 
+
+
 
     }
 
