@@ -42,6 +42,11 @@ typedef struct{
     bool decayPhase;
 } ADSR_Control;
 typedef struct{
+    float dbGain;
+    float fCenter;
+    float Q;
+} Filter;
+typedef struct{
     bool black;
     float frequency;
     bool pressed;
@@ -61,9 +66,10 @@ typedef struct{
 } Input;
 
 Key keys[17];
-Slider sliders[8];
+Slider sliders[11];
 unsigned char spi_buffer[100];
 Oscillator osc;
+Filter filter;
 ADSR_Control adsr;
 Input masterInput;
 float buffer[1024];
@@ -228,11 +234,30 @@ void buildSliders(){
     Release.param = &adsr.release;
     Release.name = "Release";
     sliders[7] = Release;
-    
-    
+    Slider dbGain;
+    dbGain.xPos = 750;
+    dbGain.yPos = 350;
+    dbGain.value = 0;
+    dbGain.param = &filter.dbGain;
+    dbGain.name = "dB Gain";
+    sliders[8] = Release;
+    Slider fCenter;
+    fCenter.xPos = 900;
+    fCenter.yPos = 350;
+    fCenter.value = 0;
+    fCenter.param = &filter.fCenter;
+    fCenter.name = "Center Freq";
+    sliders[9] = fCenter;
+    Slider Q;
+    Q.xPos = 1050;
+    Q.yPos = 350;
+    Q.value = 0;
+    Q.param = &filter.Q;
+    Q.name = "Q";
+    sliders[10] = Q;
 }
 void drawSliders(){
-    for(int i = 0; i < 8; i++){
+    for(int i = 0; i < 11; i++){
         Slider tempSlider = sliders[i];
         //draw black rectangle
         int visibleXPos = tempSlider.xPos + SLIDER_WIDTH/2 - SLIDER_VISIBLE_WIDTH/2;
@@ -366,7 +391,7 @@ void processInput(){
         else{
             clearKeyPress();
             //check if slider is selected
-            for(int i = 0; i < 8; i++){
+            for(int i = 0; i < 11; i++){
                 Slider tempSlider = sliders[i];
                 if(masterInput.x > tempSlider.xPos && masterInput.x -tempSlider.xPos < SLIDER_WIDTH && masterInput.y > tempSlider.yPos && masterInput.y -tempSlider.yPos < SLIDER_HEIGHT){
                     tempSlider.value = (float)(tempSlider.yPos + SLIDER_HEIGHT - masterInput.y)/SLIDER_HEIGHT;
@@ -387,7 +412,7 @@ void processInput(){
         clearKeyPress();
     }
 }
-void initOscADSR(){
+void initOscADSRFilter(){
     osc.frequency = 200;
     osc.threshold = 0;
     osc.octave = 0;
@@ -405,6 +430,9 @@ void initOscADSR(){
     adsr.decay = 0;
     adsr.release = 0;
     adsr.sustain = 0;
+    filter.dbGain = 0;
+    filter.fCenter = 0;
+    filter.Q = 0;
 }
 void main() {
     InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Synth");
@@ -429,7 +457,7 @@ void main() {
 
     // Configure the interface.
     // CHANNEL insicates chip select,
-    // 500000 indicates bus speed.
+    // 50000 indicates bus speed.
     fd = wiringPiSPISetup(CHANNEL, 50000);
 
     //cout << "Init result: " << fd << endl;
