@@ -430,7 +430,7 @@ void main() {
     // Configure the interface.
     // CHANNEL insicates chip select,
     // 500000 indicates bus speed.
-    fd = wiringPiSPISetup(CHANNEL, 500000);
+    fd = wiringPiSPISetup(CHANNEL, 50000);
 
     //cout << "Init result: " << fd << endl;
 

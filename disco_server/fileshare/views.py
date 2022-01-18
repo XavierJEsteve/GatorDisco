@@ -25,8 +25,8 @@ def upload_config(request):
                 if synthform.is_valid():
                         synthform.save()
                         
-                # Need to save config settings in a place that the raylib application can load it
-
+                        # Need to save config settings in a place that the raylib application can load it
+                        print(synthform)
 
         else:
                 synthform = SynthForm()
@@ -36,7 +36,7 @@ def upload_config(request):
         })
 
 def upload_audio(request):
-
+        ''' Area for uploading audio files'''
 
         if request.method == 'POST':
                 audioform = AudioForm(request.POST, request.FILES)

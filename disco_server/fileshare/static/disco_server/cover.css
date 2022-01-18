@@ -20,7 +20,7 @@ body {
 }
 #main-wrapper {
   background-color: grey;
-  background-image: url('./eq-background.png');
+  /*background-image: url('./eq-background.png');*/
   background-repeat: no-repeat;
   background-position: top;
 }
