@@ -438,7 +438,7 @@ void main() {
     InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Synth");
     SetTargetFPS(60);
     //InitAudioDevice();
-    initOscADSR();
+    initOscADSRFilter();
     buildKeys();
     buildSliders();
     /*
