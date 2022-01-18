@@ -1,18 +1,13 @@
 /*
- * PeakEq.c
+ * Regalia-MitraEQ.c
  *
- *  Created on: Jan 10, 2022
- *      Author: rives
+ *  Created on: Jan 18, 2022
+ *      Author: Evan rives
  *
- *      A simple 1 band peakeq which utilizes a biquad filter
- *      centered around 1KHz
+ *      Regalia-Mitra EQ is a filter structure where we utilize an all pass filter
+ *      to achieve low frequency performance
  *
- *      A = 10^(dBGain/40)
- *      w0 = 2pi*f0/fs      f0 = center freq.   fs = sampling freq
- *      cos(w0) and sin(w0)
- *      a = sin(w0)/2Q      Q = width of passband (I think)
  *
- *      These will be used to calculate the coeffiecients b0,b1,b2 & a0,a1,a2
  */
 
 
@@ -37,17 +32,17 @@ int16 sample_R = 0;
 
 //biquad variable parameters
 float32 dbGain = 0.0; //keep between +/- 15dB
-float32 alpha = 0.0;
-float32 A = 0.0;    //this will control the gain (I think)
-float32 w0 = 0.0;
-float32 cosParam = 0.0; //cos(w0)
-float32 sinParam = 0.0; //sin(w0)
-float32 Q = 0.56;    //Q will be static, this covers one octave
-float32 fCenter = 200.0; //(keep between 10 and 1000 Hz)
+float32 K = 0.0;
+float32 a = 0.0;    //this will control the gain (I think)
+float32 B = 0.0;
+float32 b = 0.0;;
+
+float32 Q = 1.414;    //Q will be static, this covers one octave
+float32 fCenter = 5100.0; //(keep between 10 and 1000 Hz)
 Uint16 Fs = 48000;
 
 int16 sampleIn = 0;
-float32 sampleOut = 0;
+float32 sampleOut, APFOut = 0.0;
 
 //filter coefficients
 float32 b0,b1,b2,a0,a1,a2 = 0.0;
@@ -100,11 +95,11 @@ int main(void)
 
 
     //calculate default biquad parameters
-    A = powf(10.0,dbGain/40.0);  //dBGain of 0, no gain, basic sound in/out
-    w0 = PI2 * (float32)(fCenter/Fs);
-    cosParam = cosf(w0);
-    sinParam = sinf(w0);
-    alpha = (sinParam/(2*Q));
+    B = fCenter / Q;
+    K = powf(10, dbGain/20.0);           //controls gain
+    a = (1 - tanf((float32)(M_PI * B/Fs))/(1+tanf((float32)(M_PI * B/Fs))));
+    b =  -1*cosf((float32)((PI2*fCenter)/Fs));   //controls center frequency
+
 
 
     //coeffiecients will be placed in a struct corresponding to the frequency band
@@ -118,83 +113,60 @@ int main(void)
         if(ParamUpdate == 1)
         {
             //get ratio of each channel to control biquad parameters
+            GpioDataRegs.GPADAT.bit.GPIO7 = 1; //pin 79
             cFreqRatio = (adcDataCh0 / 4095.0);
             gainRatio = (adcDataCh1/ 4095.0);
             qRatio = (adcDataCh2/ 4095.0);
 
             //get range of parameters and multiply by ratio to get value to add to low end
             // i.e : 1000Hz - 10Hz = 990 Hz  ==> 990Hz * (0.5 ratio) = 495 ==> 495Hz + 10Hz = 505Hz
-            fCenter = ((1800 * cFreqRatio) + 200);
+            fCenter = ((4250 * cFreqRatio) + 250);
             dbGain  = ((30 * gainRatio) + -15);
             Q       = ((9.9 * qRatio) + 0.1);
 
             //these values along with the coefficients will be placed in a struct ideally (possibly previous samples as well)
             //re-calculate variables for filter coeffiecients
-            A = powf(10, dbGain/40.0);           //controls gain
-            w0 = PI2 * (float32)(fCenter/Fs);   //controls center frequency
-            cosParam = cosf(w0);
-            sinParam = sinf(w0);
-            alpha = (sinParam/(2*Q));           //controls Q
+            B = fCenter / Q;
+
+            K = powf(10, dbGain/20.0);           //controls gain
+            a = (1 - tanf((float32)(M_PI * B/Fs))/(1+tanf((float32)(M_PI * B/Fs))));
+            b =  -1*cosf((float32)((PI2*fCenter)/Fs));   //controls center frequency
 
             //might do small size 2 arrays to keep track of previous outputs????
-            b0 = 1 + alpha*A; //b0 = 1 + a*A
-            b1 = -2*cosParam; //b1 = -2cos(w0)
-            b2 = 1 - alpha*A; //b2 = 1 - a*A
-            a0 = 1 + (alpha/A); //a0 = 1+(alpha/A)
-            a1 = b1;           //a1 same as b1, -2cos(w0)
-            a2 = 1 - (alpha/A); //a2 = 1-(alpha/A)
+            b0 = ((1 + a + K - K*a)) * 0.5;
+            b1 = (b + b*a);
+            b2 = (1 + a - K + K*a) * 0.5;
+            a1 = b1;           //a1 same as b1
+            a2 = a;
 
             ParamUpdate = 0;
+            GpioDataRegs.GPADAT.bit.GPIO7 = 0; //pin 79
         }
 
-        /*//get ratio of each channel to control biquad parameters
-        cFreqRatio = (adcDataCh0 / 4095.0);
-        gainRatio = (adcDataCh1/ 4095.0);
-        //qRatio = (adcDataCh2/ 4095.0);
-
-        //get range of parameters and multiply by ratio to get value to add to low end
-        // i.e : 1000Hz - 10Hz = 990 Hz  ==> 990Hz * (0.5 ratio) = 495 ==> 495Hz + 10Hz = 505Hz
-        fCenter = ((9800 * cFreqRatio) + 200);
-        dbGain  = ((30 * gainRatio) + -15);
-        //Q       = ((9.9 * qRatio) + 0.1);
-
-        //these values along with the coefficients will be placed in a struct ideally (possibly previous samples as well)
-        //re-calculate variables for filter coeffiecients
-        A = powf(10, dbGain/40.0);           //controls gain
-        w0 = PI2 * (float32)(fCenter/Fs);   //controls center frequency
-        cosParam = cosf(w0);
-        sinParam = sinf(w0);
-        alpha = (sinParam/(2*Q));           //controls Q
-
-        //might do small size 2 arrays to keep track of previous outputs????
-        b0 = 1 + alpha*A; //b0 = 1 + a*A
-        b1 = -2*cosParam; //b1 = -2cos(w0)
-        b2 = 1 - alpha*A; //b2 = 1 - a*A
-        a0 = 1 + (alpha/A); //a0 = 1+(alpha/A)
-        a1 = b1;           //a1 same as b1, -2cos(w0)
-        a2 = 1 - (alpha/A); //a2 = 1-(alpha/A)*/
 
         //DIRECT FORM 1 DIFFERENCE EQUATION
         //y[n]= (b0/a0)*x[n] + (b1/a0)x[n-1] + (b2/a0)x[n-2] - (a1/a0)y[n-1] - (a2/a0)y[n-2]
 
-/*
-        sampleOut = (b0/a0)*sampleIn + (b1/a0)*xd1 + (b2/a0)*xd2 - (a1/a0)*yd1 - (a2/a0)*yd2;
+        APFOut = (b0)*sampleIn + (b1)*xd1 + (b2)*xd2 - (a1)*yd1 - (a2)*yd2;
 
         //shift the samples
         xd2 = xd1;
         xd1 = sampleIn;
         yd2 = yd1;
-        yd1 = sampleOut;
-*/
+        yd1 = APFOut;
+
+
 
         //TRANSPOSED DIRECT FORM 2
         // y[n] = a[0]*x[n] + d[0];
         // d[0] = a[1]*x[n] - b[1]*y[n] + d[1];
         // d[1] = a[2]*x[n] - b[2]*y[n] + d[2];
 
-        sampleOut = (b0/a0)*sampleIn + z1;
-        z1 = (b1/a0)*sampleIn - (a1/a0)*sampleOut + z2;
-        z2 = (b2/a0)*sampleIn - (a2/a0)*sampleOut;
+/*        APFOut = (b0)*sampleIn + z1;
+        z1 = (b1)*sampleIn - (a1)*APFOut + z2;
+        z2 = (b2)*sampleIn - (a2)*APFOut;*/
+
+        sampleOut = 0.5*(sampleIn + APFOut) + (float32)(K/2)*(sampleIn - APFOut);
 
     }
 
@@ -233,7 +205,7 @@ void InitTimer1(void) {
 interrupt void Mcbsp_RxINTB_ISR(void)
 {
     //8.43us
-    GpioDataRegs.GPADAT.bit.GPIO7 = 1;
+    //GpioDataRegs.GPADAT.bit.GPIO7 = 1; //pin 79
     sample_L = McbspbRegs.DRR2.all; // store high word of left channel
     sample_R = McbspbRegs.DRR1.all;
 
