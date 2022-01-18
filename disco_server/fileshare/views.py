@@ -26,7 +26,20 @@ def upload_config(request):
                         synthform.save()
                         
                         # Need to save config settings in a place that the raylib application can load it
-                        print(synthform)
+                        config_bytes = [
+                                synthform.cleaned_data.get("octave"), 
+                                synthform.cleaned_data.get("pulseWidth"),
+                                synthform.cleaned_data.get("pwmFreq"),
+                                synthform.cleaned_data.get("pwmValue"),
+                                synthform.cleaned_data.get("attack"),
+                                synthform.cleaned_data.get("decay"),                        
+                                synthform.cleaned_data.get("sustain"),
+                                synthform.cleaned_data.get("release")
+                        ]
+
+                        print("Config bytes", config_bytes)
+                        with open('config_data.data', 'wb') as cfile:
+                                cfile.write(bytearray(config_bytes))
 
         else:
                 synthform = SynthForm()
