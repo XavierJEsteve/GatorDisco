@@ -240,7 +240,7 @@ void buildSliders(){
     dbGain.value = 0;
     dbGain.param = &filter.dbGain;
     dbGain.name = "dB Gain";
-    sliders[8] = Release;
+    sliders[8] = dbGain;
     Slider fCenter;
     fCenter.xPos = 900;
     fCenter.yPos = 350;
