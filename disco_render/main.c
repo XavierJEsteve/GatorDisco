@@ -43,9 +43,8 @@ typedef struct{
     bool decayPhase;
 } ADSR_Control;
 typedef struct{
-    float32 highPass;
-    float32 cutoff;
-    Biquad* biquads;
+    float highPass;
+    float cutoff;
 } Filter;
 typedef struct{
     bool black;
@@ -257,18 +256,18 @@ void buildSliders(){
     Release.name = "Release";
     sliders[7] = Release;
     Slider cutoff;
-    dbGain.xPos = 750;
-    dbGain.yPos = 350;
-    dbGain.value = 0;
-    dbGain.param = &filter.cutoff;
-    dbGain.name = "Cutoff";
-    sliders[8] = dbGain;
+    cutoff.xPos = 750;
+    cutoff.yPos = 350;
+    cutoff.value = 0;
+    cutoff.param = &filter.cutoff;
+    cutoff.name = "Cutoff";
+    sliders[8] = cutoff;
     Slider highPass;
-    fCenter.xPos = 900;
-    fCenter.yPos = 350;
-    fCenter.value = 0;
-    fCenter.param = &filter.highPass;
-    fCenter.name = "High Pass";
+    highPass.xPos = 900;
+    highPass.yPos = 350;
+    highPass.value = 0;
+    highPass.param = &filter.highPass;
+    highPass.name = "High Pass";
     sliders[9] = highPass;
 }
 void drawSliders(){
@@ -450,9 +449,8 @@ void initOscADSRFilter(){
     adsr.decay = 0;
     adsr.release = 0;
     adsr.sustain = 0;
-    filter.dbGain = 0;
-    filter.fCenter = 0;
-    filter.Q = 0;
+    filter.cutoff = 0;
+    filter.highPass = 0;
 }
 
 void main() {
