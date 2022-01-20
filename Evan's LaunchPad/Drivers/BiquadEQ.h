@@ -10,37 +10,38 @@
 
 #include <F28x_Project.h>
 #include <math.h>
+#include <stdlib.h>
 
 #define PI2 6.283185307179
 
 typedef struct
 {
-    float32 dbGain = 0.0; //keep between +/- 15dB
-    float32 Q = 0.707;    //Q controls bandwidth
-    float32 fCenter = 0.0; //vary center frequency
+    float32 dbGain; //keep between +/- 15dB
+    float32 Q;    //Q controls bandwidth
+    float32 fCenter; //vary center frequency
 
-    float32 alpha = 0.0;
-    float32 A = 0.0;    //this will control the gain
-    float32 w0 = 0.0;
-    float32 cosParam = 0.0; //cos(w0)
-    float32 sinParam = 0.0; //sin(w0)
+    float32 alpha;
+    float32 A;    //this will control the gain
+    float32 w0;
+    float32 cosParam; //cos(w0)
+    float32 sinParam; //sin(w0)
 
-    Uint16 Fs = 48000;
+    Uint16 Fs;
 
     //coefficients
-    float32 b0,b1,b2,a0,a1,a2 = 0.0;
+    float32 b0,b1,b2,a0,a1,a2;
 
     //delays
-    float32 z1,z2 = 0.0;
+    float32 z1,z2;
 
 
 }Biquad;
 
 
-Biquad** initializeBiquads();
+Biquad* initializeBiquads();
 void updateParameters(Biquad* Biquad, float32 dbGain, float32 fCenter, float32 Q); //will send a pointer
 void calculateCoefficients(Biquad* Biquad);
-int16 processBiquads(Biquad** EQ);
+int16 processBiquads(Biquad* EQ, int16 sampleIn);
 
 /*
  ranges of the different freq bands

@@ -7,7 +7,7 @@
 
 #include "BiquadEQ.h"
 
-Biquad** initializeBiquads()
+Biquad* initializeBiquads()
 {
 
 /*
@@ -16,20 +16,30 @@ Biquad** initializeBiquads()
     return value: returns a pointer to an array of biquads
 */
 
-    Biquad EQ[7];
+
+    static Biquad EQ[7];
     //set up the different center frequencies of each band
-    EQ[0]->fCenter = 300.0;
-    EQ[1]->fCenter = 500.0;
-    EQ[2]->fCenter = 1000.0;
-    EQ[3]->fCenter = 2000.0;
-    EQ[4]->fCenter = 4000.0;
-    EQ[5]->fCenter = 8000.0;
-    EQ[6]->fCenter = 16000.0;
+    EQ[0].fCenter = 300.0;
+    EQ[1].fCenter = 500.0;
+    EQ[2].fCenter = 1000.0;
+    EQ[3].fCenter = 2000.0;
+    EQ[4].fCenter = 4000.0;
+    EQ[5].fCenter = 8000.0;
+    EQ[6].fCenter = 16000.0;
+
+
+    EQ[0].Fs = 48000;
+    EQ[1].Fs = 48000;
+    EQ[2].Fs = 48000;
+    EQ[3].Fs = 48000;
+    EQ[4].Fs = 48000;
+    EQ[5].Fs = 48000;
+    EQ[6].Fs = 48000;
 
     //initialize default parameters and coefficients
     for(int i = 0; i < 7; i++)
     {
-        updateParameters(EQ[i], 0.0, EQ[i]->fCenter, EQ[i]->Q);
+        updateParameters(&EQ[i], 0.0, EQ[i].fCenter, 0.707);
     }
 
     return EQ;
@@ -82,12 +92,12 @@ void calculateCoefficients(Biquad* Biquad)
         IMPORTANT**: Function normalizes by dividing every coefficient by a0
     */
 
-    Biquad->b0 = 1 + alpha*A; //b0 = 1 + a*A
-    Biquad->b1 = -2*cosParam; //b1 = -2cos(w0)
-    Biquad->b2 = 1 - alpha*A; //b2 = 1 - a*A
-    Biquad->a0 = 1 + (alpha/A); //a0 = 1+(alpha/A)
-    Biquad->a1 = b1;           //a1 same as b1, -2cos(w0)
-    Biquad->a2 = 1 - (alpha/A); //a2 = 1-(alpha/A)
+    Biquad->b0 = 1 + Biquad->alpha*Biquad->A;       //b0 = 1 + a*A
+    Biquad->b1 = -2*Biquad->cosParam;               //b1 = -2cos(w0)
+    Biquad->b2 = 1 - Biquad->alpha*Biquad->A;       //b2 = 1 - a*A
+    Biquad->a0 = 1 + (Biquad->alpha/Biquad->A);     //a0 = 1+(alpha/A)
+    Biquad->a1 = Biquad->b1;                        //a1 same as b1, -2cos(w0)
+    Biquad->a2 = 1 - (Biquad->alpha/Biquad->A);     //a2 = 1-(alpha/A)
 
     //Normalizing
     Biquad->b0 = (Biquad->b0)/(Biquad->a0);
@@ -98,7 +108,7 @@ void calculateCoefficients(Biquad* Biquad)
 
 }
 
-int16 processBiquads(Biquad** EQ, int16 sampleIn)
+int16 processBiquads(Biquad* EQ, int16 sampleIn)
 {
     /*
       Inputs:
@@ -110,19 +120,19 @@ int16 processBiquads(Biquad** EQ, int16 sampleIn)
         utilizing Transposed Direct Form 2, the output of 1 biquad feeds into the input of the next
 
     */
-    float32 biquadInput = sampleIn;
+    float32 biquadInput = (float32)sampleIn;
     float32 biquadOutput = 0.0;
 
     for(int i = 0; i < 7; i++)
     {
-        biquadOutput = (EQ[i]->b0)*biquadInput + EQ[i]->z1;
-        EQ[i]->z1 = (EQ[i]->b1)*biquadInput - (EQ[i]->a1)*biquadOutput + EQ[i]->z2;
-        EQ[i]->z2 = (EQ[i]->b2)*biquadInput - (EQ[i]->a2)*biquadOutput;
+        biquadOutput = (EQ[i].b0)*biquadInput + EQ[i].z1;
+        EQ[i].z1 = (EQ[i].b1)*biquadInput - (EQ[i].a1)*biquadOutput + EQ[i].z2;
+        EQ[i].z2 = (EQ[i].b2)*biquadInput - (EQ[i].a2)*biquadOutput;
 
         biquadInput = biquadOutput;
 
     }
 
-    return biquadOutput;
+    return (int16)biquadOutput;
 
 }
