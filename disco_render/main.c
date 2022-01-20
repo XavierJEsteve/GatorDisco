@@ -19,7 +19,8 @@ static const int CHANNEL = 0;
 #define SLIDER_VISIBLE_WIDTH 10
 #define MAX_ATTACK_TIME 3
 #define MAX_DECAY_TIME 5
-#define NUM_SLIDERS 8
+#define NUM_SLIDERS 11
+#define NUM_BUTTONS 1
 
 typedef struct{
     float phase;
@@ -61,12 +62,22 @@ typedef struct{
 } Slider;
 typedef struct{
     bool keyPressed;
+    int xPos;
+    int yPos;
+    int width;
+    int height;
+    Color color;
+    char* text;
+} Button;
+typedef struct{
+    bool keyPressed;
     int x;
     int y;
 } Input;
 
 Key keys[17];
-Slider sliders[11];
+Slider sliders[NUM_SLIDERS];
+Button buttons[NUM_BUTTONS];
 unsigned char spi_buffer[100];
 Oscillator osc;
 Filter filter;
@@ -176,6 +187,17 @@ void buildKeys(){
         keys[i] = tempKey;
         tempFreq *= 1.059463;
     }
+}
+void buildButtons(){
+    Button load_config;
+    load_config.keyPressed = false;
+    load_config.xPos = (3*SCREEN_WIDTH/5);
+    load_config.yPos = SCREEN_HEIGHT/3;
+    load_config.width = SCREEN_WIDTH/5;
+    load_config.height = SCREEN_HEIGHT/12;
+    load_config.color = BLACK;
+    load_config.text = "LOAD CONFIG";
+    buttons[0] = load_config;
 }
 void buildSliders(){
     Slider octave;
@@ -299,12 +321,17 @@ void drawKeys(int height){
         }
     }
 }
+void drawButtons(){
+    DrawRectangle(buttons[0].xPos, buttons[0].yPos, buttons[0].width, buttons[0].height, buttons[0].color);
+    DrawText(buttons[0].text, buttons[0].xPos, buttons[0].yPos, 25, RED);
+}
 void drawGUI(){
     BeginDrawing();
     ClearBackground(GRAY);
     drawWaveform(buffer,SCREEN_WIDTH/6,SCREEN_HEIGHT/6,SCREEN_WIDTH-(SCREEN_WIDTH*1.5/6),SCREEN_HEIGHT/12);
     drawKeys(SCREEN_HEIGHT/4);
     drawSliders();
+    drawButtons();
     EndDrawing();
 }
 void clearKeyPress(){
@@ -434,6 +461,7 @@ void initOscADSRFilter(){
     filter.fCenter = 0;
     filter.Q = 0;
 }
+
 void main() {
     InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Synth");
     SetTargetFPS(60);
@@ -441,6 +469,7 @@ void main() {
     initOscADSRFilter();
     buildKeys();
     buildSliders();
+    buildButtons();
     /*
     SetAudioStreamBufferSizeDefault(1024);
     AudioStream synthStream = LoadAudioStream(SAMPLE_RATE,
