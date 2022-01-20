@@ -3,11 +3,12 @@
 #include <F2837xD_device.h>
 #include <F28x_Project.h>
 #include <math.h>
+#include "BiquadEQ.h"
 
 interrupt void Mcbspb_RxINTB_ISR(void);
 interrupt void Spi_RxINTB_ISR(void);
 
-#define SAMPLE_RATE 32000
+#define SAMPLE_RATE 48000
 #define STREAM_BUFFER_SIZE 1
 #define MAX_ATTACK_TIME 3
 #define MAX_DECAY_TIME 5
@@ -50,10 +51,17 @@ typedef struct{
     int x;
     int y;
 } Input;
+typedef struct{
+    float32 highPass;
+    float32 cutoff;
+    Biquad* biquads;
+} Filter;
 
 Oscillator osc;
 ADSR_Control adsr;
 Input masterInput;
+Filter filter;
+
 bool ping = false;
 int16 ping_buffer[STREAM_BUFFER_SIZE];
 int16 pong_buffer[STREAM_BUFFER_SIZE];
@@ -100,6 +108,7 @@ void updateSignal(int16* signal, float sample_duration){
     osc.PWM_phaseStride = osc.PWM_frequency*20 * sample_duration;
     osc.phaseStride = osc.frequency * sample_duration * osc.octaveFactor;
     for(int i = 0; i < STREAM_BUFFER_SIZE; i++){
+        //pulse wave
         osc.phase += osc.phaseStride;
         if(osc.phase > 1) osc.phase -= 1;
         float sin_value = sinf(2.0f * PI * osc.phase);
@@ -115,13 +124,60 @@ void updateSignal(int16* signal, float sample_duration){
         else {
             signal[i] = -0.5*MAX_VALUE;
         }
+        //FILTER
+        signal[i] = processBiquads(filter.biquads, signal[i]);
+        //ADSR
         signal[i] *= calculateAmp();
     }
     updateSignalCounter++;
 
 }
 
-
+void updateBiquads(){
+    bool zeroOut = false;
+    if(filter.highPass > 0.5){
+        for(int i = 6; i >=0; i--){
+            if(!zeroOut){
+                if(filter.cutoff*20000 < filter.biquads[i].fCenter){
+                    updateParameters(&filter.biquads[i],0,filter.biquads[i].fCenter,0.707);
+                }
+                else{
+                    float32 fCenterLow = filter.biquads[i].fCenter;
+                    float32 fCenterHigh;
+                    if(i < 6) fCenterHigh = filter.biquads[i+1].fCenter;
+                    else fCenterHigh = 20000;
+                    float ratio = (fCenterHigh - filter.cutoff*20000)/(fCenterHigh - fCenterLow);
+                    updateParameters(&filter.biquads[i],15*ratio-15,filter.biquads[i].fCenter,0.707);
+                    zeroOut = true;
+                }
+            }
+            else{
+                updateParameters(&filter.biquads[i],-15.0,filter.biquads[i].fCenter,0.707);
+            }
+        }
+    }
+    else{
+        for(int i = 0; i <7; i++){
+            if(!zeroOut){
+                if(filter.cutoff*20000 > filter.biquads[i].fCenter){
+                    updateParameters(&filter.biquads[i],0,filter.biquads[i].fCenter,0.707);
+                }
+                else{
+                    float32 fCenterHigh = filter.biquads[i].fCenter;
+                    float32 fCenterLow;
+                    if(i > 0) fCenterLow = filter.biquads[i-1].fCenter;
+                    else fCenterLow = 0;
+                    float ratio = (fCenterHigh - filter.cutoff*20000)/(fCenterHigh - fCenterLow);
+                    updateParameters(&filter.biquads[i],-15*ratio,filter.biquads[i].fCenter,0.707);
+                    zeroOut = true;
+                }
+            }
+            else{
+                updateParameters(&filter.biquads[i],-15.0,filter.biquads[i].fCenter,0.707);
+            }
+        }
+    }
+}
 void getSliderParams(){
     osc.octave = 0.5;
     osc.threshold = 0.5;
@@ -134,7 +190,7 @@ void getSliderParams(){
 }
 
 void initOscADSR(){
-    osc.frequency = 200;
+    osc.frequency = 600;
     osc.threshold = 0;
     osc.octave = 0;
     osc.PWM_phase = 0;
@@ -160,6 +216,8 @@ void initOscADSR(){
     params[5] = &adsr.decay;
     params[6] = &adsr.sustain;
     params[7] = &adsr.release;
+    params[8] = &filter.cutoff;
+    params[9] = &filter.highPass;
 }
 void buildKeys(){
     float tempFreq = 261.6;
@@ -191,12 +249,18 @@ int main() {
 
 
     //synth init functions
-    masterInput.keyPressed = false;
+    masterInput.keyPressed = true;
     initOscADSR();
     buildKeys();
     getSliderParams();
+    //filter init
+    filter.biquads = initializeBiquads();
+    filter.cutoff = 1;
     updateSignal(ping_buffer, sample_duration);
     updateSignal(pong_buffer, sample_duration);
+    filter.highPass = 0.7;
+    filter.cutoff = 0.6;
+    updateBiquads();
     while(1)
     {
         if(samplePointer == STREAM_BUFFER_SIZE){
@@ -251,7 +315,12 @@ interrupt void Spi_RxINTB_ISR(void){
             paramSelection = data & 127;
         }
         else{
-            if(paramSelection > 1){
+            if(paramSelection > 9){
+                float val = (float)data / 128.0;
+                *params[paramSelection - 2] = val;
+                updateBiquads();
+            }
+            else if(paramSelection > 1){
                 float val = (float)data / 128.0;
                 *params[paramSelection - 2] = val;
             }
