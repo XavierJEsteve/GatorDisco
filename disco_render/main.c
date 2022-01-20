@@ -19,7 +19,7 @@ static const int CHANNEL = 0;
 #define SLIDER_VISIBLE_WIDTH 10
 #define MAX_ATTACK_TIME 3
 #define MAX_DECAY_TIME 5
-#define NUM_SLIDERS 11
+#define NUM_SLIDERS 10
 #define NUM_BUTTONS 1
 
 typedef struct{
@@ -43,9 +43,9 @@ typedef struct{
     bool decayPhase;
 } ADSR_Control;
 typedef struct{
-    float dbGain;
-    float fCenter;
-    float Q;
+    float32 highPass;
+    float32 cutoff;
+    Biquad* biquads;
 } Filter;
 typedef struct{
     bool black;
@@ -256,30 +256,23 @@ void buildSliders(){
     Release.param = &adsr.release;
     Release.name = "Release";
     sliders[7] = Release;
-    Slider dbGain;
+    Slider cutoff;
     dbGain.xPos = 750;
     dbGain.yPos = 350;
     dbGain.value = 0;
-    dbGain.param = &filter.dbGain;
-    dbGain.name = "dB Gain";
+    dbGain.param = &filter.cutoff;
+    dbGain.name = "Cutoff";
     sliders[8] = dbGain;
-    Slider fCenter;
+    Slider highPass;
     fCenter.xPos = 900;
     fCenter.yPos = 350;
     fCenter.value = 0;
-    fCenter.param = &filter.fCenter;
-    fCenter.name = "Center Freq";
-    sliders[9] = fCenter;
-    Slider Q;
-    Q.xPos = 1050;
-    Q.yPos = 350;
-    Q.value = 0;
-    Q.param = &filter.Q;
-    Q.name = "Q";
-    sliders[10] = Q;
+    fCenter.param = &filter.highPass;
+    fCenter.name = "High Pass";
+    sliders[9] = highPass;
 }
 void drawSliders(){
-    for(int i = 0; i < 11; i++){
+    for(int i = 0; i < NUM_SLIDERS; i++){
         Slider tempSlider = sliders[i];
         //draw black rectangle
         int visibleXPos = tempSlider.xPos + SLIDER_WIDTH/2 - SLIDER_VISIBLE_WIDTH/2;
@@ -418,7 +411,7 @@ void processInput(){
         else{
             clearKeyPress();
             //check if slider is selected
-            for(int i = 0; i < 11; i++){
+            for(int i = 0; i < NUM_SLIDERS; i++){
                 Slider tempSlider = sliders[i];
                 if(masterInput.x > tempSlider.xPos && masterInput.x -tempSlider.xPos < SLIDER_WIDTH && masterInput.y > tempSlider.yPos && masterInput.y -tempSlider.yPos < SLIDER_HEIGHT){
                     tempSlider.value = (float)(tempSlider.yPos + SLIDER_HEIGHT - masterInput.y)/SLIDER_HEIGHT;
