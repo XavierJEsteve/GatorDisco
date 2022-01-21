@@ -1,6 +1,7 @@
 # Gator Disco
 ## By Xavier Esteve, Luke Jones, and Evan Rives
 ### This is a **prototype** for our 2021-2022 Senior Design capstone project
+### repo: https://github.com/XavierJEsteve/GatorDisco.git
 
 This application is currently comprised of a pre-compiled raylib library and main.c source file to run the synthesizer, located in disco_render.
 
@@ -10,6 +11,7 @@ Our Alpha build includes the R.PI running the GUI and sending control signals to
 
 There is also a web server framework built on Django that can be found in disco_server.
 
+### Installation instructions
 In order to run the applications, one should seperately start the gui application by executing main.c.
 
 The application can be built by running 'make main.c PLATFORM=PLATFORM_RPI' from disco_render. This will use the static libraylib library and raylib.h file to generate an executable.
