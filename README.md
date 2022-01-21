@@ -2,7 +2,11 @@
 ## By Xavier Esteve, Luke Jones, and Evan Rives
 ### This is a **prototype** for our 2021-2022 Senior Design capstone project
 
-This application is currently comprised of a pre-compiled rayliub library and main.c source file to run the synthesizer, located in disco_render.
+This application is currently comprised of a pre-compiled raylib library and main.c source file to run the synthesizer, located in disco_render.
+
+The Project involves the GUI handling the control signals, which is sent to the DSP launchpad for audio processing. The DSP board operates at 200MHz and includes a audio codec with 16-bit ADC/DAC. 
+
+Our Alpha build includes the R.PI running the GUI and sending control signals to the DSP via SPI and generating notes via PWM and being able to manipulate the audio by controlling an 7-band equalizer. 
 
 There is also a web server framework built on Django that can be found in disco_server.
 
@@ -36,3 +40,5 @@ In the place of make, cmake can also be used to build dependencies cross-platfor
   ii.	cd build && cmake .. # Build from that directory so the build files are in one place
   iii.	cmake --build . # Build the project
 4.	Run the new executable
+
+To be able to run and compile C code onto the Lauchpad, please read CCS_C_Project_Creation_V2020.pdf
