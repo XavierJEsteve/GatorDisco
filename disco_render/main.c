@@ -442,20 +442,22 @@ void processInput(){
                     if (strcmp(tempButton.text,"LOAD CONFIG") == 0)
                     {
                         //Verify config data saved by python code can be read
-                        unsigned char config_buffer[9];
+                        unsigned char config_buffer[11];
                         FILE *ptr;
                         ptr = fopen("../synth_settings.bin","rb");
                         if (! ptr)
                         {
                             printf("Failed to open synth-settings file\n");
+
                         }
                         else 
                         {
                             printf("Successfully opened synth-settings file\n");
-                            fread(config_buffer,sizeof(config_buffer),8,ptr); //read 8 bytes from config_data.data
-                            for (int i = 0; i < 9; i++){
+                            fread(config_buffer,sizeof(config_buffer),10,ptr); //read 8 bytes from config_data.data
+                            for (int i = 0; i < 10; i++){
                                 printf("%d\n", config_buffer[i]);
                             }
+                            fclose(ptr);
                         }
                     }
                 }
