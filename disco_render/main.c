@@ -1,4 +1,6 @@
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include "raylib.h"
 #include <math.h>
 #include <errno.h>
@@ -423,6 +425,39 @@ void processInput(){
                     spi_buffer[0] = 128 | (i+2);
                     spi_buffer[1] = output;
                     wiringPiSPIDataRW(CHANNEL, spi_buffer, 2);
+                }
+            }
+        
+            //check if a button is selected
+            for (int i=0; i< NUM_BUTTONS; i++){
+                Button tempButton = buttons[i];
+                if(    masterInput.x > tempButton.xPos 
+                    && masterInput.x - tempButton.xPos < tempButton.width 
+                    && masterInput.y > tempButton.yPos 
+                    && masterInput.y - tempButton.yPos < tempButton.height)
+                {
+                    tempButton.keyPressed = true;
+
+                    // Was it the load_config button?
+                    if (strcmp(tempButton.text,"LOAD CONFIG") == 0)
+                    {
+                        //Verify config data saved by python code can be read
+                        unsigned char config_buffer[9];
+                        FILE *ptr;
+                        ptr = fopen("../synth_settings.bin","rb");
+                        if (! ptr)
+                        {
+                            printf("Failed to open synth-settings file\n");
+                        }
+                        else 
+                        {
+                            printf("Successfully opened synth-settings file\n");
+                            fread(config_buffer,sizeof(config_buffer),8,ptr); //read 8 bytes from config_data.data
+                            for (int i = 0; i < 9; i++){
+                                printf("%d\n", config_buffer[i]);
+                            }
+                        }
+                    }
                 }
             }
         }

@@ -38,7 +38,7 @@ def upload_config(request):
                         ]
 
                         print("Config bytes", config_bytes)
-                        with open('config_data.data', 'wb') as cfile:
+                        with open('synth_settings.bin', 'wb') as cfile:
                                 cfile.write(bytearray(config_bytes))
 
         else:
