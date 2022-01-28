@@ -15,8 +15,11 @@ slider_PWM_val = 1;
 slider_pulse_width = 0.5;
 freq = 600;
 
-%"phase stride is the frequency of the signal in radians, PWM_phaseStride
-%is the frequency of the pulse width modulator
+%"phase stride is the cyclic frequency of the signal, PWM_phaseStride
+%is the frequency of the pulse width modulator. phaseStride is added to a variable called phase
+%to keep track of what the output of a sin wave oscillator would be at the current sample/iteration of
+%the loop. This info is used to determine the output of the pulse wave, but it could also be used for any 
+%oscillator who's output can be determined by a phase (sawtooth, triangle, etc.)
 output = zeros(fs*length_seconds,1);
 PWM_phaseStride = slider_PWM_freq*PWM_maxFreq * sample_duration;
 phaseStride = freq * sample_duration;
