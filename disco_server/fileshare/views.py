@@ -25,8 +25,21 @@ def upload_config(request):
                 if synthform.is_valid():
                         synthform.save()
                         
-                # Need to save config settings in a place that the raylib application can load it
+                        # Need to save config settings in a place that the raylib application can load it
+                        config_bytes = [
+                                synthform.cleaned_data.get("octave"), 
+                                synthform.cleaned_data.get("pulseWidth"),
+                                synthform.cleaned_data.get("pwmFreq"),
+                                synthform.cleaned_data.get("pwmValue"),
+                                synthform.cleaned_data.get("attack"),
+                                synthform.cleaned_data.get("decay"),                        
+                                synthform.cleaned_data.get("sustain"),
+                                synthform.cleaned_data.get("release")
+                        ]
 
+                        print("Config bytes", config_bytes)
+                        with open('synth_settings.bin', 'wb') as cfile:
+                                cfile.write(bytearray(config_bytes))
 
         else:
                 synthform = SynthForm()
@@ -36,7 +49,7 @@ def upload_config(request):
         })
 
 def upload_audio(request):
-
+        ''' Area for uploading audio files'''
 
         if request.method == 'POST':
                 audioform = AudioForm(request.POST, request.FILES)

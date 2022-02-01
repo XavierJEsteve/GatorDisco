@@ -50,8 +50,8 @@ void SPIB_Slave_Init(){
          * receives data on the falling edge of the SPICLK signal
          */
         SpibRegs.SPICCR.bit.CLKPOLARITY = 0;
-        SpibRegs.SPICTL.bit.CLK_PHASE = 0;
-        SpibRegs.SPICTL.bit.TALK = 1;               //might disable if there is nothing we need to send back to the R.PI
+        SpibRegs.SPICTL.bit.CLK_PHASE = 1;
+        SpibRegs.SPICTL.bit.TALK = 0;               //might disable if there is nothing we need to send back to the R.PI
         SpibRegs.SPICTL.bit.SPIINTENA = 1;          //enable SPI interrupt
 
         //The SPI peripheral clock needs to be running at 200 MHz

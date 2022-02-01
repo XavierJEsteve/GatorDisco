@@ -11,14 +11,14 @@ class AudioModel(Model):
 
 class SynthModel(Model):
     name        = models.CharField(null=True, max_length=16)
-    octave      = models.DecimalField(max_digits=3, decimal_places=2)
-    pulseWidth  = models.DecimalField(max_digits=3, decimal_places=2)
-    pwmFreq     = models.DecimalField(max_digits=3, decimal_places=2)
-    pwmValue    = models.DecimalField(max_digits=3, decimal_places=2)
-    attack      = models.DecimalField(max_digits=3, decimal_places=2)
-    decay       = models.DecimalField(max_digits=3, decimal_places=2)
-    sustain     = models.DecimalField(max_digits=3, decimal_places=2)
-    release     = models.DecimalField(max_digits=3, decimal_places=2)
+    octave      = models.IntegerField(default=0)
+    pulseWidth  = models.IntegerField(default=0)
+    pwmFreq     = models.IntegerField(default=0)
+    pwmValue    = models.IntegerField(default=0)
+    attack      = models.IntegerField(default=0)
+    decay       = models.IntegerField(default=0)
+    sustain     = models.IntegerField(default=0)
+    release     = models.IntegerField(default=0)
 
     def __str__(self):
         return self.name
