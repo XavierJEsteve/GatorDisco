@@ -6,6 +6,8 @@
 #include <errno.h>
 #include <wiringPiSPI.h>
 #include <unistd.h>
+#include <sys/soundcard.h>
+#include <fcntl.h>
 
 // channel is the wiringPi name for the chip select (or chip enable) pin.
 // Set this to 0 or 1, depending on how it's connected.
@@ -23,7 +25,7 @@ static const int CHANNEL = 0;
 #define MAX_DECAY_TIME 5
 #define NUM_SLIDERS 10
 #define NUM_BUTTONS 1
-
+#define MIDI_DEVICE "/dev/midi2"
 typedef struct{
     float phase;
     float phaseStride;
@@ -183,7 +185,7 @@ void buildKeys(){
                 }
             }
             tempKey.xPos = xPos;
-            
+
         }
         keys[i] = tempKey;
         tempFreq *= 1.059463;
@@ -349,7 +351,7 @@ void clearKeyPress(){
 void processInput(){
     masterInput.y = GetMouseY();
     masterInput.x = GetMouseX();
-    
+
     if(IsMouseButtonDown(0)){
         if(masterInput.y > (3*SCREEN_HEIGHT / 4)){
             if(masterInput.keyPressed == false){
@@ -427,13 +429,13 @@ void processInput(){
                     wiringPiSPIDataRW(CHANNEL, spi_buffer, 2);
                 }
             }
-        
+
             //check if a button is selected
             for (int i=0; i< NUM_BUTTONS; i++){
                 Button tempButton = buttons[i];
-                if(    masterInput.x > tempButton.xPos 
-                    && masterInput.x - tempButton.xPos < tempButton.width 
-                    && masterInput.y > tempButton.yPos 
+                if(    masterInput.x > tempButton.xPos
+                    && masterInput.x - tempButton.xPos < tempButton.width
+                    && masterInput.y > tempButton.yPos
                     && masterInput.y - tempButton.yPos < tempButton.height)
                 {
                     tempButton.keyPressed = true;
@@ -450,7 +452,7 @@ void processInput(){
                             printf("Failed to open synth-settings file\n");
 
                         }
-                        else 
+                        else
                         {
                             printf("Successfully opened synth-settings file\n");
                             fread(config_buffer,sizeof(config_buffer),10,ptr); //read 8 bytes from config_data.data
@@ -522,7 +524,14 @@ void main() {
     // clear display
     spi_buffer[0] = 0x76;
     wiringPiSPIDataRW(CHANNEL, spi_buffer, 1);
-
+        unsigned char firstByte = 0;
+        unsigned char secondByte = 0;
+        unsigned char midipacket[4];
+        int seqfd = open(MIDI_DEVICE, O_RDONLY);
+        if (seqfd == -1) {
+                printf("Error: cannot open %s\n", MIDI_DEVICE);
+                exit(1);
+        }
     //sleep(5);
     while(WindowShouldClose() == false)
     {
@@ -531,6 +540,17 @@ void main() {
             processInput();
             //updateSignal(buffer, sample_duration);
             drawGUI();
+                read(seqfd, &midipacket, sizeof(midipacket));
+                if(firstByte != midipacket[1] || secondByte != midipacket[2]){
+                        spi_buffer[0] = 128;
+                        spi_buffer[1] = midipacket[2];
+                        wiringPiSPIDataRW(CHANNEL, spi_buffer, 2);
+                        spi_buffer[0] = 129;
+                        spi_buffer[1] = midipacket[1] - 24;
+                        wiringPiSPIDataRW(CHANNEL, spi_buffer, 2);
+                        firstByte = midipacket[1];
+                        secondByte = midipacket[2];
+}
         //}
     }
     //CloseAudioDevice();

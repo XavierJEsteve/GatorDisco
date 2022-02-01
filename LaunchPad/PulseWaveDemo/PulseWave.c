@@ -19,7 +19,7 @@ int bufferSwitchCounter = 0;
 float* params[10];
 int paramSelection = 0;
 int keySelection = -1;
-float frequencies[17];
+float frequencies[85];
 typedef struct{
     float phase;
     float phaseStride;
@@ -92,7 +92,7 @@ float calculateAmp(){
     return adsr.amplitude;
 }
 void updateSignal(int16* signal, float sample_duration){
-
+    /*
     if(osc.octave < 0.25){
         osc.octaveFactor = 0.25;
     }
@@ -105,6 +105,8 @@ void updateSignal(int16* signal, float sample_duration){
     else{
         osc.octaveFactor = 2;
     }
+    */
+    osc.octaveFactor = 1;
     osc.PWM_phaseStride = osc.PWM_frequency*20 * sample_duration;
     osc.phaseStride = osc.frequency * sample_duration * osc.octaveFactor;
     for(int i = 0; i < STREAM_BUFFER_SIZE; i++){
@@ -134,6 +136,7 @@ void updateSignal(int16* signal, float sample_duration){
 }
 
 void updateBiquads(){
+
     bool zeroOut = false;
     if(filter.highPass > 0.5){
         for(int i = 6; i >=0; i--){
@@ -220,8 +223,8 @@ void initOscADSR(){
     params[9] = &filter.highPass;
 }
 void buildKeys(){
-    float tempFreq = 261.6;
-    for(int i = 0; i < 17; i++){
+    float tempFreq = 261.6/4;
+    for(int i = 0; i < 85; i++){
         frequencies[i] = tempFreq;
         tempFreq *= 1.059463;
     }
@@ -334,7 +337,7 @@ interrupt void Spi_RxINTB_ISR(void){
                     }
                 }
                 else if(paramSelection == 1){
-                    if(data >= 0 && data < 17){
+                    if(data >= 0 && data < 85){
                         osc.frequency = frequencies[data];
                     }
                 }
