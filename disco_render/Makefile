@@ -24,7 +24,7 @@
 .PHONY: all clean
 
 # Define required raylib variables
-PROJECT_NAME       ?= raylib_examples
+PROJECT_NAME       ?= gator_disco
 RAYLIB_VERSION     ?= 4.0.0
 RAYLIB_PATH        ?= ..
 
@@ -42,7 +42,11 @@ PLATFORM           ?= PLATFORM_DESKTOP
 # If there is a libraylib in both EXAMPLE_RUNTIME_PATH and RAYLIB_INSTALL_PATH, at runtime,
 # the library at EXAMPLE_RUNTIME_PATH, if present, will take precedence over the one at RAYLIB_INSTALL_PATH.
 # RAYLIB_INSTALL_PATH should be the desired full path to libraylib. No relative paths.
-DESTDIR ?= /usr/local
+# WIN_DEST ?= ./win32 
+# RPI_DEST ?= ./RPi
+mkfile_path := $(abspath $(lastword $(MAKEFILE_LIST)))
+DESTDIR := $(dir $(mkfile_path))
+
 RAYLIB_INSTALL_PATH ?= $(DESTDIR)/lib
 # RAYLIB_H_INSTALL_PATH locates the installed raylib header and associated source files.
 RAYLIB_H_INSTALL_PATH ?= $(DESTDIR)/include
@@ -72,30 +76,8 @@ ifeq ($(PLATFORM),PLATFORM_DESKTOP)
         ifeq ($(UNAMEOS),Linux)
             PLATFORM_OS=LINUX
         endif
-        ifeq ($(UNAMEOS),FreeBSD)
-            PLATFORM_OS=BSD
-        endif
-        ifeq ($(UNAMEOS),OpenBSD)
-            PLATFORM_OS=BSD
-        endif
-        ifeq ($(UNAMEOS),NetBSD)
-            PLATFORM_OS=BSD
-        endif
-        ifeq ($(UNAMEOS),DragonFly)
-            PLATFORM_OS=BSD
-        endif
-        ifeq ($(UNAMEOS),Darwin)
-            PLATFORM_OS=OSX
-        endif
-    endif
 endif
 ifeq ($(PLATFORM),PLATFORM_RPI)
-    UNAMEOS=$(shell uname)
-    ifeq ($(UNAMEOS),Linux)
-        PLATFORM_OS=LINUX
-    endif
-endif
-ifeq ($(PLATFORM),PLATFORM_DRM)
     UNAMEOS=$(shell uname)
     ifeq ($(UNAMEOS),Linux)
         PLATFORM_OS=LINUX
@@ -117,37 +99,10 @@ endif
 ifeq ($(PLATFORM),PLATFORM_RPI)
     RAYLIB_PATH        ?= /home/pi/raylib
 endif
-ifeq ($(PLATFORM),PLATFORM_DRM)
-    RAYLIB_PATH        ?= /home/pi/raylib
-endif
 
-ifeq ($(PLATFORM),PLATFORM_WEB)
-    # Emscripten required variables
-    EMSDK_PATH         ?= C:/emsdk
-    EMSCRIPTEN_PATH    ?= $(EMSDK_PATH)/upstream/emscripten
-    CLANG_PATH          = $(EMSDK_PATH)/upstream/bin
-    PYTHON_PATH         = $(EMSDK_PATH)/python/3.9.2-1_64bit
-    NODE_PATH           = $(EMSDK_PATH)/node/14.15.5_64bit/bin
-    export PATH         = $(EMSDK_PATH);$(EMSCRIPTEN_PATH);$(CLANG_PATH);$(NODE_PATH);$(PYTHON_PATH);C:\raylib\MinGW\bin:$$(PATH)
-endif
-
-# Define raylib release directory for compiled library.
-# RAYLIB_RELEASE_PATH points to provided binaries or your freshly built version
-RAYLIB_RELEASE_PATH 	?= $(RAYLIB_PATH)/src
-
-# EXAMPLE_RUNTIME_PATH embeds a custom runtime location of libraylib.so or other desired libraries
-# into each example binary compiled with RAYLIB_LIBTYPE=SHARED. It defaults to RAYLIB_RELEASE_PATH
-# so that these examples link at runtime with your version of libraylib.so in ../release/libs/linux
-# without formal installation from ../src/Makefile. It aids portability and is useful if you have
-# multiple versions of raylib, have raylib installed to a non-standard location, or want to
-# bundle libraylib.so with your game. Change it to your liking.
-# NOTE: If, at runtime, there is a libraylib.so at both EXAMPLE_RUNTIME_PATH and RAYLIB_INSTALL_PATH,
-# The library at EXAMPLE_RUNTIME_PATH, if present, will take precedence over RAYLIB_INSTALL_PATH,
-# Implemented for LINUX below with CFLAGS += -Wl,-rpath,$(EXAMPLE_RUNTIME_PATH)
-# To see the result, run readelf -d core/core_basic_window; looking at the RPATH or RUNPATH attribute.
-# To see which libraries a built example is linking to, ldd core/core_basic_window;
-# Look for libraylib.so.1 => $(RAYLIB_INSTALL_PATH)/libraylib.so.1 or similar listing.
-EXAMPLE_RUNTIME_PATH   ?= $(RAYLIB_RELEASE_PATH)
+# # Define raylib release directory for compiled library.
+# # RAYLIB_RELEASE_PATH points to provided binaries or your freshly built version
+# RAYLIB_RELEASE_PATH 	?= $(RAYLIB_PATH)/src
 
 # Define default C compiler: gcc
 # NOTE: define g++ compiler if using C++
@@ -158,10 +113,6 @@ ifeq ($(PLATFORM),PLATFORM_DESKTOP)
         # OSX default compiler
         CC = clang
     endif
-    ifeq ($(PLATFORM_OS),BSD)
-        # FreeBSD, OpenBSD, NetBSD, DragonFly default compiler
-        CC = clang
-    endif
 endif
 ifeq ($(PLATFORM),PLATFORM_RPI)
     ifeq ($(USE_RPI_CROSS_COMPILER),TRUE)
@@ -170,27 +121,17 @@ ifeq ($(PLATFORM),PLATFORM_RPI)
         CC = $(RPI_TOOLCHAIN)/bin/arm-linux-gnueabihf-gcc
     endif
 endif
-ifeq ($(PLATFORM),PLATFORM_WEB)
-    # HTML5 emscripten compiler
-    # WARNING: To compile to HTML5, code must be redesigned
-    # to use emscripten.h and emscripten_set_main_loop()
-    CC = emcc
-endif
+
 
 # Define default make program
-MAKE = make
+MAKE = make # Works for the PI and maybe OSX
 
 ifeq ($(PLATFORM),PLATFORM_DESKTOP)
     ifeq ($(PLATFORM_OS),WINDOWS)
         MAKE = mingw32-make
     endif
 endif
-ifeq ($(PLATFORM),PLATFORM_ANDROID)
-    MAKE = mingw32-make
-endif
-ifeq ($(PLATFORM),PLATFORM_WEB)
-    MAKE = mingw32-make
-endif
+
 
 # Define compiler flags:
 #  -O1                  defines optimization level
@@ -205,15 +146,6 @@ CFLAGS += -Wall -std=c99 -D_DEFAULT_SOURCE -Wno-missing-braces -Wunused-result
 
 ifeq ($(BUILD_MODE),DEBUG)
     CFLAGS += -g
-    ifeq ($(PLATFORM),PLATFORM_WEB)
-        CFLAGS += -s ASSERTIONS=1 --profiling
-    endif
-else
-    ifeq ($(PLATFORM),PLATFORM_WEB)
-        CFLAGS += -Os
-    else
-        CFLAGS += -s -O1
-    endif
 endif
 
 # Additional flags for compiler (if desired)
@@ -230,15 +162,11 @@ ifeq ($(PLATFORM),PLATFORM_DESKTOP)
     endif
 endif
 ifeq ($(PLATFORM),PLATFORM_RPI)
-    CFLAGS += -std=gnu99
-endif
-ifeq ($(PLATFORM),PLATFORM_DRM)
-    CFLAGS += -std=gnu99 -DEGL_NO_X11
+    CFLAGS += -std=gnu99 -v
 endif
 
 # Define include paths for required headers
-# NOTE: Some external/extras libraries could be required (stb, physac, easings...)
-INCLUDE_PATHS = -I. -I$(RAYLIB_PATH)/src -I$(RAYLIB_PATH)/src/external -I$(RAYLIB_PATH)/src/extras
+INCLUDE_PATHS = -I. -I$(RAYLIB_H_INSTALL_PATH)
 
 # Define additional directories containing required header files
 ifeq ($(PLATFORM),PLATFORM_RPI)
@@ -247,67 +175,29 @@ ifeq ($(PLATFORM),PLATFORM_RPI)
     INCLUDE_PATHS += -I/opt/vc/include/interface/vmcs_host/linux
     INCLUDE_PATHS += -I/opt/vc/include/interface/vcos/pthreads
 endif
-ifeq ($(PLATFORM),PLATFORM_DRM)
-    # DRM required libraries
-    INCLUDE_PATHS += -I/usr/include/libdrm
-endif
 ifeq ($(PLATFORM),PLATFORM_DESKTOP)
-    ifeq ($(PLATFORM_OS),BSD)
-        # Consider -L$(RAYLIB_H_INSTALL_PATH)
-        INCLUDE_PATHS += -I/usr/local/include
-    endif
     ifeq ($(PLATFORM_OS),LINUX)
         INCLUDE_PATHS += -I$(RAYLIB_H_INSTALL_PATH)
     endif
 endif
 
 # Define library paths containing required libs.
-LDFLAGS = -L. -L$(RAYLIB_RELEASE_PATH) -L$(RAYLIB_PATH)/src
+LDFLAGS = -L$(RAYLIB_INSTALL_PATH)
 
 ifeq ($(PLATFORM),PLATFORM_DESKTOP)
     ifeq ($(PLATFORM_OS),WINDOWS)
         # resource file contains windows executable icon and properties
-        LDFLAGS += $(RAYLIB_PATH)/src/raylib.rc.data
+        # LDFLAGS += $(RAYLIB_PATH)/src/raylib.rc.data
         # -Wl,--subsystem,windows hides the console window
         ifeq ($(BUILD_MODE), RELEASE)
             LDFLAGS += -Wl,--subsystem,windows
         endif
-    endif
-    ifeq ($(PLATFORM_OS),BSD)
-        # Consider -L$(RAYLIB_INSTALL_PATH)
-        LDFLAGS += -L. -Lsrc -L/usr/local/lib
     endif
     ifeq ($(PLATFORM_OS),LINUX)
         # Reset everything.
         # Precedence: immediately local, installed version, raysan5 provided libs
         LDFLAGS = -L. -L$(RAYLIB_INSTALL_PATH) -L$(RAYLIB_RELEASE_PATH) -L$(RAYLIB_PATH)
     endif
-endif
-ifeq ($(PLATFORM),PLATFORM_WEB)
-    # -Os                        # size optimization
-    # -O2                        # optimization level 2, if used, also set --memory-init-file 0
-    # -s USE_GLFW=3              # Use glfw3 library (context/input management)
-    # -s ALLOW_MEMORY_GROWTH=1   # to allow memory resizing -> WARNING: Audio buffers could FAIL!
-    # -s TOTAL_MEMORY=16777216   # to specify heap memory size (default = 16MB) (67108864 = 64MB)
-    # -s USE_PTHREADS=1          # multithreading support
-    # -s WASM=0                  # disable Web Assembly, emitted by default
-    # -s ASYNCIFY                # lets synchronous C/C++ code interact with asynchronous JS
-    # -s FORCE_FILESYSTEM=1      # force filesystem to load/save files data
-    # -s ASSERTIONS=1            # enable runtime checks for common memory allocation errors (-O1 and above turn it off)
-    # --profiling                # include information for code profiling
-    # --memory-init-file 0       # to avoid an external memory initialization code file (.mem)
-    # --preload-file resources   # specify a resources folder for data compilation
-    # --source-map-base          # allow debugging in browser with source map
-    LDFLAGS += -s USE_GLFW=3 -s ASYNCIFY -s TOTAL_MEMORY=67108864 -s FORCE_FILESYSTEM=1 --preload-file $(dir $<)resources@resources
-
-    # NOTE: Simple raylib examples are compiled to be interpreter with asyncify, that way,
-    # we can compile same code for ALL platforms with no change required, but, working on bigger
-    # projects, code needs to be refactored to avoid a blocking while() loop, moving Update and Draw
-    # logic to a self contained function: UpdateDrawFrame(), check core_basic_window_web.c for reference.
-
-    # Define a custom shell .html and output extension
-    LDFLAGS += --shell-file $(RAYLIB_PATH)/src/shell.html
-    EXT = .html
 endif
 ifeq ($(PLATFORM),PLATFORM_RPI)
     LDFLAGS += -L/opt/vc/lib
@@ -347,14 +237,6 @@ ifeq ($(PLATFORM),PLATFORM_DESKTOP)
         # NOTE: Required packages: libopenal-dev libegl1-mesa-dev
         LDLIBS = -lraylib -framework OpenGL -framework Cocoa -framework IOKit -framework CoreAudio -framework CoreVideo
     endif
-    ifeq ($(PLATFORM_OS),BSD)
-        # Libraries for FreeBSD, OpenBSD, NetBSD, DragonFly desktop compiling
-        # NOTE: Required packages: mesa-libs
-        LDLIBS = -lraylib -lGL -lpthread -lm
-
-        # On XWindow requires also below libraries
-        LDLIBS += -lX11 -lXrandr -lXinerama -lXi -lXxf86vm -lXcursor
-    endif
     ifeq ($(USE_EXTERNAL_GLFW),TRUE)
         # NOTE: It could require additional packages installed: libglfw3-dev
         LDLIBS += -lglfw
@@ -365,177 +247,26 @@ ifeq ($(PLATFORM),PLATFORM_RPI)
     # NOTE: Required packages: libasound2-dev (ALSA)
     LDLIBS = -lraylib -lbrcmGLESv2 -lbrcmEGL -lpthread -lrt -lm -lbcm_host -ldl -lwiringPi
 endif
-ifeq ($(PLATFORM),PLATFORM_DRM)
-    # Libraries for DRM compiling
-    # NOTE: Required packages: libasound2-dev (ALSA)
-    LDLIBS = -lraylib -lGLESv2 -lEGL -lpthread -lrt -lm -lgbm -ldrm -ldl
-endif
-ifeq ($(PLATFORM),PLATFORM_WEB)
-    # Libraries for web (HTML5) compiling
-    LDLIBS = $(RAYLIB_RELEASE_PATH)/libraylib.a
-endif
 
-# Define all object files required
-CORE = \
-    core/core_basic_window \
-    core/core_basic_screen_manager \
-    core/core_input_keys \
-    core/core_input_mouse \
-    core/core_input_mouse_wheel \
-    core/core_input_gamepad \
-    core/core_input_multitouch \
-    core/core_input_gestures \
-    core/core_2d_camera \
-    core/core_2d_camera_platformer \
-    core/core_3d_camera_mode \
-    core/core_3d_camera_free \
-    core/core_3d_camera_first_person \
-    core/core_3d_picking \
-    core/core_world_screen \
-    core/core_custom_logging \
-    core/core_window_letterbox \
-    core/core_drop_files \
-    core/core_random_values \
-    core/core_scissor_test \
-    core/core_storage_values \
-    core/core_vr_simulator \
-    core/core_loading_thread \
-    core/core_quat_conversion \
-    core/core_window_flags \
-    core/core_split_screen \
-    core/core_smooth_pixelperfect \
-    core/core_custom_frame_control
+# # Define all object files required
+WINDOWS = \
+    main
 
-SHAPES = \
-    shapes/shapes_basic_shapes \
-    shapes/shapes_bouncing_ball \
-    shapes/shapes_colors_palette \
-    shapes/shapes_logo_raylib \
-    shapes/shapes_logo_raylib_anim \
-    shapes/shapes_rectangle_scaling \
-    shapes/shapes_lines_bezier \
-    shapes/shapes_collision_area \
-    shapes/shapes_following_eyes \
-    shapes/shapes_easings_ball_anim \
-    shapes/shapes_easings_box_anim \
-    shapes/shapes_easings_rectangle_array \
-    shapes/shapes_draw_ring \
-    shapes/shapes_draw_circle_sector \
-    shapes/shapes_draw_rectangle_rounded
+RPI = \
+    main
 
-TEXTURES = \
-    textures/textures_logo_raylib \
-    textures/textures_mouse_painting \
-    textures/textures_rectangle \
-    textures/textures_srcrec_dstrec \
-    textures/textures_image_drawing \
-    textures/textures_image_generation \
-    textures/textures_image_loading \
-    textures/textures_image_processing \
-    textures/textures_image_text \
-    textures/textures_to_image \
-    textures/textures_raw_data \
-    textures/textures_particles_blending \
-    textures/textures_npatch_drawing \
-    textures/textures_background_scrolling \
-    textures/textures_sprite_button \
-    textures/textures_sprite_explosion \
-    textures/textures_bunnymark \
-    textures/textures_blend_modes \
-    textures/textures_draw_tiled \
-    textures/textures_polygon
-
-TEXT = \
-    text/text_raylib_fonts \
-    text/text_font_spritefont \
-    text/text_font_loading \
-    text/text_font_filters \
-    text/text_font_sdf \
-    text/text_format_text \
-    text/text_input_box \
-    text/text_writing_anim \
-    text/text_rectangle_bounds \
-    text/text_unicode \
-    text/text_draw_3d
-
-MODELS = \
-    models/models_animation \
-    models/models_billboard \
-    models/models_box_collisions \
-    models/models_cubicmap \
-    models/models_first_person_maze \
-    models/models_geometric_shapes \
-    models/models_mesh_generation \
-    models/models_mesh_picking \
-    models/models_loading \
-    models/models_loading_vox \
-    models/models_loading_gltf \
-    models/models_orthographic_projection \
-    models/models_rlgl_solar_system \
-    models/models_skybox \
-    models/models_yaw_pitch_roll \
-    models/models_heightmap \
-    models/models_waving_cubes
-
-SHADERS = \
-    shaders/shaders_model_shader \
-    shaders/shaders_shapes_textures \
-    shaders/shaders_custom_uniform \
-    shaders/shaders_postprocessing \
-    shaders/shaders_palette_switch \
-    shaders/shaders_raymarching \
-    shaders/shaders_texture_drawing \
-    shaders/shaders_texture_waves \
-    shaders/shaders_texture_outline \
-    shaders/shaders_julia_set \
-    shaders/shaders_eratosthenes \
-    shaders/shaders_basic_lighting \
-    shaders/shaders_fog \
-    shaders/shaders_simple_mask \
-    shaders/shaders_spotlight \
-    shaders/shaders_hot_reloading \
-    shaders/shaders_mesh_instancing \
-    shaders/shaders_multi_sample2d
- 
-AUDIO = \
-    audio/audio_module_playing \
-    audio/audio_music_stream \
-    audio/audio_raw_stream \
-    audio/audio_sound_loading \
-    audio/audio_multichannel_sound
-
-PHYSICS = \
-    physics/physics_demo \
-    physics/physics_friction \
-    physics/physics_movement \
-    physics/physics_restitution \
-    physics/physics_shatter
-
-WIP = \
-	WIP/main
 CURRENT_MAKEFILE = $(lastword $(MAKEFILE_LIST))
 
 # Default target entry
-all: $(CORE) $(SHAPES) $(TEXT) $(TEXTURES) $(MODELS) $(SHADERS) $(AUDIO) $(PHYSICS)
+all: $(WINDOWS) $(RPi)
 
-core: $(CORE)
-shapes: $(SHAPES)
-textures: $(TEXTURES)
-text: $(TEXT)
-models: $(MODELS)
-shaders: $(SHADERS)
-audio: $(AUDIO)
-physics: $(PHYSICS)
+windows: $(CORE)
+rpi: $(SHAPES)
 
 # Generic compilation pattern
 # NOTE: Examples must be ready for Android compilation!
 %: %.c
-ifeq ($(PLATFORM),PLATFORM_ANDROID)
-	$(MAKE) -f Makefile.Android PROJECT_NAME=$@ PROJECT_SOURCE_FILES=$<
-else
 	$(CC) -o $@$(EXT) $< $(CFLAGS) $(INCLUDE_PATHS) $(LDFLAGS) $(LDLIBS) -D$(PLATFORM)
-endif
-
 # Clean everything
 clean:
 ifeq ($(PLATFORM),PLATFORM_DESKTOP)
@@ -551,16 +282,9 @@ ifeq ($(PLATFORM),PLATFORM_DESKTOP)
 		rm -f *.o
     endif
 endif
+
 ifeq ($(PLATFORM),PLATFORM_RPI)
 	find . -type f -executable -delete
 	rm -fv *.o
 endif
-ifeq ($(PLATFORM),PLATFORM_DRM)
-	find . -type f -executable -delete
-	rm -fv *.o
 endif
-ifeq ($(PLATFORM),PLATFORM_WEB)
-	del *.o *.html *.js
-endif
-	@echo Cleaning done
-
