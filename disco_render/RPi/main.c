@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include "include/raylib.h"
+#include "raylib.h"
 #include <math.h>
 
 #define SAMPLE_RATE 44100
