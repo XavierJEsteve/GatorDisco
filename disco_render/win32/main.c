@@ -6,7 +6,7 @@
 #include <errno.h>
 #include "include/wiringPiSPI.h"
 #include <unistd.h>
-#include <sys/soundcard.h>
+//#include <sys/soundcard.h>
 #include <fcntl.h>
 
 // channel is the wiringPi name for the chip select (or chip enable) pin.
@@ -32,6 +32,7 @@ typedef struct{
     float phase;
     float phaseStride;
     float frequency;
+    //osc parameters
     float threshold;
     float octave;
     float octaveFactor;
@@ -40,6 +41,12 @@ typedef struct{
     float PWM_frequency;
     float PWM_val;
 } Oscillator;
+typedef struct{
+    float phase;
+    float phaseStride;
+    float frequency;
+    float val;
+} LFO;
 typedef struct{
     float attack;
     float decay;
@@ -88,6 +95,7 @@ unsigned char spi_buffer[100];
 Oscillator osc;
 Filter filter;
 ADSR_Control adsr;
+LFO lfo;
 Input masterInput;
 float buffer[1024];
 float sample_duration;
@@ -128,17 +136,18 @@ void updateSignal(float* signal, float sample_duration){
     else{
         osc.octaveFactor = 2;
     }
-    osc.PWM_phaseStride = osc.PWM_frequency*20 * sample_duration;
+    lfo.phaseStride = lfo.frequency*20 * sample_duration;
     osc.phaseStride = osc.frequency * sample_duration * osc.octaveFactor;
     for(int i = 0; i < 1024; i++){
+        //
         osc.phase += osc.phaseStride;
         if(osc.phase > 1) osc.phase -= 1;
         float sin_value = sinf(2.0f * PI * osc.phase);
         if(osc.oscType == 0){
             //PWM phase
-            osc.PWM_phase += osc.PWM_phaseStride;
-            if(osc.PWM_phase > 1) osc.PWM_phase -= 1;
-            float PWM_sin_value = sinf(2.0f * PI * osc.PWM_phase)*osc.PWM_val;
+            lfo.phase += lfo.phaseStride;
+            if(lfo.phase > 1) lfo.phase -= 1;
+            float PWM_sin_value = sinf(2.0f * PI * lfo.phase)*lfo.val;
             float threshold = 0.5*(osc.threshold + PWM_sin_value);
             if(sin_value > threshold){
                 signal[i] = 0.5;
@@ -229,27 +238,27 @@ void buildSliders(){
     octave.param = &osc.octave;
     octave.name = "OCTAVE";
     sliders[0] = octave;
-    Slider threshold;
-    threshold.xPos = 300;
-    threshold.yPos = 100;
-    threshold.value = 0;
-    threshold.param = &osc.threshold;
-    threshold.name = "PULSE WIDTH";
-    sliders[1] = threshold;
-    Slider PWM_freq;
-    PWM_freq.xPos = 450;
-    PWM_freq.yPos = 100;
-    PWM_freq.value = 0;
-    PWM_freq.param = &osc.PWM_frequency;
-    PWM_freq.name = "PWM Freq";
-    sliders[2] = PWM_freq;
-    Slider PWM_val;
-    PWM_val.xPos = 600;
-    PWM_val.yPos = 100;
-    PWM_val.value = 0;
-    PWM_val.param = &osc.PWM_val;
-    PWM_val.name = "PWM Val";
-    sliders[3] = PWM_val;
+    Slider oscParam1;
+    oscParam1.xPos = 300;
+    oscParam1.yPos = 100;
+    oscParam1.value = 0;
+    oscParam1.param = &osc.threshold;
+    oscParam1.name = "PULSE WIDTH";
+    sliders[1] = oscParam1;
+    Slider oscParam2;
+    oscParam2.xPos = 450;
+    oscParam2.yPos = 100;
+    oscParam2.value = 0;
+    oscParam2.param = &lfo.frequency;
+    oscParam2.name = "PWM Freq";
+    sliders[2] = oscParam2;
+    Slider oscParam3;
+    oscParam3.xPos = 600;
+    oscParam3.yPos = 100;
+    oscParam3.value = 0;
+    oscParam3.param = &lfo.val;
+    oscParam3.name = "PWM Val";
+    sliders[3] = oscParam3;
     Slider Attack;
     Attack.xPos = 200;
     Attack.yPos = 350;
@@ -489,6 +498,11 @@ void processInput(){
                         osc.oscType++;
                         osc.oscType %= NUM_OSCILLATORS;
                         buttons[1].text = oscNames[osc.oscType];
+                        if(osc.oscType == 0){
+                            sliders[1].name = "PULSE WIDTH";
+                            sliders[2].name = "PWM Freq";
+                            sliders[3].name = "PWM Val";
+                        }
                     }
                 }
             }
@@ -505,10 +519,10 @@ void initOscADSRFilter(){
     osc.frequency = 200;
     osc.threshold = 0;
     osc.octave = 0;
-    osc.PWM_phase = 0;
-    osc.PWM_phaseStride = 0;
-    osc.PWM_frequency = 0;
-    osc.PWM_val = 0;
+    lfo.phase = 0;
+    lfo.phaseStride = 0;
+    lfo.frequency = 0;
+    lfo.val = 0;
     sample_duration = (1.0f)/SAMPLE_RATE;
     osc.phase = 0;
     osc.phaseStride = osc.frequency * sample_duration;
@@ -592,3 +606,4 @@ void main() {
     CloseAudioDevice();
     CloseWindow();
 }
+
