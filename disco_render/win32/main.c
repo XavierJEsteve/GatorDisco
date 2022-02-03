@@ -13,7 +13,7 @@
 // Set this to 0 or 1, depending on how it's connected.
 static const int CHANNEL = 0;
 
-#define SAMPLE_RATE 44100
+#define SAMPLE_RATE 48000
 #define STREAM_BUFFER_SIZE 1024
 #define SCREEN_HEIGHT 800
 #define SCREEN_WIDTH 1280
@@ -24,9 +24,11 @@ static const int CHANNEL = 0;
 #define MAX_ATTACK_TIME 3
 #define MAX_DECAY_TIME 5
 #define NUM_SLIDERS 10
-#define NUM_BUTTONS 1
+#define NUM_BUTTONS 2
+#define NUM_OSCILLATORS 2
 #define MIDI_DEVICE "/dev/midi2"
 typedef struct{
+    int oscType;
     float phase;
     float phaseStride;
     float frequency;
@@ -79,6 +81,7 @@ typedef struct{
 } Input;
 
 Key keys[17];
+char* oscNames[NUM_OSCILLATORS] = {"PULSE WAVE", "SAWTOOTH"};
 Slider sliders[NUM_SLIDERS];
 Button buttons[NUM_BUTTONS];
 unsigned char spi_buffer[100];
@@ -131,16 +134,22 @@ void updateSignal(float* signal, float sample_duration){
         osc.phase += osc.phaseStride;
         if(osc.phase > 1) osc.phase -= 1;
         float sin_value = sinf(2.0f * PI * osc.phase);
-        //PWM phase
-        osc.PWM_phase += osc.PWM_phaseStride;
-        if(osc.PWM_phase > 1) osc.PWM_phase -= 1;
-        float PWM_sin_value = sinf(2.0f * PI * osc.PWM_phase)*osc.PWM_val;
-        float threshold = 0.5*(osc.threshold + PWM_sin_value);
-        if(sin_value > threshold){
-            signal[i] = 0.5;
+        if(osc.oscType == 0){
+            //PWM phase
+            osc.PWM_phase += osc.PWM_phaseStride;
+            if(osc.PWM_phase > 1) osc.PWM_phase -= 1;
+            float PWM_sin_value = sinf(2.0f * PI * osc.PWM_phase)*osc.PWM_val;
+            float threshold = 0.5*(osc.threshold + PWM_sin_value);
+            if(sin_value > threshold){
+                signal[i] = 0.5;
+            }
+            else {
+                signal[i] = -0.5;
+            }
         }
-        else {
-            signal[i] = -0.5;
+        else if(osc.oscType == 1){
+            //sawtooth output
+            signal[i] = osc.phase -0.5;
         }
         signal[i] *= calculateAmp();
     }
@@ -201,6 +210,16 @@ void buildButtons(){
     load_config.color = BLACK;
     load_config.text = "LOAD CONFIG";
     buttons[0] = load_config;
+    Button oscSelect;
+    oscSelect.keyPressed = false;
+    oscSelect.xPos = (SCREEN_WIDTH/32);
+    oscSelect.yPos = SCREEN_HEIGHT/5;
+    oscSelect.width = SCREEN_WIDTH/8;
+    oscSelect.height = SCREEN_HEIGHT/12;
+    oscSelect.color = GREEN;
+    oscSelect.text = "PULSE WAVE";
+    buttons[1] = oscSelect;
+
 }
 void buildSliders(){
     Slider octave;
@@ -318,8 +337,10 @@ void drawKeys(int height){
     }
 }
 void drawButtons(){
-    DrawRectangle(buttons[0].xPos, buttons[0].yPos, buttons[0].width, buttons[0].height, buttons[0].color);
-    DrawText(buttons[0].text, buttons[0].xPos, buttons[0].yPos, 25, RED);
+    for(int i = 0; i < NUM_BUTTONS; i++){
+        DrawRectangle(buttons[i].xPos, buttons[i].yPos, buttons[i].width, buttons[i].height, buttons[i].color);
+        DrawText(buttons[i].text, buttons[i].xPos, buttons[i].yPos, 25, RED);
+    }
 }
 void drawGUI(){
     BeginDrawing();
@@ -436,12 +457,13 @@ void processInput(){
                 if(    masterInput.x > tempButton.xPos
                     && masterInput.x - tempButton.xPos < tempButton.width
                     && masterInput.y > tempButton.yPos
-                    && masterInput.y - tempButton.yPos < tempButton.height)
+                    && masterInput.y - tempButton.yPos < tempButton.height
+                    && tempButton.keyPressed == false)
                 {
-                    tempButton.keyPressed = true;
+                    buttons[i].keyPressed = true;
 
                     // Was it the load_config button?
-                    if (strcmp(tempButton.text,"LOAD CONFIG") == 0)
+                    if (i == 0)
                     {
                         //Verify config data saved by python code can be read
                         unsigned char config_buffer[11];
@@ -462,12 +484,21 @@ void processInput(){
                             fclose(ptr);
                         }
                     }
+                    //pulseWave Button?
+                    else if(i == 1){
+                        osc.oscType++;
+                        osc.oscType %= NUM_OSCILLATORS;
+                        buttons[1].text = oscNames[osc.oscType];
+                    }
                 }
             }
         }
     }
     else {
         clearKeyPress();
+        for(int i = 0; i < NUM_BUTTONS; i++){
+            buttons[i].keyPressed = false;
+        }
     }
 }
 void initOscADSRFilter(){
@@ -500,7 +531,6 @@ void main() {
     buildKeys();
     buildSliders();
     buildButtons();
-    
     SetAudioStreamBufferSizeDefault(1024);
     AudioStream synthStream = LoadAudioStream(SAMPLE_RATE,
         32 ,
