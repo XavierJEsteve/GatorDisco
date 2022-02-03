@@ -166,7 +166,7 @@ ifeq ($(PLATFORM),PLATFORM_RPI)
 endif
 
 # Define include paths for required headers
-INCLUDE_PATHS = -I. -I$(RAYLIB_H_INSTALL_PATH)
+INCLUDE_PATHS = -I$(RAYLIB_H_INSTALL_PATH)/
 
 # Define additional directories containing required header files
 ifeq ($(PLATFORM),PLATFORM_RPI)

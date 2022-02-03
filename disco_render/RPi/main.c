@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "raylib.h"
+#include <raylib.h>
 #include <math.h>
 #include <errno.h>
 #include <wiringPiSPI.h>
@@ -530,7 +530,7 @@ void main() {
         int seqfd = open(MIDI_DEVICE, O_RDONLY);
         if (seqfd == -1) {
                 printf("Error: cannot open %s\n", MIDI_DEVICE);
-                exit(1);
+                //exit(1);
         }
     //sleep(5);
     while(WindowShouldClose() == false)
