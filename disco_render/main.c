@@ -446,7 +446,7 @@ void processInput(){
                         //Verify config data saved by python code can be read
                         unsigned char config_buffer[11];
                         FILE *ptr;
-                        ptr = fopen("../synth_settings.bin","rb");
+                        ptr = fopen("../disco_server/synth_settings.bin","rb");
                         if (! ptr)
                         {
                             printf("Failed to open synth-settings file\n");
@@ -456,8 +456,20 @@ void processInput(){
                         {
                             printf("Successfully opened synth-settings file\n");
                             fread(config_buffer,sizeof(config_buffer),10,ptr); //read 8 bytes from config_data.data
-                            for (int i = 0; i < 10; i++){
-                                printf("%d\n", config_buffer[i]);
+                            for (int i = 0; i < NUM_SLIDERS; i++){
+                                // printf("%d\n", config_buffer[i]);
+                                Slider tempSlider = sliders[i];
+                                tempSlider.value = (float)config_buffer[i] / 128;
+                                *tempSlider.param = tempSlider.value;
+                                sliders[i] = tempSlider;
+                                //printf("SPI COMMAND\n");
+                                //printf("%d (%s)\n", i+2,tempSlider.name);
+                                int output = 127*tempSlider.value;
+                                //printf("%d\n", output);
+                                spi_buffer[0] = 128 | (i+2);
+                                spi_buffer[1] = output;
+                                wiringPiSPIDataRW(CHANNEL, spi_buffer, 2);
+                                
                             }
                             fclose(ptr);
                         }
@@ -550,6 +562,7 @@ void main() {
                         wiringPiSPIDataRW(CHANNEL, spi_buffer, 2);
                         firstByte = midipacket[1];
                         secondByte = midipacket[2];
+                        printf("Sending midi command"); // First byte: %u....Second Byte: %u",(firstByte, secondByte))
 }
         //}
     }

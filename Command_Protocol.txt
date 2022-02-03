@@ -1,0 +1,25 @@
+/*************************/
+8 bit commands sent via SPI
+
+MSB is a 1 for parameter selection, 0 for parameter value.
+Values corresponding to sliders range from 0 to 127.
+Values corresponding to digital values such as note selection, key press on/off range from 0 to some value 
+depending on the number of options. Ex. 0 to 1 for key press on/off
+
+Current Parameter selection protocol:
+
+Key press on/off  Range: 0 to 1   Command: 10000000
+Note selection    Range: 0 to 16  Command: 10000001
+Octave            Range: 0 to 127 Command: 10000010
+OSC Param 1       Range: 0 to 127 Command: 10000011
+OSC Param 2       Range: 0 to 127 Command: 10000100
+OSC Param 3       Range: 0 to 127 Command: 10000101
+Attack            Range: 0 to 127 Command: 10000110
+Decay             Range: 0 to 127 Command: 10000111
+Sustain           Range: 0 to 127 Command: 10001000
+Release           Range: 0 to 127 Command: 10001001
+Cutoff Frequency  Range: 0 to 127 Command: 10001010
+HighPass/LowPass  Range: 0 to 127 Command: 10001011
+
+
+
