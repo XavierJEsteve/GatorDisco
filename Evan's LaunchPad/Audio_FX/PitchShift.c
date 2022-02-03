@@ -58,9 +58,10 @@ int16 processPitchShift(int16 sampleIn)
     int32 result;
     static Uint16 diff_comp;
     float32 w;
-    //w = 0.8f * (1-cosf(PI2*PitchWrite / ((PITCHBUFFERSIZE - 1)))); //a hanning window to reduce clicks
+    //w = 0.5f - 0.5f * (1-cosf(PI2*PitchWrite / ((PITCHBUFFERSIZE - 1)))); //a hanning window to reduce clicks
 
     //write to buffer
+    //PitchBuffer[PitchWrite] = sampleIn * w;
     PitchBuffer[PitchWrite] = sampleIn;
 
     index = (Uint16)PitchRead;
