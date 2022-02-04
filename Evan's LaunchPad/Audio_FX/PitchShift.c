@@ -18,7 +18,7 @@
 
 #pragma DATA_SECTION(PitchBuffer, "ramgs1");
 
-#define WRAP_SHIFT 2
+#define WRAP_SHIFT 4
 #define WRAP_SIZE (1 << WRAP_SHIFT) // How much overlap there is to reduce glitching
 #define PITCHBUFFERSIZE 4096
 #define PITCHBUFFERSIZE_MASK 4095
@@ -58,11 +58,10 @@ int16 processPitchShift(int16 sampleIn)
     int32 result;
     static Uint16 diff_comp;
     float32 w;
-    //w = 0.5f - 0.5f * (1-cosf(PI2*PitchWrite / ((PITCHBUFFERSIZE - 1)))); //a hanning window to reduce clicks
+    w = 0.90f - 0.10f * (1-cosf(PI2*PitchWrite / ((PITCHBUFFERSIZE - 1)))); //a hanning window to reduce clicks
 
     //write to buffer
-    //PitchBuffer[PitchWrite] = sampleIn * w;
-    PitchBuffer[PitchWrite] = sampleIn;
+    PitchBuffer[PitchWrite] = sampleIn*w;
 
     index = (Uint16)PitchRead;
     index = index & PITCHBUFFERSIZE_MASK; //Masking for wrapping
@@ -76,7 +75,7 @@ int16 processPitchShift(int16 sampleIn)
     sampleOut = PitchBuffer[index];
 
     //the difference between read and write pointers, determines if we crossfade
-    diff = ( index - PitchWrite + PITCHBUFFERSIZE ) % PITCHBUFFERSIZE;
+/*    diff = ( index - PitchWrite + PITCHBUFFERSIZE ) % PITCHBUFFERSIZE;
     if(diff < WRAP_SIZE )
     {
         //crossfade
@@ -88,7 +87,7 @@ int16 processPitchShift(int16 sampleIn)
 
         sampleOut = (int16)(result >> WRAP_SHIFT);
 
-    }
+    }*/
 
     // Increment write position : check if position has gotten bigger than buffer size
     PitchWrite = (PitchWrite + 1) & PITCHBUFFERSIZE_MASK;
