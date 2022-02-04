@@ -7,7 +7,9 @@ This application is currently comprised of a pre-compiled raylib library and mai
 
 The Project involves the GUI handling the control signals, which is sent to the DSP launchpad for audio processing. The DSP board operates at 200MHz and includes a audio codec with 16-bit ADC/DAC. 
 
-Our Alpha build includes the R.PI running the GUI and sending control signals to the DSP via SPI and generating notes via PWM and being able to manipulate the audio by controlling an 7-band equalizer. 
+Our Alpha build includes the R.PI running the GUI and sending control signals to the DSP via SPI and generating notes via PWM and being able to manipulate the audio by controlling an 7-band equalizer.
+
+Our Beta build has improved to now handle midi signals and transmit them to the DSP. THe DSP handles the midi and outputs corresponding notes via PWM. There is also 4 effects currently done which are: Bitcrushing, sample rate reduction, echo and pitchshift.
 
 There is also a web server framework built on Django that can be found in disco_server.
 
