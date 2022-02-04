@@ -1,8 +1,19 @@
 #include <stdio.h>
-#include "raylib.h"
+#include <stdlib.h>
+#include <string.h>
+#include "include/raylib.h"
 #include <math.h>
+#include <errno.h>
+#include "include/wiringPiSPI.h"
+#include <unistd.h>
+//#include <sys/soundcard.h>
+#include <fcntl.h>
 
-#define SAMPLE_RATE 44100
+// channel is the wiringPi name for the chip select (or chip enable) pin.
+// Set this to 0 or 1, depending on how it's connected.
+static const int CHANNEL = 0;
+
+#define SAMPLE_RATE 48000
 #define STREAM_BUFFER_SIZE 1024
 #define SCREEN_HEIGHT 800
 #define SCREEN_WIDTH 1280
@@ -12,12 +23,16 @@
 #define SLIDER_VISIBLE_WIDTH 10
 #define MAX_ATTACK_TIME 3
 #define MAX_DECAY_TIME 5
-#define NUM_SLIDERS 8
-
+#define NUM_SLIDERS 10
+#define NUM_BUTTONS 3
+#define NUM_OSCILLATORS 2
+#define MIDI_DEVICE "/dev/midi2"
 typedef struct{
+    int oscType;
     float phase;
     float phaseStride;
     float frequency;
+    //osc parameters
     float threshold;
     float octave;
     float octaveFactor;
@@ -27,6 +42,12 @@ typedef struct{
     float PWM_val;
 } Oscillator;
 typedef struct{
+    float phase;
+    float phaseStride;
+    float frequency;
+    float val;
+} LFO;
+typedef struct{
     float attack;
     float decay;
     float sustain;
@@ -34,6 +55,10 @@ typedef struct{
     float amplitude;
     bool decayPhase;
 } ADSR_Control;
+typedef struct{
+    float highPass;
+    float cutoff;
+} Filter;
 typedef struct{
     bool black;
     float frequency;
@@ -49,14 +74,28 @@ typedef struct{
 } Slider;
 typedef struct{
     bool keyPressed;
+    int xPos;
+    int yPos;
+    int width;
+    int height;
+    Color color;
+    char* text;
+} Button;
+typedef struct{
+    bool keyPressed;
     int x;
     int y;
 } Input;
 
 Key keys[17];
-Slider sliders[8];
+char* oscNames[NUM_OSCILLATORS] = {"PULSE WAVE", "SAWTOOTH"};
+Slider sliders[NUM_SLIDERS];
+Button buttons[NUM_BUTTONS];
+unsigned char spi_buffer[100];
 Oscillator osc;
+Filter filter;
 ADSR_Control adsr;
+LFO lfo;
 Input masterInput;
 float buffer[1024];
 float sample_duration;
@@ -97,22 +136,29 @@ void updateSignal(float* signal, float sample_duration){
     else{
         osc.octaveFactor = 2;
     }
-    osc.PWM_phaseStride = osc.PWM_frequency*20 * sample_duration;
+    lfo.phaseStride = lfo.frequency*20 * sample_duration;
     osc.phaseStride = osc.frequency * sample_duration * osc.octaveFactor;
     for(int i = 0; i < 1024; i++){
+        //
         osc.phase += osc.phaseStride;
         if(osc.phase > 1) osc.phase -= 1;
         float sin_value = sinf(2.0f * PI * osc.phase);
-        //PWM phase
-        osc.PWM_phase += osc.PWM_phaseStride;
-        if(osc.PWM_phase > 1) osc.PWM_phase -= 1;
-        float PWM_sin_value = sinf(2.0f * PI * osc.PWM_phase)*osc.PWM_val;
-        float threshold = 0.5*(osc.threshold + PWM_sin_value);
-        if(sin_value > threshold){
-            signal[i] = 0.5;
+        if(osc.oscType == 0){
+            //PWM phase
+            lfo.phase += lfo.phaseStride;
+            if(lfo.phase > 1) lfo.phase -= 1;
+            float PWM_sin_value = sinf(2.0f * PI * lfo.phase)*lfo.val;
+            float threshold = 0.5*(osc.threshold + PWM_sin_value);
+            if(sin_value > threshold){
+                signal[i] = 0.5;
+            }
+            else {
+                signal[i] = -0.5;
+            }
         }
-        else {
-            signal[i] = -0.5;
+        else if(osc.oscType == 1){
+            //sawtooth output
+            signal[i] = osc.phase -0.5;
         }
         signal[i] *= calculateAmp();
     }
@@ -157,11 +203,41 @@ void buildKeys(){
                 }
             }
             tempKey.xPos = xPos;
-            
+
         }
         keys[i] = tempKey;
         tempFreq *= 1.059463;
     }
+}
+void buildButtons(){
+    Button load_config;
+    load_config.keyPressed = false;
+    load_config.xPos = (3*SCREEN_WIDTH/5);
+    load_config.yPos = SCREEN_HEIGHT/3;
+    load_config.width = SCREEN_WIDTH/5;
+    load_config.height = SCREEN_HEIGHT/12;
+    load_config.color = BLACK;
+    load_config.text = "LOAD CONFIG";
+    buttons[0] = load_config;
+    Button oscSelect;
+    oscSelect.keyPressed = false;
+    oscSelect.xPos = (SCREEN_WIDTH/32);
+    oscSelect.yPos = SCREEN_HEIGHT/5;
+    oscSelect.width = SCREEN_WIDTH/8;
+    oscSelect.height = SCREEN_HEIGHT/12;
+    oscSelect.color = GREEN;
+    oscSelect.text = "PULSE WAVE";
+    buttons[1] = oscSelect;
+    Button Echo;
+    Echo.keyPressed = false;
+    Echo.xPos = (3*SCREEN_WIDTH/5)-100;
+    Echo.yPos = SCREEN_HEIGHT*(2/5)+100;
+    Echo.width = SCREEN_WIDTH/5;
+    Echo.height = SCREEN_HEIGHT/12;
+    Echo.color = BLACK;
+    Echo.text = "ECHO";
+    buttons[2] = Echo;
+
 }
 void buildSliders(){
     Slider octave;
@@ -171,27 +247,27 @@ void buildSliders(){
     octave.param = &osc.octave;
     octave.name = "OCTAVE";
     sliders[0] = octave;
-    Slider threshold;
-    threshold.xPos = 300;
-    threshold.yPos = 100;
-    threshold.value = 0;
-    threshold.param = &osc.threshold;
-    threshold.name = "PULSE WIDTH";
-    sliders[1] = threshold;
-    Slider PWM_freq;
-    PWM_freq.xPos = 450;
-    PWM_freq.yPos = 100;
-    PWM_freq.value = 0;
-    PWM_freq.param = &osc.PWM_frequency;
-    PWM_freq.name = "PWM Freq";
-    sliders[2] = PWM_freq;
-    Slider PWM_val;
-    PWM_val.xPos = 600;
-    PWM_val.yPos = 100;
-    PWM_val.value = 0;
-    PWM_val.param = &osc.PWM_val;
-    PWM_val.name = "PWM Val";
-    sliders[3] = PWM_val;
+    Slider oscParam1;
+    oscParam1.xPos = 300;
+    oscParam1.yPos = 100;
+    oscParam1.value = 0;
+    oscParam1.param = &osc.threshold;
+    oscParam1.name = "PULSE WIDTH";
+    sliders[1] = oscParam1;
+    Slider oscParam2;
+    oscParam2.xPos = 450;
+    oscParam2.yPos = 100;
+    oscParam2.value = 0;
+    oscParam2.param = &lfo.frequency;
+    oscParam2.name = "PWM Freq";
+    sliders[2] = oscParam2;
+    Slider oscParam3;
+    oscParam3.xPos = 600;
+    oscParam3.yPos = 100;
+    oscParam3.value = 0;
+    oscParam3.param = &lfo.val;
+    oscParam3.name = "PWM Val";
+    sliders[3] = oscParam3;
     Slider Attack;
     Attack.xPos = 200;
     Attack.yPos = 350;
@@ -220,11 +296,23 @@ void buildSliders(){
     Release.param = &adsr.release;
     Release.name = "Release";
     sliders[7] = Release;
-    
-    
+    Slider cutoff;
+    cutoff.xPos = 750;
+    cutoff.yPos = 350;
+    cutoff.value = 0;
+    cutoff.param = &filter.cutoff;
+    cutoff.name = "Cutoff";
+    sliders[8] = cutoff;
+    Slider highPass;
+    highPass.xPos = 900;
+    highPass.yPos = 350;
+    highPass.value = 0;
+    highPass.param = &filter.highPass;
+    highPass.name = "High Pass";
+    sliders[9] = highPass;
 }
 void drawSliders(){
-    for(int i = 0; i < 8; i++){
+    for(int i = 0; i < NUM_SLIDERS; i++){
         Slider tempSlider = sliders[i];
         //draw black rectangle
         int visibleXPos = tempSlider.xPos + SLIDER_WIDTH/2 - SLIDER_VISIBLE_WIDTH/2;
@@ -266,12 +354,19 @@ void drawKeys(int height){
         }
     }
 }
+void drawButtons(){
+    for(int i = 0; i < NUM_BUTTONS; i++){
+        DrawRectangle(buttons[i].xPos, buttons[i].yPos, buttons[i].width, buttons[i].height, buttons[i].color);
+        DrawText(buttons[i].text, buttons[i].xPos, buttons[i].yPos, 25, RED);
+    }
+}
 void drawGUI(){
     BeginDrawing();
     ClearBackground(GRAY);
     drawWaveform(buffer,SCREEN_WIDTH/6,SCREEN_HEIGHT/6,SCREEN_WIDTH-(SCREEN_WIDTH*1.5/6),SCREEN_HEIGHT/12);
     drawKeys(SCREEN_HEIGHT/4);
     drawSliders();
+    drawButtons();
     EndDrawing();
 }
 void clearKeyPress(){
@@ -280,9 +375,14 @@ void clearKeyPress(){
             keys[i].pressed = false;
         }
         if(masterInput.keyPressed == true){
+            /*
             printf("SPI COMMAND\n");
             printf("00000000 (Keypressed)\n");
             printf("00000000\n");
+            */
+            spi_buffer[0] = 128;
+            spi_buffer[1] = 0;
+            //wiringPiSPIDataRW(CHANNEL, spi_buffer, 2);
         }
         masterInput.keyPressed = false;
     }
@@ -290,13 +390,18 @@ void clearKeyPress(){
 void processInput(){
     masterInput.y = GetMouseY();
     masterInput.x = GetMouseX();
-    
+
     if(IsMouseButtonDown(0)){
         if(masterInput.y > (3*SCREEN_HEIGHT / 4)){
             if(masterInput.keyPressed == false){
+                /*
                 printf("SPI COMMAND\n");
                 printf("00000000 (Keypressed)\n");
                 printf("00000001\n");
+                */
+                spi_buffer[0] = 128;
+                spi_buffer[1] = 1;
+                //wiringPiSPIDataRW(CHANNEL, spi_buffer, 2);
             }
             masterInput.keyPressed = true;
             bool checkBlack = false;
@@ -333,9 +438,14 @@ void processInput(){
             }
             osc.frequency = keys[keyIndex].frequency;
             if(keyIndex != keySelection){
+                /*
                 printf("SPI COMMAND\n");
                 printf("00000001 (Key Selection)\n");
                 printf("%d\n", keyIndex);
+                */
+                spi_buffer[0] = 129;
+                spi_buffer[1] = keyIndex;
+                //wiringPiSPIDataRW(CHANNEL, spi_buffer, 2);
                 keySelection = keyIndex;
             }
             keys[keyIndex].pressed = true;
@@ -343,32 +453,89 @@ void processInput(){
         else{
             clearKeyPress();
             //check if slider is selected
-            for(int i = 0; i < 8; i++){
+            for(int i = 0; i < NUM_SLIDERS; i++){
                 Slider tempSlider = sliders[i];
                 if(masterInput.x > tempSlider.xPos && masterInput.x -tempSlider.xPos < SLIDER_WIDTH && masterInput.y > tempSlider.yPos && masterInput.y -tempSlider.yPos < SLIDER_HEIGHT){
                     tempSlider.value = (float)(tempSlider.yPos + SLIDER_HEIGHT - masterInput.y)/SLIDER_HEIGHT;
                     *tempSlider.param = tempSlider.value;
                     sliders[i] = tempSlider;
-                    printf("SPI COMMAND\n");
-                    printf("%d (%s)\n", i+2,tempSlider.name);
+                    //printf("SPI COMMAND\n");
+                    //printf("%d (%s)\n", i+2,tempSlider.name);
                     int output = 127*tempSlider.value;
-                    printf("%d\n", output);
+                    //printf("%d\n", output);
+                    spi_buffer[0] = 128 | (i+2);
+                    spi_buffer[1] = output;
+                    //wiringPiSPIDataRW(CHANNEL, spi_buffer, 2);
+                }
+            }
+
+            //check if a button is selected
+            for (int i=0; i< NUM_BUTTONS; i++){
+                Button tempButton = buttons[i];
+                if(    masterInput.x > tempButton.xPos
+                    && masterInput.x - tempButton.xPos < tempButton.width
+                    && masterInput.y > tempButton.yPos
+                    && masterInput.y - tempButton.yPos < tempButton.height
+                    && tempButton.keyPressed == false)
+                {
+                    buttons[i].keyPressed = true;
+
+                    // Was it the load_config button?
+                    if (i == 0)
+                    {
+                        //Verify config data saved by python code can be read
+                        unsigned char config_buffer[11];
+                        FILE *ptr;
+                        ptr = fopen("../synth_settings.bin","rb");
+                        if (! ptr)
+                        {
+                            printf("Failed to open synth-settings file\n");
+
+                        }
+                        else
+                        {
+                            printf("Successfully opened synth-settings file\n");
+                            fread(config_buffer,sizeof(config_buffer),10,ptr); //read 8 bytes from config_data.data
+                            for (int i = 0; i < 10; i++){
+                                printf("%d\n", config_buffer[i]);
+                            }
+                            fclose(ptr);
+                        }
+                    }
+                    //pulseWave Button?
+                    else if(i == 1){
+                        osc.oscType++;
+                        osc.oscType %= NUM_OSCILLATORS;
+                        buttons[1].text = oscNames[osc.oscType];
+                        if(osc.oscType == 0){
+                            sliders[1].name = "PULSE WIDTH";
+                            sliders[2].name = "PWM Freq";
+                            sliders[3].name = "PWM Val";
+                        }
+                    }
+                    //Echo Effect?
+                    else if(i == 2){
+                        printf("Place echo effect functionality here\n");
+                    }
                 }
             }
         }
     }
     else {
         clearKeyPress();
+        for(int i = 0; i < NUM_BUTTONS; i++){
+            buttons[i].keyPressed = false;
+        }
     }
 }
-void initOscADSR(){
+void initOscADSRFilter(){
     osc.frequency = 200;
     osc.threshold = 0;
     osc.octave = 0;
-    osc.PWM_phase = 0;
-    osc.PWM_phaseStride = 0;
-    osc.PWM_frequency = 0;
-    osc.PWM_val = 0;
+    lfo.phase = 0;
+    lfo.phaseStride = 0;
+    lfo.frequency = 0;
+    lfo.val = 0;
     sample_duration = (1.0f)/SAMPLE_RATE;
     osc.phase = 0;
     osc.phaseStride = osc.frequency * sample_duration;
@@ -379,14 +546,18 @@ void initOscADSR(){
     adsr.decay = 0;
     adsr.release = 0;
     adsr.sustain = 0;
+    filter.cutoff = 0;
+    filter.highPass = 0;
 }
+
 void main() {
     InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Synth");
     SetTargetFPS(60);
     InitAudioDevice();
-    initOscADSR();
+    initOscADSRFilter();
     buildKeys();
     buildSliders();
+    buildButtons();
     SetAudioStreamBufferSizeDefault(1024);
     AudioStream synthStream = LoadAudioStream(SAMPLE_RATE,
         32 ,
@@ -394,15 +565,58 @@ void main() {
     );
     SetAudioStreamVolume(synthStream, 0.25f);
     PlayAudioStream(synthStream);
+    
+    //spi config
+    //int fd, result;
+
+    //cout << "Initializing" << endl ;
+
+    // Configure the interface.
+    // CHANNEL insicates chip select,
+    // 50000 indicates bus speed.
+    //fd = wiringPiSPISetup(CHANNEL, 50000);
+
+    //cout << "Init result: " << fd << endl;
+
+    // clear display
+	/*
+    spi_buffer[0] = 0x76;
+    wiringPiSPIDataRW(CHANNEL, spi_buffer, 1);
+        unsigned char firstByte = 0;
+        unsigned char secondByte = 0;
+        unsigned char midipacket[4];
+	
+        int seqfd = open(MIDI_DEVICE, O_RDONLY);
+        if (seqfd == -1) {
+                printf("Error: cannot open %s\n", MIDI_DEVICE);
+                exit(1);
+        }
+	
+    sleep(5);
+*/
     while(WindowShouldClose() == false)
     {
         if(IsAudioStreamProcessed(synthStream)){
             UpdateAudioStream(synthStream, buffer, STREAM_BUFFER_SIZE);
             processInput();
-            //updateSignal(buffer, sample_duration);
+            updateSignal(buffer, sample_duration);
             drawGUI();
+		/*
+                read(seqfd, &midipacket, sizeof(midipacket));
+		if(firstByte != midipacket[1] || secondByte != midipacket[2]){
+                        spi_buffer[0] = 128;
+                        spi_buffer[1] = midipacket[2];
+                        //wiringPiSPIDataRW(CHANNEL, spi_buffer, 2);
+                        spi_buffer[0] = 129;
+                        spi_buffer[1] = midipacket[1] - 24;
+                        //wiringPiSPIDataRW(CHANNEL, spi_buffer, 2);
+                        firstByte = midipacket[1];
+                        secondByte = midipacket[2];
+		}
+		*/
         }
     }
     CloseAudioDevice();
     CloseWindow();
 }
+
