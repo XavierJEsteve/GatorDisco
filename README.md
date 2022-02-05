@@ -1,5 +1,5 @@
 # Gator Disco
-## By Xavier Esteve, Luke Jones, and Evan Rives
+## By Xavier Esteve, Luke Jones, Evan Rives, Rachel Romaine, and Dylan VanStaden
 ### This is a **prototype** for our 2021-2022 Senior Design capstone project
 ### repo: https://github.com/XavierJEsteve/GatorDisco.git
 
