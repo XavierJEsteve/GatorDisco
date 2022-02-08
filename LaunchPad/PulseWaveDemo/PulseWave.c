@@ -229,6 +229,13 @@ void buildKeys(){
         tempFreq *= 1.059463;
     }
 }
+void buildKeys(){
+    float tempFreq = 261.6;
+    for(int i = 0; i < 17; i++){
+        frequencies[i] = tempFreq;
+        tempFreq *= 1.059463;
+    }
+}
 int main() {
     //LaunchPad init functions
     InitSysCtrl();
@@ -252,7 +259,7 @@ int main() {
 
 
     //synth init functions
-    masterInput.keyPressed = true;
+    masterInput.keyPressed = false;
     initOscADSR();
     buildKeys();
     getSliderParams();

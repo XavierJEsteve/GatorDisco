@@ -238,7 +238,7 @@ endif
 
 # Define include paths for required headers
 # NOTE: Some external/extras libraries could be required (stb, physac, easings...)
-INCLUDE_PATHS = -I. -I$(RAYLIB_PATH)/src -I$(RAYLIB_PATH)/src/external -I$(RAYLIB_PATH)/src/extras
+INCLUDE_PATHS = -I include/ -I$(RAYLIB_PATH)/src -I$(RAYLIB_PATH)/src/external -I$(RAYLIB_PATH)/src/extras
 
 # Define additional directories containing required header files
 ifeq ($(PLATFORM),PLATFORM_RPI)
@@ -262,7 +262,7 @@ ifeq ($(PLATFORM),PLATFORM_DESKTOP)
 endif
 
 # Define library paths containing required libs.
-LDFLAGS = -L. -L$(RAYLIB_RELEASE_PATH) -L$(RAYLIB_PATH)/src
+LDFLAGS = -L lib/ -L$(RAYLIB_RELEASE_PATH) -L$(RAYLIB_PATH)/src
 
 ifeq ($(PLATFORM),PLATFORM_DESKTOP)
     ifeq ($(PLATFORM_OS),WINDOWS)
@@ -511,8 +511,8 @@ PHYSICS = \
     physics/physics_restitution \
     physics/physics_shatter
 
-WIP = \
-	WIP/main
+MAIN = \
+	main
 CURRENT_MAKEFILE = $(lastword $(MAKEFILE_LIST))
 
 # Default target entry
