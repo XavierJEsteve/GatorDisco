@@ -212,7 +212,7 @@ void buildButtons(){
     Button oscillator;
     oscillator.keyPressed = false;
     oscillator.xPos = 0;
-    oscillator.yPos = SCREEN_HEIGHT/5;
+    oscillator.yPos = SCREEN_HEIGHT/3;
     oscillator.width = SCREEN_WIDTH/7;
     oscillator.height = SCREEN_HEIGHT/12;
     oscillator.color = BLUE;
