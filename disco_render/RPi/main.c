@@ -452,7 +452,7 @@ void processInput(){
                         //Verify config data saved by python code can be read
                         unsigned char config_buffer[11];
                         FILE *ptr;
-                        ptr = fopen("../disco_server/synth_settings.bin","rb");
+                        ptr = fopen("../../synth_settings.bin","rb");
                         if (! ptr)
                         {
                             printf("Failed to open synth-settings file\n");
@@ -542,9 +542,6 @@ void main() {
     // clear display
     spi_buffer[0] = 0x76;
     wiringPiSPIDataRW(CHANNEL, spi_buffer, 1);
-    unsigned char firstByte = 0;
-    unsigned char secondByte = 0;
-    unsigned char midipacket[4];
     seqfd = open(MIDI_DEVICE, O_RDONLY);
     if (seqfd == -1) {
             printf("Error: cannot open %s\n", MIDI_DEVICE);
@@ -561,7 +558,7 @@ void main() {
         //if(IsAudioStreamProcessed(synthStream)){
             //UpdateAudioStream(synthStream, buffer, STREAM_BUFFER_SIZE);
             processInput();
-            //updateSignal(buffer, sample_duration);
+            // updateSignal(buffer, sample_duration);
             drawGUI();
         //}
     }
@@ -572,9 +569,13 @@ void main() {
 void* midiThreadFunction(void* x) {
    unsigned char midipacket[4];         // bytes from sequencer drive
     int midiByteCounter = 0;
+    unsigned char firstByte = 0;
+    unsigned char secondByte = 0;
+
    while (1) {
       read(seqfd, &midipacket, sizeof(midipacket));
-        if(firstByte != midipacket[1] || secondByte != midipacket[2]){
+        if((firstByte != midipacket[1] || secondByte != midipacket[2])
+            &&  (midipacket[1] > 23 && midipacket[1] <109) ){
             spi_buffer[0] = 128;
             spi_buffer[1] = midipacket[2];
             wiringPiSPIDataRW(CHANNEL, spi_buffer, 2);
