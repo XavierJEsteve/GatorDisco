@@ -7,6 +7,10 @@ disco_render/bin/
 disco_render/build/
 disco_render/out/
 disco_render/CMakeSettings.json
+<<<<<<< HEAD
 
 
 disco_server/synth_settings.bin
+=======
+*.pyc
+>>>>>>> eaef2f64c2281282962cf62942068706945f9bc2

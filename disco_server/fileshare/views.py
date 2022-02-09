@@ -16,10 +16,17 @@ def index(request):
                 'synth_files'  : synth_files
         }
         return render(request, 'index.html', context)
+        ''' TODO  
+        * Change 'Uploaded Files' text color to yellow
+        * Change text color for each DB entry listed in the table
+        * CRUD from the main screen
+        '''
 
 def upload_config(request):
-        ''' Area for uploading config files'''
-
+        ''' TODO
+        * Make a nicer looking form
+        * Clean form inputted data
+        '''
         if request.method == 'POST':
                 synthform = SynthForm(request.POST)
                 if synthform.is_valid():
@@ -39,7 +46,7 @@ def upload_config(request):
                                 synthform.cleaned_data.get("hp_lp")
                         ]
 
-                        print("Config bytes", config_bytes)
+                        # print("Config bytes", config_bytes)
                         with open('synth_settings.bin', 'wb') as cfile:
                                 cfile.write(bytearray(config_bytes))
 

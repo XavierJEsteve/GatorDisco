@@ -1,7 +1,8 @@
 {% extends 'base.html' %}
 
 {% block content_index %}
-    <h2>Uploaded files</h2>
+
+    <h2 color="yellow">Uploaded files</h2>
     <table style="width: 30%" class= "table table-sm">
         <thead class="thead-dark">
             <tr>
@@ -13,7 +14,7 @@
         <tbody>
             {% for audio in audio_files %}
                 <tr>
-                    <td>{{ audio.name }}</td>
+                    <td class="td-bright">{{ audio.name }}</td>
                 </tr>
             {% endfor %}
         </tbody>
@@ -29,7 +30,7 @@
         <tbody>
             {% for synth in synth_files %}
                 <tr>
-                    <td>{{ synth.name }}</td>
+                    <td class="td-bright">{{ synth.name }}</td>
                 </tr>
             {% endfor %}
         </tbody>
