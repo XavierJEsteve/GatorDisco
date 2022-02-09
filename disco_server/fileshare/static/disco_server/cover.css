@@ -11,17 +11,30 @@
   text-shadow: none; /* Prevent inheritance from `body` */
 }
 
-
-/*
- * Base structure
- */
-body {
-  background-color: rgb(160, 4, 4);
+.table {
+  --bs-table-bg: transparent;
+  --bs-table-accent-bg: transparent;
+  --bs-table-striped-color: #212529;
+  --bs-table-striped-bg: rgba(0, 0, 0, 0.05);
+  --bs-table-active-color: #212529;
+  --bs-table-active-bg: rgba(0, 0, 0, 0.1);
+  --bs-table-hover-color: #212529;
+  --bs-table-hover-bg: rgba(0, 0, 0, 0.075);
+  width: 100%;
+  margin-bottom: 1rem;
+  color: #212529;
+  vertical-align: top;
+  height: 100%;
 }
-#main-wrapper {
+
+body {
   background-image: url('./outrun.jpg');
-  background-repeat: no-repeat;
+  background-repeat: repeat;
   background-position: top;
+}
+
+#main-wrapper {
+
 }
 
 #synthForm {
@@ -30,24 +43,19 @@ body {
 
 .div-forms {
   display: grid;
-  /* grid-template-columns: 1fr 1fr 1fr; */
+  grid-template-columns: 1fr;
   grid-gap: 20px;
   justify-content: center;
 }
 
 .div-form {
-  background-color: rgba(227, 54, 233, 0.671);
   padding: 10px;
-  border: 5px solid  rgb(239, 255, 93);
-  fill:  rgb(239, 255, 93);
+  /* border: 5px solid  rgb(239, 255, 93);
+  fill:  rgb(239, 255, 93); */
   padding-bottom: 10px;
   justify-content: center;
-
 }
 
-/*
- * Header
- */
  h1 {
   padding: .25rem 0;
   font-weight: 700;
@@ -65,8 +73,34 @@ h2 {
   border-bottom: .25rem solid transparent;
   /* text-align: center; */
 }
+
+.main-container{
+  margin: 10px auto;
+  width:400px;
+  height:800px;
+  display:grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  grid-row: auto;
+  column-gap: 20px;
+  row-gap: 20px;
+}
+
+.main-section {
+  background-color: rgba(227, 54, 233, 0.671);
+  padding:5px;
+  border-radius:5px;
+  color:#fff;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:20px;
+  font-family:sans-serif; 
+ 
+}
+
 .td-bright {
-  color: rgb(239, 255, 93);
+  /* color: rgb(239, 255, 93);  */
+  color: white;
 }
  .nav-masthead .nav-link {
   padding: .25rem 0;

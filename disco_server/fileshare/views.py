@@ -7,26 +7,15 @@ from .forms import AudioForm, SynthForm
 from .models import AudioModel, SynthModel
 
 # Create your views here.
-
-def index(request):
-        audio_files = AudioModel.objects.all()
-        synth_files = SynthModel.objects.all()
-        context = {
-                'audio_files'   : audio_files,
-                'synth_files'  : synth_files
-        }
-        return render(request, 'index.html', context)
-        ''' TODO  
+''' TODO  
         * Change 'Uploaded Files' text color to yellow
         * Change text color for each DB entry listed in the table
         * CRUD from the main screen
-        '''
+                '''
+def index(request):
+        audio_files = AudioModel.objects.all()
+        synth_files = SynthModel.objects.all()
 
-def upload_config(request):
-        ''' TODO
-        * Make a nicer looking form
-        * Clean form inputted data
-        '''
         if request.method == 'POST':
                 synthform = SynthForm(request.POST)
                 if synthform.is_valid():
@@ -52,11 +41,15 @@ def upload_config(request):
 
         else:
                 synthform = SynthForm()
+        
+        context = {
+                'audio_files'   : audio_files,
+                'synth_files'   : synth_files,
+                'synthform'     : synthform
+        }
+        return render(request, 'index.html', context)
 
-        return render(request, 'upload_config.html', {
-                'synthform': synthform 
-        })
-
+###############################################
 def upload_audio(request):
         ''' Area for uploading audio files'''
 

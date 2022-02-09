@@ -1,38 +1,54 @@
 {% extends 'base.html' %}
 
 {% block content_index %}
+    <div class = "main-section">
+        <table class= "table table-sm">
+            <thead class="thead-dark">
+                <tr>
+                    <th style="width: 30%">
+                        <h2> Audio Name</h2>
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for audio in audio_files %}
+                    <tr>
+                        <td class="td-bright">{{ audio.name }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div class = "main-section">
+        <table class= "table table-sm">
+            <thead class="thead-dark">
+                <tr>
+                    <th>
+                        <h2>Synth Name</h2>
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for synth in synth_files %}
+                    <tr>
+                        <td class="td-bright">{{ synth.name }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 
-    <h2 color="yellow">Uploaded files</h2>
-    <table style="width: 30%" class= "table table-sm">
-        <thead class="thead-dark">
-            <tr>
-                <th style="width: 30%">
-                    <a href="{% url 'upload_audio' %}">Audio Name</a>
-                </th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for audio in audio_files %}
-                <tr>
-                    <td class="td-bright">{{ audio.name }}</td>
-                </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-    <table style="width: 30%" class= "table table-sm">
-        <thead class="thead-dark">
-            <tr>
-                <th>
-                    <a href="{% url 'upload_config' %}">Config Name</a>
-                </th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for synth in synth_files %}
-                <tr>
-                    <td class="td-bright">{{ synth.name }}</td>
-                </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    <div class="main-section">
+        <div class="div-forms">
+            <div class="div-form">
+                <h2>Synth Settings</h2>
+                <form id="synthForm" method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    {{ synthform }}
+                    <button type="submit">Upload Synth Settings</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    
 {% endblock %}
