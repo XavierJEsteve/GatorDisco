@@ -19,8 +19,7 @@ def index(request):
         if request.method == 'POST':
                 synthform = SynthForm(request.POST)
                 if synthform.is_valid():
-                        synthform.save()
-                        
+                        synthform.save()                        
                         # Need to save config settings in a place that the raylib application can load it
                         config_bytes = [
                                 synthform.cleaned_data.get("octave"),
@@ -34,8 +33,8 @@ def index(request):
                                 synthform.cleaned_data.get("cutoff"),
                                 synthform.cleaned_data.get("hp_lp")
                         ]
+                        synthform = SynthForm() # Clear form after submission
 
-                        # print("Config bytes", config_bytes)
                         with open('synth_settings.bin', 'wb') as cfile:
                                 cfile.write(bytearray(config_bytes))
 
