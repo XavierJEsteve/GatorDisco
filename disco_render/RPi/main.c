@@ -7,6 +7,7 @@
 #include <wiringPiSPI.h>
 #include <unistd.h>
 #include <sys/soundcard.h>
+#include <pthread.h>         /* for MIDI input interpreter thread */
 #include <fcntl.h>
 
 // channel is the wiringPi name for the chip select (or chip enable) pin.
@@ -26,6 +27,11 @@ static const int CHANNEL = 0;
 #define NUM_SLIDERS 10
 #define NUM_BUTTONS 1
 #define MIDI_DEVICE "/dev/midi2"
+
+void* midiThreadFunction(void*);    // thread function for MIDI input interpreter
+int seqfd;
+pthread_t midiInThread;   // thread blocker for midi input
+
 typedef struct{
     float phase;
     float phaseStride;
@@ -536,14 +542,19 @@ void main() {
     // clear display
     spi_buffer[0] = 0x76;
     wiringPiSPIDataRW(CHANNEL, spi_buffer, 1);
-        unsigned char firstByte = 0;
-        unsigned char secondByte = 0;
-        unsigned char midipacket[4];
-        int seqfd = open(MIDI_DEVICE, O_RDONLY);
-        if (seqfd == -1) {
-                printf("Error: cannot open %s\n", MIDI_DEVICE);
-                //exit(1);
-        }
+    unsigned char firstByte = 0;
+    unsigned char secondByte = 0;
+    unsigned char midipacket[4];
+    seqfd = open(MIDI_DEVICE, O_RDONLY);
+    if (seqfd == -1) {
+            printf("Error: cannot open %s\n", MIDI_DEVICE);
+            //exit(1);
+    }
+    int status = pthread_create(&midiInThread, NULL, midiThreadFunction, NULL);
+    if (status == -1) {
+        printf("Error: unable to create MIDI input thread.\n");
+        exit(1);
+    } 
     //sleep(5);
     while(WindowShouldClose() == false)
     {
@@ -552,20 +563,30 @@ void main() {
             processInput();
             //updateSignal(buffer, sample_duration);
             drawGUI();
-                read(seqfd, &midipacket, sizeof(midipacket));
-                if(firstByte != midipacket[1] || secondByte != midipacket[2]){
-                        spi_buffer[0] = 128;
-                        spi_buffer[1] = midipacket[2];
-                        wiringPiSPIDataRW(CHANNEL, spi_buffer, 2);
-                        spi_buffer[0] = 129;
-                        spi_buffer[1] = midipacket[1] - 24;
-                        wiringPiSPIDataRW(CHANNEL, spi_buffer, 2);
-                        firstByte = midipacket[1];
-                        secondByte = midipacket[2];
-                        printf("Sending midi command"); // First byte: %u....Second Byte: %u",(firstByte, secondByte))
-}
         //}
     }
     //CloseAudioDevice();
     CloseWindow();
+}
+
+void* midiThreadFunction(void* x) {
+   unsigned char midipacket[4];         // bytes from sequencer drive
+    int midiByteCounter = 0;
+   while (1) {
+      read(seqfd, &midipacket, sizeof(midipacket));
+        if(firstByte != midipacket[1] || secondByte != midipacket[2]){
+            spi_buffer[0] = 128;
+            spi_buffer[1] = midipacket[2];
+            wiringPiSPIDataRW(CHANNEL, spi_buffer, 2);
+            spi_buffer[0] = 129;
+            spi_buffer[1] = midipacket[1] - 24;
+            wiringPiSPIDataRW(CHANNEL, spi_buffer, 2);
+            firstByte = midipacket[1];
+            secondByte = midipacket[2];
+            printf("Sending midi command %d\n", midiByteCounter); // First byte: %u....Second Byte: %u",(firstByte, secondByte))
+            printf("%d\n",firstByte);
+            printf("%d\n",secondByte);
+        }
+    }
+   
 }
