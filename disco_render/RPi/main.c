@@ -335,8 +335,10 @@ void drawKeys(int height){
     }
 }
 void drawButtons(){
-    DrawRectangle(buttons[0].xPos, buttons[0].yPos, buttons[0].width, buttons[0].height, buttons[0].color);
-    DrawText(buttons[0].text, buttons[0].xPos, buttons[0].yPos, 25, RED);
+    for(int i= 0 ; i < NUM_BUTTONS; i++){
+        DrawRectangle(buttons[i].xPos, buttons[i].yPos, buttons[i].width, buttons[i].height, buttons[i].color);
+        DrawText(buttons[i].text, buttons[i].xPos, buttons[i].yPos, 25, RED);
+    }
 }
 void drawGUI(){
     BeginDrawing();
