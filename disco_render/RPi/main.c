@@ -25,7 +25,8 @@ static const int CHANNEL = 0;
 #define MAX_ATTACK_TIME 3
 #define MAX_DECAY_TIME 5
 #define NUM_SLIDERS 10
-#define NUM_BUTTONS 1
+#define NUM_BUTTONS 2
+#define NUM_OSCILLATORS 2
 #define MIDI_DEVICE "/dev/midi2"
 
 void* midiThreadFunction(void*);    // thread function for MIDI input interpreter
@@ -33,6 +34,7 @@ int seqfd;
 pthread_t midiInThread;   // thread blocker for midi input
 
 typedef struct{
+    int oscType;
     float phase;
     float phaseStride;
     float frequency;
@@ -207,6 +209,15 @@ void buildButtons(){
     load_config.color = BLACK;
     load_config.text = "LOAD CONFIG";
     buttons[0] = load_config;
+    Button oscillator;
+    oscillator.keyPressed = false;
+    oscillator.xPos = 0;
+    oscillator.yPos = SCREEN_HEIGHT/3;
+    oscillator.width = SCREEN_WIDTH/5;
+    oscillator.height = SCREEN_HEIGHT/12;
+    oscillator.color = BLACK;
+    oscillator.text = "PULSE wAVE";
+    buttons[1] = oscillator;
 }
 void buildSliders(){
     Slider octave;
