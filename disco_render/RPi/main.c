@@ -474,8 +474,8 @@ void processInput(){
                 if(    masterInput.x > tempButton.xPos
                     && masterInput.x - tempButton.xPos < tempButton.width
                     && masterInput.y > tempButton.yPos
-                    && masterInput.y - tempButton.yPos < tempButton.height)
-                    && tempButton.keyPressed == false
+                    && masterInput.y - tempButton.yPos < tempButton.height
+                    && tempButton.keyPressed == false)
                 {
                     buttons[i].keyPressed = true;
 
