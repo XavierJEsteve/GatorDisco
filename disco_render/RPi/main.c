@@ -212,10 +212,10 @@ void buildButtons(){
     Button oscillator;
     oscillator.keyPressed = false;
     oscillator.xPos = 0;
-    oscillator.yPos = SCREEN_HEIGHT/3;
-    oscillator.width = SCREEN_WIDTH/5;
+    oscillator.yPos = SCREEN_HEIGHT/5;
+    oscillator.width = SCREEN_WIDTH/7;
     oscillator.height = SCREEN_HEIGHT/12;
-    oscillator.color = BLACK;
+    oscillator.color = BLUE;
     oscillator.text = "PULSE wAVE";
     buttons[1] = oscillator;
 }
@@ -367,6 +367,25 @@ void clearKeyPress(){
         masterInput.keyPressed = false;
     }
 }
+void updateOscType(int val){
+    if(val < NUM_OSCILLATORS && val > -1){
+        osc.oscType = val;
+        if(osc.oscType == 0){
+            //update button parameters
+            buttons[1].text = "PULSE WAVE";
+            buttons[1].color = BLUE;
+        }
+        else if(osc.oscType == 1){
+            //update button parameters
+            buttons[1].text = "SAWTOOTH";
+            buttons[1].color = GREEN;
+        }
+        //send SPI command
+        spi_buffer[0] = 140;
+        spi_buffer[1] = osc.oscType;
+        wiringPiSPIDataRW(CHANNEL, spi_buffer, 2);
+    }
+}
 void processInput(){
     masterInput.y = GetMouseY();
     masterInput.x = GetMouseX();
@@ -456,8 +475,9 @@ void processInput(){
                     && masterInput.x - tempButton.xPos < tempButton.width
                     && masterInput.y > tempButton.yPos
                     && masterInput.y - tempButton.yPos < tempButton.height)
+                    && tempButton.keyPressed == false
                 {
-                    tempButton.keyPressed = true;
+                    buttons[i].keyPressed = true;
 
                     // Was it the load_config button?
                     if (strcmp(tempButton.text,"LOAD CONFIG") == 0)
@@ -493,6 +513,24 @@ void processInput(){
                             fclose(ptr);
                         }
                     }
+                    else if(i == 1){
+                        osc.oscType = (osc.oscType + 1)%NUM_OSCILLATORS;
+                        if(osc.oscType == 0){
+                            //update button parameters
+                            buttons[1].text = "PULSE WAVE";
+                            buttons[1].color = BLUE;
+                            //send SPI command
+
+                        }
+                        else if(osc.oscType == 1){
+                            //update button parameters
+                            buttons[1].text = "SAWTOOTH";
+                            buttons[1].color = GREEN;
+                        }
+                    }
+                }
+                else{
+                    buttons[i].keyPressed = false;
                 }
             }
         }
