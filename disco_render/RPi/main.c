@@ -514,19 +514,7 @@ void processInput(){
                         }
                     }
                     else if(i == 1){
-                        osc.oscType = (osc.oscType + 1)%NUM_OSCILLATORS;
-                        if(osc.oscType == 0){
-                            //update button parameters
-                            buttons[1].text = "PULSE WAVE";
-                            buttons[1].color = BLUE;
-                            //send SPI command
-
-                        }
-                        else if(osc.oscType == 1){
-                            //update button parameters
-                            buttons[1].text = "SAWTOOTH";
-                            buttons[1].color = GREEN;
-                        }
+                        updateOscType((osc.oscType + 1)%NUM_OSCILLATORS);
                     }
                 }
                 else{
