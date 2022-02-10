@@ -544,8 +544,8 @@ void initOscADSRFilter(){
     adsr.attack = 0;
     adsr.decay = 0;
     adsr.release = 0;
-    adsr.sustain = 0;
-    filter.cutoff = 0;
+    adsr.sustain = 1;
+    filter.cutoff = 1;
     filter.highPass = 0;
 }
 
