@@ -265,7 +265,7 @@ void buildSliders(){
     Slider Sustain;
     Sustain.xPos = 450;
     Sustain.yPos = 350;
-    Sustain.value = 0;
+    Sustain.value = 1;
     Sustain.param = &adsr.sustain;
     Sustain.name = "Sustain";
     sliders[6] = Sustain;
@@ -279,7 +279,7 @@ void buildSliders(){
     Slider cutoff;
     cutoff.xPos = 750;
     cutoff.yPos = 350;
-    cutoff.value = 0;
+    cutoff.value = 1;
     cutoff.param = &filter.cutoff;
     cutoff.name = "Cutoff";
     sliders[8] = cutoff;
