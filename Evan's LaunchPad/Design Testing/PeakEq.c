@@ -42,23 +42,23 @@ float32 A = 0.0;    //this will control the gain (I think)
 float32 w0 = 0.0;
 float32 cosParam = 0.0; //cos(w0)
 float32 sinParam = 0.0; //sin(w0)
-float32 Q = 0.56;    //Q will be static, this covers one octave
+float32 Q = 0.707;    //Q will be static, this covers one octave
 float32 fCenter = 200.0; //(keep between 10 and 1000 Hz)
 Uint16 Fs = 48000;
 
 int16 sampleIn = 0;
-float32 sampleOut = 0;
+float sampleOut = 0;
 
 //filter coefficients
-float32 b0,b1,b2,a0,a1,a2 = 0.0;
+float b0,b1,b2,a0,a1,a2 = 0.0;
 
 //delay samples
-float32 xd1,xd2,yd1,yd2,z1,z2 = 0;
+float z1,z2 = 0;
 
 //adc data
 Uint16 adcDataCh0, adcDataCh1,adcDataCh2 = 0;
 float32 cFreqRatio, gainRatio, qRatio = 0.0;
-Uint16 ParamUpdate = 0;
+volatile Uint16 eqflag = 0;
 
 
 int main(void)
@@ -115,18 +115,18 @@ int main(void)
     while(1)
     {
 
-        if(ParamUpdate == 1)
+/*        if(ParamUpdate == 1)
         {
             //get ratio of each channel to control biquad parameters
             cFreqRatio = (adcDataCh0 / 4095.0);
             gainRatio = (adcDataCh1/ 4095.0);
-            qRatio = (adcDataCh2/ 4095.0);
+            //qRatio = (adcDataCh2/ 4095.0);
 
             //get range of parameters and multiply by ratio to get value to add to low end
             // i.e : 1000Hz - 10Hz = 990 Hz  ==> 990Hz * (0.5 ratio) = 495 ==> 495Hz + 10Hz = 505Hz
             fCenter = ((1800 * cFreqRatio) + 200);
             dbGain  = ((30 * gainRatio) + -15);
-            Q       = ((9.9 * qRatio) + 0.1);
+            //Q       = ((9.9 * qRatio) + 0.1);
 
             //these values along with the coefficients will be placed in a struct ideally (possibly previous samples as well)
             //re-calculate variables for filter coeffiecients
@@ -145,56 +145,55 @@ int main(void)
             a2 = 1 - (alpha/A); //a2 = 1-(alpha/A)
 
             ParamUpdate = 0;
+        }*/
+
+        if(eqflag == 1)
+        {
+            //========================================TESTING THE TIMING OF THE COEFFICIENT UPDATE=============================
+            GpioDataRegs.GPADAT.bit.GPIO7 = 1;
+
+
+            //these values along with the coefficients will be placed in a struct ideally (possibly previous samples as well)
+            //re-calculate variables for filter coeffiecients
+            A = powf(10, dbGain/40.0);           //controls gain
+            w0 = PI2 * (float32)(fCenter/Fs);   //controls center frequency
+            cosParam = cosf(w0);
+            sinParam = sinf(w0);
+            alpha = (sinParam/(2*Q));           //controls Q
+
+            //might do small size 2 arrays to keep track of previous outputs????
+            b0 = 1 + alpha*A; //b0 = 1 + a*A
+            b1 = -2*cosParam; //b1 = -2cos(w0)
+            b2 = 1 - alpha*A; //b2 = 1 - a*A
+            a0 = 1 + (alpha/A); //a0 = 1+(alpha/A)
+            a1 = b1;           //a1 same as b1, -2cos(w0)
+            a2 = 1 - (alpha/A); //a2 = 1-(alpha/A)
+
+            //DIRECT FORM 1 DIFFERENCE EQUATION
+            //y[n]= (b0/a0)*x[n] + (b1/a0)x[n-1] + (b2/a0)x[n-2] - (a1/a0)y[n-1] - (a2/a0)y[n-2]
+
+    /*
+            sampleOut = (b0/a0)*sampleIn + (b1/a0)*xd1 + (b2/a0)*xd2 - (a1/a0)*yd1 - (a2/a0)*yd2;
+
+            //shift the samples
+            xd2 = xd1;
+            xd1 = sampleIn;
+            yd2 = yd1;
+            yd1 = sampleOut;
+    */
+
+            //TRANSPOSED DIRECT FORM 2
+            // y[n] = a[0]*x[n] + d[0];
+            // d[0] = a[1]*x[n] - b[1]*y[n] + d[1];
+            // d[1] = a[2]*x[n] - b[2]*y[n] + d[2];
+
+            sampleOut = (b0/a0)*sampleIn + z1;
+            z1 = (b1/a0)*sampleIn - (a1/a0)*sampleOut + z2;
+            z2 = (b2/a0)*sampleIn - (a2/a0)*sampleOut;
+
+            GpioDataRegs.GPADAT.bit.GPIO7 = 0; //stop clock
+            eqflag = 0;
         }
-
-        /*//get ratio of each channel to control biquad parameters
-        cFreqRatio = (adcDataCh0 / 4095.0);
-        gainRatio = (adcDataCh1/ 4095.0);
-        //qRatio = (adcDataCh2/ 4095.0);
-
-        //get range of parameters and multiply by ratio to get value to add to low end
-        // i.e : 1000Hz - 10Hz = 990 Hz  ==> 990Hz * (0.5 ratio) = 495 ==> 495Hz + 10Hz = 505Hz
-        fCenter = ((9800 * cFreqRatio) + 200);
-        dbGain  = ((30 * gainRatio) + -15);
-        //Q       = ((9.9 * qRatio) + 0.1);
-
-        //these values along with the coefficients will be placed in a struct ideally (possibly previous samples as well)
-        //re-calculate variables for filter coeffiecients
-        A = powf(10, dbGain/40.0);           //controls gain
-        w0 = PI2 * (float32)(fCenter/Fs);   //controls center frequency
-        cosParam = cosf(w0);
-        sinParam = sinf(w0);
-        alpha = (sinParam/(2*Q));           //controls Q
-
-        //might do small size 2 arrays to keep track of previous outputs????
-        b0 = 1 + alpha*A; //b0 = 1 + a*A
-        b1 = -2*cosParam; //b1 = -2cos(w0)
-        b2 = 1 - alpha*A; //b2 = 1 - a*A
-        a0 = 1 + (alpha/A); //a0 = 1+(alpha/A)
-        a1 = b1;           //a1 same as b1, -2cos(w0)
-        a2 = 1 - (alpha/A); //a2 = 1-(alpha/A)*/
-
-        //DIRECT FORM 1 DIFFERENCE EQUATION
-        //y[n]= (b0/a0)*x[n] + (b1/a0)x[n-1] + (b2/a0)x[n-2] - (a1/a0)y[n-1] - (a2/a0)y[n-2]
-
-/*
-        sampleOut = (b0/a0)*sampleIn + (b1/a0)*xd1 + (b2/a0)*xd2 - (a1/a0)*yd1 - (a2/a0)*yd2;
-
-        //shift the samples
-        xd2 = xd1;
-        xd1 = sampleIn;
-        yd2 = yd1;
-        yd1 = sampleOut;
-*/
-
-        //TRANSPOSED DIRECT FORM 2
-        // y[n] = a[0]*x[n] + d[0];
-        // d[0] = a[1]*x[n] - b[1]*y[n] + d[1];
-        // d[1] = a[2]*x[n] - b[2]*y[n] + d[2];
-
-        sampleOut = (b0/a0)*sampleIn + z1;
-        z1 = (b1/a0)*sampleIn - (a1/a0)*sampleOut + z2;
-        z2 = (b2/a0)*sampleIn - (a2/a0)*sampleOut;
 
     }
 
@@ -209,15 +208,15 @@ void InitAdca(void) {
     DELAY_US(1000);                                                    // Delay to allow ADC to power up
 
     AdcaRegs.ADCSOC0CTL.bit.CHSEL = 0;                                 // Sets SOC0 to channel 0 -> pin ADCINA0
-    AdcaRegs.ADCSOC0CTL.bit.ACQPS = 14;                                // Sets sample and hold window -> must be at least 1 ADC clock long
+    AdcaRegs.ADCSOC0CTL.bit.ACQPS = 23;                                // Sets sample and hold window -> must be at least 1 ADC clock long
     AdcaRegs.ADCSOC0CTL.bit.TRIGSEL= 2;                                // Set the adc to trigger on Timer1 interrupt
 
     AdcaRegs.ADCSOC1CTL.bit.CHSEL = 1;                                 // Sets SOC0 to channel 0 -> pin ADCINA1
-    AdcaRegs.ADCSOC1CTL.bit.ACQPS = 14;                                // Sets sample and hold window -> must be at least 1 ADC clock long
+    AdcaRegs.ADCSOC1CTL.bit.ACQPS = 23;                                // Sets sample and hold window -> must be at least 1 ADC clock long
     AdcaRegs.ADCSOC1CTL.bit.TRIGSEL= 2;                                // Set the adc to trigger on Timer1 interrupt
 
     AdcaRegs.ADCSOC2CTL.bit.CHSEL = 2;                                 // Sets SOC0 to channel 0 -> pin ADCINA0
-    AdcaRegs.ADCSOC2CTL.bit.ACQPS = 14;                                // Sets sample and hold window -> must be at least 1 ADC clock long
+    AdcaRegs.ADCSOC2CTL.bit.ACQPS = 23;                                // Sets sample and hold window -> must be at least 1 ADC clock long
     AdcaRegs.ADCSOC2CTL.bit.TRIGSEL= 2;                                // Set the adc to trigger on Timer1 interrupt
 }
 
@@ -233,7 +232,7 @@ void InitTimer1(void) {
 interrupt void Mcbsp_RxINTB_ISR(void)
 {
     //8.43us
-    GpioDataRegs.GPADAT.bit.GPIO7 = 1;
+    eqflag = 1;
     sample_L = McbspbRegs.DRR2.all; // store high word of left channel
     sample_R = McbspbRegs.DRR1.all;
 
@@ -248,10 +247,18 @@ interrupt void Timer1_isr(void) {
 
     //AdcaRegs.ADCSOCFRC1.all = 0x1;          //0x07 == Force conversion on channel 0,1,2 | 0x03 == conversion on channel 0,1
 
-    ParamUpdate = 1;
+    //ParamUpdate = 1;
     adcDataCh0 = AdcaResultRegs.ADCRESULT0;    // Read ADC result into global variable
     adcDataCh1 = AdcaResultRegs.ADCRESULT1;
     adcDataCh2 = AdcaResultRegs.ADCRESULT2;
+
+
+
+    //get range of parameters and multiply by ratio to get value to add to low end
+    // i.e : 1000Hz - 10Hz = 990 Hz  ==> 990Hz * (0.5 ratio) = 495 ==> 495Hz + 10Hz = 505Hz
+    fCenter = ((9980 * (adcDataCh0 / 4095.0)) + 20);
+    dbGain  = ((30 * (adcDataCh1/ 4095.0)) + -15);
+    //Q       = ((9.9 * (adcDataCh2/ 4095.0))) + 0.1);
 }
 
 void GPIO_INIT()

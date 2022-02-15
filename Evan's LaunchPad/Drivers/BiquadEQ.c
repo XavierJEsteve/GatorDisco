@@ -11,21 +11,24 @@ Biquad* initializeBiquads()
 {
 
 /*
-    function: generates the 7 biquads with pre-generated parameters
+    function: generates the 10 biquads with pre-generated parameters
 
     return value: returns a pointer to an array of biquads
 */
 
 
-    static Biquad EQ[7];
+    static Biquad EQ[10];
     //set up the different center frequencies of each band
-    EQ[0].fCenter = 300.0;
-    EQ[1].fCenter = 500.0;
-    EQ[2].fCenter = 1000.0;
-    EQ[3].fCenter = 2000.0;
-    EQ[4].fCenter = 4000.0;
-    EQ[5].fCenter = 8000.0;
-    EQ[6].fCenter = 16000.0;
+    EQ[0].fCenter = 32.0;
+    EQ[1].fCenter = 64.0;
+    EQ[2].fCenter = 125.0;
+    EQ[3].fCenter = 250.0;
+    EQ[4].fCenter = 500.0;
+    EQ[5].fCenter = 1000.0;
+    EQ[6].fCenter = 2000.0;
+    EQ[7].fCenter = 4000.0;
+    EQ[8].fCenter = 8000.0;
+    EQ[9].fCenter = 16000.0;
 
 
     EQ[0].Fs = 48000;
@@ -35,11 +38,14 @@ Biquad* initializeBiquads()
     EQ[4].Fs = 48000;
     EQ[5].Fs = 48000;
     EQ[6].Fs = 48000;
+    EQ[7].Fs = 48000;
+    EQ[8].Fs = 48000;
+    EQ[9].Fs = 48000;
 
     //initialize default parameters and coefficients
-    for(int i = 0; i < 7; i++)
+    for(int i = 0; i < 9; i++)
     {
-        updateParameters(&EQ[i], 0.0, EQ[i].fCenter, 0.707);
+        updateParameters(&EQ[i], 0.0, EQ[i].fCenter, 1.414);
     }
 
     return EQ;
@@ -123,7 +129,7 @@ int16 processBiquads(Biquad* EQ, int16 sampleIn)
     float32 biquadInput = (float32)sampleIn;
     float32 biquadOutput = 0.0;
 
-    for(int i = 0; i < 7; i++)
+    for(int i = 0; i < 9; i++)
     {
         biquadOutput = (EQ[i].b0)*biquadInput + EQ[i].z1;
         EQ[i].z1 = (EQ[i].b1)*biquadInput - (EQ[i].a1)*biquadOutput + EQ[i].z2;

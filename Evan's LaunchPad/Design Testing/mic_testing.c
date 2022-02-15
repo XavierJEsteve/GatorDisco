@@ -1,16 +1,24 @@
 /*
- * PitchShift_testing.c
+ * mic_testing.c
  *
- *  Created on: Feb 3, 2022
+ *  Created on: Jan 27, 2022 1:10 PM
  *      Author: Evan Rives
- *
- *      Testing Pitch shifting
- *      Switches will control Pitch between 2x and 0.1x
- *
- *      Pitch Shifting is done in the Time-domain
  */
 
 
+/*
+ * BitCrush_Testing.c
+ *
+ *  Created on: Jan 27, 2022 09:27 AM
+ *      Author: Evan Rives
+ *
+ *      Test program to see BitCrush Audio effect
+ *      reduces the bit depth of the sampled audio
+ *      should add neat distortion to audio
+ *
+ *      Testing sample rate reduction as well which adds
+ *
+ */
 
 
 
@@ -18,7 +26,6 @@
 #include <math.h>
 #include "Drivers/SPIDriver.h"
 #include "Drivers/InitAIC23.h"
-#include "Audio_FX/PitchShift.h"
 
 interrupt void Mcbsp_RxINTB_ISR(void);
 
@@ -34,8 +41,6 @@ int16 sampleOut = 0;
 
 Uint16 Switches = 0;
 
-volatile Uint16 pitchflag = 0;
-float32 pitchstep = 1.0;
 
 
 
@@ -55,7 +60,7 @@ int main(void)
     EALLOW;             // EALLOW for rest of program (unless later function disables it)
     GPIO_INIT();        // Initialize Switches and Buttons on CODEC
     InitSPIA();         // Initialize SPIA module for Communication with CODEC
-    InitAIC23();        // Initialize CODEC (Currently running DSP mode)
+    InitAIC23_MIC();        // Initialize CODEC (Currently running DSP mode)
     InitMcBSPb();       // Initalize McbspB (Currently running DSP mode)
 
 
@@ -75,29 +80,6 @@ int main(void)
 
     while(1)
     {
-        Switches = (GpioDataRegs.GPADAT.bit.GPIO16 << 3) + (GpioDataRegs.GPADAT.bit.GPIO15 << 2) + (GpioDataRegs.GPADAT.bit.GPIO14 << 1) + GpioDataRegs.GPADAT.bit.GPIO11;
-
-        if(Switches == 15)
-            pitchstep = 2.0;
-        else if(Switches == 0)
-            pitchstep = 0.5;
-        else if(Switches == 7)
-            pitchstep = 1.0;
-        else
-        {
-            pitchstep = (float32)(Switches / 7.5);
-        }
-
-
-        if(pitchflag == 1)
-        {
-            GpioDataRegs.GPADAT.bit.GPIO7 = 1;
-            updatePitch(pitchstep);
-            sampleOut = processPitchShift(sampleIn);
-            pitchflag = 0;
-            GpioDataRegs.GPADAT.bit.GPIO7 = 0;
-        }
-
 
 
     }
@@ -110,15 +92,15 @@ int main(void)
 interrupt void Mcbsp_RxINTB_ISR(void)
 {
     //8.43us
-    pitchflag = 1;
 
+    GpioDataRegs.GPADAT.bit.GPIO7 = 1;
     sample_L = McbspbRegs.DRR2.all; // store high word of left channel
     sample_R = McbspbRegs.DRR1.all;
 
     sampleIn = (sample_L + sample_R) >> 1;
 
-    McbspbRegs.DXR2.all = (int16)sampleOut; // send out data
-    McbspbRegs.DXR1.all = (int16)sampleOut;// send out data
+    McbspbRegs.DXR2.all = sampleIn; // send out data
+    McbspbRegs.DXR1.all = sampleIn;// send out data
     PieCtrlRegs.PIEACK.all = PIEACK_GROUP6;
 }
 
@@ -161,5 +143,3 @@ void GPIO_INIT()
     GpioCtrlRegs.GPAPUD.bit.GPIO15 = 0;
     GpioCtrlRegs.GPAPUD.bit.GPIO16 = 0;
 }
-
-
