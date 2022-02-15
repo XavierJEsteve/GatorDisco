@@ -19,7 +19,7 @@
 #pragma DATA_SECTION(PitchBuffer, "ramgs1");
 
 #define WRAP_SHIFT 4
-#define WRAP_SIZE (1 << WRAP_SHIFT) // How much overlap there is to reduce glitching
+#define OVERLAP 100 //how much overlap before we crossfade and switch read pointer to reduce clicks
 #define PITCHBUFFERSIZE 4096
 #define PITCHBUFFERSIZE_MASK 4095
 
@@ -52,42 +52,59 @@ int16 processPitchShift(int16 sampleIn)
 
     static int16 PitchWrite = 0;
     static float32 PitchRead = 0;
+    static float32 PitchRead2 = PITCHBUFFERSIZE/2;
     static Uint16 index = 0;
+    static Uint16 index2 = 0;
     static Uint16 diff = 0;
-    int16 sampleOut;
+    int16 sampleOut, sample1, sample2;
     int32 result;
     static Uint16 diff_comp;
-    float32 w;
-    w = 0.90f - 0.10f * (1-cosf(PI2*PitchWrite / ((PITCHBUFFERSIZE - 1)))); //a hanning window to reduce clicks
+    float32 w, crossfade;
+    //w = 0.90f - 0.10f * (1-cosf(PI2*PitchWrite / ((PITCHBUFFERSIZE - 1)))); //a hanning window to reduce clicks
 
     //write to buffer
-    PitchBuffer[PitchWrite] = sampleIn*w;
+    PitchBuffer[PitchWrite] = sampleIn;
 
     index = (Uint16)PitchRead;
     index = index & PITCHBUFFERSIZE_MASK; //Masking for wrapping
+    index2 = (Uint16)PitchRead2;
+    index2 = index2 & PITCHBUFFERSIZE_MASK; //Masking for wrapping
 
     //add our fractional step to the PitchRead pointer
     PitchRead += PitchStep;
+    PitchRead2 += PitchStep;
     if(PitchRead > 4096.0)
         PitchRead = 0.0;
+    if(PitchRead2 > 4096.0)
+        PitchRead2 = 0.0;
 
     // Grab a sample
-    sampleOut = PitchBuffer[index];
+    sample1 = PitchBuffer[index];
+    sample2 = PitchBuffer[index2];
 
-    //the difference between read and write pointers, determines if we crossfade
-/*    diff = ( index - PitchWrite + PITCHBUFFERSIZE ) % PITCHBUFFERSIZE;
-    if(diff < WRAP_SIZE )
+
+    //the difference between read1 and write pointer, determines if we crossfade
+    diff = ( PitchWrite - index);
+    if(diff <= OVERLAP && diff >= 0)
     {
         //crossfade
+        crossfade = (float)((PitchWrite - index)/OVERLAP);
+    }
+    else if(PitchWrite - index == 0)
+        crossfade = 0.0f;
 
-        diff_comp = (WRAP_SIZE - diff);
+    //the difference between read2 and write pointer, determines if we crossfade
+    diff = (PitchWrite - index2);
+    if(diff <= OVERLAP && diff >= 0)
+    {
+        //crossfade
+        crossfade = 1.0f - (float)((PitchWrite - index2)/OVERLAP);
+    }
+    else if(PitchWrite - index2 == 0)
+        crossfade = 1.0f;
 
-        result = sampleOut * diff;
-        result = result + PitchBuffer[PitchWrite] * diff_comp;
-
-        sampleOut = (int16)(result >> WRAP_SHIFT);
-
-    }*/
+    //sum up crossfade
+    sampleOut = (float)(sample1*crossfade) + (float)(sample2*(1-crossfade));
 
     // Increment write position : check if position has gotten bigger than buffer size
     PitchWrite = (PitchWrite + 1) & PITCHBUFFERSIZE_MASK;
