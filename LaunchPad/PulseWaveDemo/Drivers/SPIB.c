@@ -1,10 +1,3 @@
-/*
- * SPIBInit.c
- *
- *  Created on: Feb 9, 2021
- *      Author: jacks
- */
-
 #include <F2837xD_Device.h>
 #include <SPIB.h>
 
