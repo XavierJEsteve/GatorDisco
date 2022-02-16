@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include "include/raylib.h"
+#define RAYGUI_IMPLEMENTATION
+#include "include/raygui.h"
 #include <math.h>
 #include <errno.h>
 #include "include/wiringPiSPI.h"
@@ -41,13 +43,13 @@ typedef struct{
     float* param;
 } Slider;
 typedef struct{
-    bool keyPressed;
     int xPos;
     int yPos;
     int width;
     int height;
     Color color;
     char* text;
+    int (*buttonAction)(void);
 } Button;
 typedef struct{
     int x;
@@ -120,24 +122,54 @@ void buildKeys(){
         keys[i] = tempKey;
     }
 }
+void loadConfig(void){
+    //Verify config data saved by python code can be read
+    unsigned char config_buffer[11];
+    FILE *ptr;
+    ptr = fopen("../synth_settings.bin","rb");
+    if (! ptr)
+    {
+        printf("Failed to open synth-settings file\n");
+
+    }
+    else
+    {
+        printf("Successfully opened synth-settings file\n");
+        fread(config_buffer,sizeof(config_buffer),10,ptr); //read 8 bytes from config_data.data
+        for (int i = 0; i < 10; i++){
+            printf("%d\n", config_buffer[i]);
+        }
+        fclose(ptr);
+    }            
+}
+void changeOsc(void){
+    synth.osc.oscType++;
+    synth.osc.oscType %= NUM_OSCILLATORS;
+    buttons[1].text = oscNames[synth.osc.oscType];
+    if(synth.osc.oscType == 0){
+        sliders[1].name = "PULSE WIDTH";
+        sliders[2].name = "PWM Freq";
+        sliders[3].name = "PWM Val";
+    }
+}
 void buildButtons(){
     Button load_config;
-    load_config.keyPressed = false;
     load_config.xPos = (3*SCREEN_WIDTH/5);
     load_config.yPos = SCREEN_HEIGHT/3;
     load_config.width = SCREEN_WIDTH/5;
     load_config.height = SCREEN_HEIGHT/12;
     load_config.color = BLACK;
     load_config.text = "LOAD CONFIG";
+    load_config.buttonAction = &loadConfig;
     buttons[0] = load_config;
     Button oscSelect;
-    oscSelect.keyPressed = false;
     oscSelect.xPos = (SCREEN_WIDTH/32);
     oscSelect.yPos = SCREEN_HEIGHT/5;
     oscSelect.width = SCREEN_WIDTH/8;
     oscSelect.height = SCREEN_HEIGHT/12;
     oscSelect.color = GREEN;
     oscSelect.text = "PULSE WAVE";
+    oscSelect.buttonAction = &changeOsc;
     buttons[1] = oscSelect;
 
 }
@@ -242,11 +274,20 @@ void drawKeys(int height){
         }
     }
 }
+int test_button_counter = 0;
 void drawButtons(){
     for(int i = 0; i < NUM_BUTTONS; i++){
-        DrawRectangle(buttons[i].xPos, buttons[i].yPos, buttons[i].width, buttons[i].height, buttons[i].color);
-        DrawText(buttons[i].text, buttons[i].xPos, buttons[i].yPos, 25, RED);
-    }
+        Button tempButton = buttons[i];
+        bool pressed = GuiButton((Rectangle){
+        tempButton.xPos,
+        tempButton.yPos,
+        tempButton.width,
+        tempButton.height
+        }, tempButton.text);
+        if(pressed){
+            tempButton.buttonAction();
+        }
+    } 
 }
 void drawGUI(){
     BeginDrawing();
@@ -356,59 +397,12 @@ void processInput(){
                     //wiringPiSPIDataRW(CHANNEL, spi_buffer, 2);
                 }
             }
-
-            //check if a button is selected
-            for (int i=0; i< NUM_BUTTONS; i++){
-                Button tempButton = buttons[i];
-                if(    masterInput.x > tempButton.xPos
-                    && masterInput.x - tempButton.xPos < tempButton.width
-                    && masterInput.y > tempButton.yPos
-                    && masterInput.y - tempButton.yPos < tempButton.height
-                    && tempButton.keyPressed == false)
-                {
-                    buttons[i].keyPressed = true;
-
-                    // Was it the load_config button?
-                    if (i == 0)
-                    {
-                        //Verify config data saved by python code can be read
-                        unsigned char config_buffer[11];
-                        FILE *ptr;
-                        ptr = fopen("../synth_settings.bin","rb");
-                        if (! ptr)
-                        {
-                            printf("Failed to open synth-settings file\n");
-
-                        }
-                        else
-                        {
-                            printf("Successfully opened synth-settings file\n");
-                            fread(config_buffer,sizeof(config_buffer),10,ptr); //read 8 bytes from config_data.data
-                            for (int i = 0; i < 10; i++){
-                                printf("%d\n", config_buffer[i]);
-                            }
-                            fclose(ptr);
-                        }
-                    }
-                    //pulseWave Button?
-                    else if(i == 1){
-                        synth.osc.oscType++;
-                        synth.osc.oscType %= NUM_OSCILLATORS;
-                        buttons[1].text = oscNames[synth.osc.oscType];
-                        if(synth.osc.oscType == 0){
-                            sliders[1].name = "PULSE WIDTH";
-                            sliders[2].name = "PWM Freq";
-                            sliders[3].name = "PWM Val";
-                        }
-                    }
-                }
-            }
         }
     }
     else {
         clearKeyPress();
         for(int i = 0; i < NUM_BUTTONS; i++){
-            buttons[i].keyPressed = false;
+            //buttons[i].keyPressed = false;
         }
     }
 }
