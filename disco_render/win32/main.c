@@ -25,8 +25,7 @@ static const int CHANNEL = 0;
 #define MAX_ATTACK_TIME 3
 #define MAX_DECAY_TIME 5
 #define NUM_SLIDERS 8
-#define NUM_BUTTONS 2
-#define NUM_OSCILLATORS 2
+#define NUM_BUTTONS 3
 #define MIDI_DEVICE "/dev/midi2"
 
 typedef struct{
@@ -57,9 +56,10 @@ typedef struct{
     bool* keyPressed;
     int* key;
 } Input;
-
-Key keys[17];
 char* oscNames[NUM_OSCILLATORS] = {"PULSE WAVE", "SAWTOOTH"};
+char* oscParamNames[NUM_OSCILLATORS] = {"PULSE WIDTH", "DETUNE"};
+char* lfoTargetNames[NUM_LFO_TARGETS] = {"Frequency", "Osc Parameter", "Amplitude"};
+Key keys[17];
 Slider sliders[NUM_SLIDERS];
 Button buttons[NUM_BUTTONS];
 unsigned char spi_buffer[100];
@@ -146,11 +146,14 @@ void changeOsc(void){
     synth.osc.oscType++;
     synth.osc.oscType %= NUM_OSCILLATORS;
     buttons[1].text = oscNames[synth.osc.oscType];
-    if(synth.osc.oscType == 0){
-        sliders[1].name = "PULSE WIDTH";
-        sliders[2].name = "PWM Freq";
-        sliders[3].name = "PWM Val";
-    }
+    sliders[1].name = oscParamNames[synth.osc.oscType];
+    synth.osc.phase = 0;
+    synth.osc.phase2 = 0;
+}
+void changeLfo(void){
+    synth.lfo.target = (synth.lfo.target + 1) % NUM_LFO_TARGETS;
+    synth.lfo.output = synth.lfo.targets[synth.lfo.target];
+    buttons[2].text = lfoTargetNames[synth.lfo.target];
 }
 void buildButtons(){
     Button load_config;
@@ -171,7 +174,15 @@ void buildButtons(){
     oscSelect.text = "PULSE WAVE";
     oscSelect.buttonAction = &changeOsc;
     buttons[1] = oscSelect;
-
+    Button lfoSelect;
+    lfoSelect.xPos = 9* SCREEN_WIDTH/16;
+    lfoSelect.yPos = SCREEN_HEIGHT/5;
+    lfoSelect.width = SCREEN_WIDTH/8;
+    lfoSelect.height = SCREEN_HEIGHT/12;
+    lfoSelect.color = GREEN;
+    lfoSelect.text = "Frequency";
+    lfoSelect.buttonAction = &changeLfo;
+    buttons[2] = lfoSelect;
 }
 void buildSliders(){
     Slider octave;
@@ -386,6 +397,7 @@ void processInput(){
                 Slider tempSlider = sliders[i];
                 if(masterInput.x > tempSlider.xPos && masterInput.x -tempSlider.xPos < SLIDER_WIDTH && masterInput.y > tempSlider.yPos && masterInput.y -tempSlider.yPos < SLIDER_HEIGHT){
                     tempSlider.value = (float)(tempSlider.yPos + SLIDER_HEIGHT - masterInput.y)/SLIDER_HEIGHT;
+                    if(tempSlider.value < 0.05) tempSlider.value = 0;
                     *tempSlider.param = tempSlider.value;
                     sliders[i] = tempSlider;
                     //printf("SPI COMMAND\n");

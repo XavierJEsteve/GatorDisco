@@ -10,9 +10,9 @@
 #define MAX_ATTACK_TIME 3
 #define MAX_DECAY_TIME 5
 #define NUM_OSCILLATORS 2
+#define NUM_LFO_TARGETS 3
 #define SAMPLE_RATE 48000
 #define MAX_LFO_SPEED 100
-
 
 typedef struct{
     //inputs

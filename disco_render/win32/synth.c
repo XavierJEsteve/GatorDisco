@@ -28,9 +28,9 @@ void updateKeyboard(Keyboard* keys){
 }
 void updateOscillator(Oscillator* osc){
     //update phase
-    osc->phase += osc->frequency / SAMPLE_RATE;
-    if(osc->phase > 1) osc->phase -= 1;
     if(osc->oscType == 0){ //pulse wave
+        osc->phase += osc->frequency / SAMPLE_RATE;
+        if(osc->phase > 1) osc->phase -= 1;
         float sin_value = sinf(2.0f * PI * osc->phase);
         //determine threshold
         float threshold = osc->param1;
@@ -43,7 +43,14 @@ void updateOscillator(Oscillator* osc){
         }
     }
     else if(osc->oscType == 1){ //sawtooth
-        *osc->output = osc->phase -0.5;
+        //two seperate oscillators
+        float frequency1 = osc->frequency * pow(1.01, osc->param1 + osc->lfo_input);
+        float frequency2 = osc->frequency * pow(1.01, -1*(osc->param1 + osc->lfo_input));
+        osc->phase += frequency1 / SAMPLE_RATE;
+        if(osc->phase > 1) osc->phase -= 1;
+        osc->phase2 += frequency2 / SAMPLE_RATE;
+        if(osc->phase2 > 1) osc->phase2 -= 1;
+        *osc->output = osc->phase + osc->phase2 - 1;
     }
 }
 void updateLFO(LFO* lfo){
@@ -97,9 +104,9 @@ void initSynth(Synth* synth){
     synth->lfo.targets[0] = &synth->keys.lfo_input;
     synth->lfo.targets[1] = &synth->osc.lfo_input;
     synth->lfo.targets[2] = &synth->env.lfo_input;
-    //hard code lfo target
-    synth->lfo.target = 2;
-    synth->lfo.output = synth->lfo.targets[2];
+    //init lfo target
+    synth->lfo.target = 0;
+    synth->lfo.output = synth->lfo.targets[0];
 }
 float updateSynth(Synth* synth){
     updateLFO(&synth->lfo);
