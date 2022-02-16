@@ -8,12 +8,11 @@
 #include <unistd.h>
 //#include <sys/soundcard.h>
 #include <fcntl.h>
-
+#include "synth.h"
 // channel is the wiringPi name for the chip select (or chip enable) pin.
 // Set this to 0 or 1, depending on how it's connected.
 static const int CHANNEL = 0;
 
-#define SAMPLE_RATE 48000
 #define STREAM_BUFFER_SIZE 1024
 #define SCREEN_HEIGHT 800
 #define SCREEN_WIDTH 1280
@@ -23,42 +22,11 @@ static const int CHANNEL = 0;
 #define SLIDER_VISIBLE_WIDTH 10
 #define MAX_ATTACK_TIME 3
 #define MAX_DECAY_TIME 5
-#define NUM_SLIDERS 10
+#define NUM_SLIDERS 8
 #define NUM_BUTTONS 2
 #define NUM_OSCILLATORS 2
 #define MIDI_DEVICE "/dev/midi2"
-typedef struct{
-    int oscType;
-    float phase;
-    float phaseStride;
-    float frequency;
-    //osc parameters
-    float threshold;
-    float octave;
-    float octaveFactor;
-    float PWM_phase;
-    float PWM_phaseStride;
-    float PWM_frequency;
-    float PWM_val;
-} Oscillator;
-typedef struct{
-    float phase;
-    float phaseStride;
-    float frequency;
-    float val;
-} LFO;
-typedef struct{
-    float attack;
-    float decay;
-    float sustain;
-    float release;
-    float amplitude;
-    bool decayPhase;
-} ADSR_Control;
-typedef struct{
-    float highPass;
-    float cutoff;
-} Filter;
+
 typedef struct{
     bool black;
     float frequency;
@@ -66,11 +34,11 @@ typedef struct{
     int xPos;
 } Key;
 typedef struct{
-    float* param;
     float value;
     int xPos;
     int yPos;
     char* name;
+    float* param;
 } Slider;
 typedef struct{
     bool keyPressed;
@@ -82,9 +50,10 @@ typedef struct{
     char* text;
 } Button;
 typedef struct{
-    bool keyPressed;
     int x;
     int y;
+    bool* keyPressed;
+    int* key;
 } Input;
 
 Key keys[17];
@@ -92,88 +61,33 @@ char* oscNames[NUM_OSCILLATORS] = {"PULSE WAVE", "SAWTOOTH"};
 Slider sliders[NUM_SLIDERS];
 Button buttons[NUM_BUTTONS];
 unsigned char spi_buffer[100];
-Oscillator osc;
-Filter filter;
-ADSR_Control adsr;
-LFO lfo;
+
+Synth synth;
+
 Input masterInput;
-float buffer[1024];
-float sample_duration;
-int keySelection = -1;
-float calculateAmp(){
-    if(masterInput.keyPressed){
-        if(!adsr.decayPhase){
-            adsr.amplitude += 1.0/(SAMPLE_RATE*MAX_ATTACK_TIME*(adsr.attack+0.001));
-            if(adsr.amplitude > 0.99){
-                adsr.amplitude = 1;
-                adsr.decayPhase = true;
-            }
-        }
-        else{
-            if(adsr.amplitude > adsr.sustain){
-                adsr.amplitude -= (1.0-adsr.sustain)/(SAMPLE_RATE*MAX_ATTACK_TIME*(adsr.decay+0.001));
-            }
-        }
-    }
-    else{
-        adsr.decayPhase = false;
-        if(adsr.amplitude > 0){
-            adsr.amplitude -= 1.0/(SAMPLE_RATE*MAX_ATTACK_TIME*(adsr.release+0.001));
-        }
-    }
-    return adsr.amplitude;
+void initMasterInput(){
+    masterInput.key = &synth.keys.key;
+    masterInput.keyPressed = &synth.env.gate;
 }
-void updateSignal(float* signal, float sample_duration){
-    if(osc.octave < 0.25){
-        osc.octaveFactor = 0.25;
-    }
-    else if(osc.octave < 0.5){
-        osc.octaveFactor = 0.5;
-    }
-    else if(osc.octave < 0.75){
-        osc.octaveFactor = 1;
-    }
-    else{
-        osc.octaveFactor = 2;
-    }
-    lfo.phaseStride = lfo.frequency*20 * sample_duration;
-    osc.phaseStride = osc.frequency * sample_duration * osc.octaveFactor;
-    for(int i = 0; i < 1024; i++){
-        //
-        osc.phase += osc.phaseStride;
-        if(osc.phase > 1) osc.phase -= 1;
-        float sin_value = sinf(2.0f * PI * osc.phase);
-        if(osc.oscType == 0){
-            //PWM phase
-            lfo.phase += lfo.phaseStride;
-            if(lfo.phase > 1) lfo.phase -= 1;
-            float PWM_sin_value = sinf(2.0f * PI * lfo.phase)*lfo.val;
-            float threshold = 0.5*(osc.threshold + PWM_sin_value);
-            if(sin_value > threshold){
-                signal[i] = 0.5;
-            }
-            else {
-                signal[i] = -0.5;
-            }
-        }
-        else if(osc.oscType == 1){
-            //sawtooth output
-            signal[i] = osc.phase -0.5;
-        }
-        signal[i] *= calculateAmp();
+float buffer[STREAM_BUFFER_SIZE];
+int keySelection = -1;
+
+void updateSignal(float* signal){
+    for(int i = 0; i < STREAM_BUFFER_SIZE; i++){
+        signal[i] = updateSynth(&synth);
     }
 }
 void drawWaveform(float* signal,int width,int height,int x, int y){
     DrawRectangle(x, y, width, height, WHITE);
-    int offset = (int)(osc.phase/osc.phaseStride);
-    int loop = (int)1.0/osc.phaseStride;
-    if (loop > 1024) loop = 1024;
+    int offset = (int)(synth.osc.phase * (SAMPLE_RATE/synth.osc.frequency));
+    int loop = (int)1.0 * (SAMPLE_RATE/synth.osc.frequency);
+    if (loop > STREAM_BUFFER_SIZE) loop = STREAM_BUFFER_SIZE;
     int start = (STREAM_BUFFER_SIZE-offset)%loop;
     Vector2 prev;
     prev.x = x;
     prev.y = (height/2)+0.5*(int)(signal[0]*100)+y;
     for(int i = 1; i < width - 1; i++){
-        int index = (start + (int)(500*i/(osc.frequency*osc.octaveFactor))%loop)%STREAM_BUFFER_SIZE;
+        int index = (start + (int)(500*i/(synth.osc.frequency))%loop)%STREAM_BUFFER_SIZE;
         Vector2 current;
         current.x = i+x;
         current.y = (height/2)+0.5*(int)(signal[index]*100)+y;
@@ -183,12 +97,10 @@ void drawWaveform(float* signal,int width,int height,int x, int y){
 }
 void buildKeys(){
     int xPos = 0;
-    float tempFreq = 261.6;
     for(int i = 0; i < 17; i++){
         Key tempKey;
         tempKey.xPos = xPos;
         tempKey.pressed = false;
-        tempKey.frequency = tempFreq;
         int note = i%12;
         if((note < 4 && note%2 == 1)||(note > 5 && note%2 == 0)){
             tempKey.black = true;
@@ -206,7 +118,6 @@ void buildKeys(){
 
         }
         keys[i] = tempKey;
-        tempFreq *= 1.059463;
     }
 }
 void buildButtons(){
@@ -235,72 +146,58 @@ void buildSliders(){
     octave.xPos = 200;
     octave.yPos = 100;
     octave.value = 0;
-    octave.param = &osc.octave;
+    octave.param = &synth.keys.octave;
     octave.name = "OCTAVE";
     sliders[0] = octave;
     Slider oscParam1;
     oscParam1.xPos = 300;
     oscParam1.yPos = 100;
     oscParam1.value = 0;
-    oscParam1.param = &osc.threshold;
-    oscParam1.name = "PULSE WIDTH";
+    oscParam1.param = &synth.osc.param1;
+    oscParam1.name = "OSC PARAM";
     sliders[1] = oscParam1;
     Slider oscParam2;
     oscParam2.xPos = 450;
     oscParam2.yPos = 100;
     oscParam2.value = 0;
-    oscParam2.param = &lfo.frequency;
-    oscParam2.name = "PWM Freq";
+    oscParam2.param = &synth.lfo.speed;
+    oscParam2.name = "LFO Freq";
     sliders[2] = oscParam2;
     Slider oscParam3;
     oscParam3.xPos = 600;
     oscParam3.yPos = 100;
     oscParam3.value = 0;
-    oscParam3.param = &lfo.val;
-    oscParam3.name = "PWM Val";
+    oscParam3.param = &synth.lfo.val;
+    oscParam3.name = "LFO Val";
     sliders[3] = oscParam3;
     Slider Attack;
     Attack.xPos = 200;
     Attack.yPos = 350;
     Attack.value = 0;
-    Attack.param = &adsr.attack;
+    Attack.param = &synth.env.attack;
     Attack.name = "Attack";
     sliders[4] = Attack;
     Slider Decay;
     Decay.xPos = 300;
     Decay.yPos = 350;
     Decay.value = 0;
-    Decay.param = &adsr.decay;
+    Decay.param = &synth.env.decay;
     Decay.name = "Decay";
     sliders[5] = Decay;
     Slider Sustain;
     Sustain.xPos = 450;
     Sustain.yPos = 350;
     Sustain.value = 0;
-    Sustain.param = &adsr.sustain;
+    Sustain.param = &synth.env.sustain;
     Sustain.name = "Sustain";
     sliders[6] = Sustain;
     Slider Release;
     Release.xPos = 600;
     Release.yPos = 350;
     Release.value = 0;
-    Release.param = &adsr.release;
+    Release.param = &synth.env.release;
     Release.name = "Release";
     sliders[7] = Release;
-    Slider cutoff;
-    cutoff.xPos = 750;
-    cutoff.yPos = 350;
-    cutoff.value = 0;
-    cutoff.param = &filter.cutoff;
-    cutoff.name = "Cutoff";
-    sliders[8] = cutoff;
-    Slider highPass;
-    highPass.xPos = 900;
-    highPass.yPos = 350;
-    highPass.value = 0;
-    highPass.param = &filter.highPass;
-    highPass.name = "High Pass";
-    sliders[9] = highPass;
 }
 void drawSliders(){
     for(int i = 0; i < NUM_SLIDERS; i++){
@@ -365,7 +262,7 @@ void clearKeyPress(){
         for(int i = 0; i < 17; i++){
             keys[i].pressed = false;
         }
-        if(masterInput.keyPressed == true){
+        if(*masterInput.keyPressed == true){
             /*
             printf("SPI COMMAND\n");
             printf("00000000 (Keypressed)\n");
@@ -375,7 +272,7 @@ void clearKeyPress(){
             spi_buffer[1] = 0;
             //wiringPiSPIDataRW(CHANNEL, spi_buffer, 2);
         }
-        masterInput.keyPressed = false;
+        *masterInput.keyPressed = false;
     }
 }
 void processInput(){
@@ -384,7 +281,7 @@ void processInput(){
 
     if(IsMouseButtonDown(0)){
         if(masterInput.y > (3*SCREEN_HEIGHT / 4)){
-            if(masterInput.keyPressed == false){
+            if(*masterInput.keyPressed == false){
                 /*
                 printf("SPI COMMAND\n");
                 printf("00000000 (Keypressed)\n");
@@ -394,7 +291,7 @@ void processInput(){
                 spi_buffer[1] = 1;
                 //wiringPiSPIDataRW(CHANNEL, spi_buffer, 2);
             }
-            masterInput.keyPressed = true;
+            *masterInput.keyPressed = true;
             bool checkBlack = false;
             bool foundKey = false;
             int keyIndex = -1;
@@ -427,7 +324,7 @@ void processInput(){
                     }
                 }
             }
-            osc.frequency = keys[keyIndex].frequency;
+            *masterInput.key = keyIndex;
             if(keyIndex != keySelection){
                 /*
                 printf("SPI COMMAND\n");
@@ -495,10 +392,10 @@ void processInput(){
                     }
                     //pulseWave Button?
                     else if(i == 1){
-                        osc.oscType++;
-                        osc.oscType %= NUM_OSCILLATORS;
-                        buttons[1].text = oscNames[osc.oscType];
-                        if(osc.oscType == 0){
+                        synth.osc.oscType++;
+                        synth.osc.oscType %= NUM_OSCILLATORS;
+                        buttons[1].text = oscNames[synth.osc.oscType];
+                        if(synth.osc.oscType == 0){
                             sliders[1].name = "PULSE WIDTH";
                             sliders[2].name = "PWM Freq";
                             sliders[3].name = "PWM Val";
@@ -515,37 +412,18 @@ void processInput(){
         }
     }
 }
-void initOscADSRFilter(){
-    osc.frequency = 200;
-    osc.threshold = 0;
-    osc.octave = 0;
-    lfo.phase = 0;
-    lfo.phaseStride = 0;
-    lfo.frequency = 0;
-    lfo.val = 0;
-    sample_duration = (1.0f)/SAMPLE_RATE;
-    osc.phase = 0;
-    osc.phaseStride = osc.frequency * sample_duration;
-    osc.phase = 0;
-    osc.phaseStride = osc.frequency * sample_duration;
-    adsr.amplitude = 0;
-    adsr.attack = 0;
-    adsr.decay = 0;
-    adsr.release = 0;
-    adsr.sustain = 0;
-    filter.cutoff = 0;
-    filter.highPass = 0;
-}
+
 
 void main() {
     InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Synth");
     SetTargetFPS(60);
     InitAudioDevice();
-    initOscADSRFilter();
+    initMasterInput();
+    initSynth(&synth);
     buildKeys();
     buildSliders();
     buildButtons();
-    SetAudioStreamBufferSizeDefault(1024);
+    SetAudioStreamBufferSizeDefault(STREAM_BUFFER_SIZE);
     AudioStream synthStream = LoadAudioStream(SAMPLE_RATE,
         32 ,
         1
@@ -586,7 +464,7 @@ void main() {
         if(IsAudioStreamProcessed(synthStream)){
             UpdateAudioStream(synthStream, buffer, STREAM_BUFFER_SIZE);
             processInput();
-            updateSignal(buffer, sample_duration);
+            updateSignal(buffer);
             drawGUI();
 		/*
                 read(seqfd, &midipacket, sizeof(midipacket));
