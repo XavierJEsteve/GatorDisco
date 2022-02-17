@@ -1,5 +1,5 @@
 /*
-    synth.h
+    synth.c
     created on: Feb 15, 2022
     Author: Luke Jones
 */
