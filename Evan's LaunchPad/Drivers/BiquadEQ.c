@@ -65,7 +65,7 @@ Biquad* initializeBiquads()
     EQ[9].high = 22720;
 
     //initialize default parameters and coefficients
-    for(int i = 0; i < 9; i++)
+    for(int i = 0; i < 10; i++)
     {
         updateParameters(&EQ[i], 0.0, EQ[i].fCenter, 1.414);
     }
@@ -151,7 +151,7 @@ int16 processBiquads(Biquad* EQ, int16 sampleIn)
     float32 biquadInput = (float32)sampleIn;
     float32 biquadOutput = 0.0;
 
-    for(int i = 0; i < 9; i++)
+    for(int i = 0; i < 10; i++)
     {
         biquadOutput = (EQ[i].b0)*biquadInput + EQ[i].z1;
         EQ[i].z1 = (EQ[i].b1)*biquadInput - (EQ[i].a1)*biquadOutput + EQ[i].z2;
@@ -163,4 +163,58 @@ int16 processBiquads(Biquad* EQ, int16 sampleIn)
 
     return (int16)biquadOutput;
 
+}
+
+void resetEQ(Biquad* EQ)
+{
+        EQ[0].fCenter = 32.0;
+        EQ[1].fCenter = 64.0;
+        EQ[2].fCenter = 125.0;
+        EQ[3].fCenter = 250.0;
+        EQ[4].fCenter = 500.0;
+        EQ[5].fCenter = 1000.0;
+        EQ[6].fCenter = 2000.0;
+        EQ[7].fCenter = 4000.0;
+        EQ[8].fCenter = 8000.0;
+        EQ[9].fCenter = 16000.0;
+
+
+        EQ[0].Fs = 48000;
+        EQ[1].Fs = 48000;
+        EQ[2].Fs = 48000;
+        EQ[3].Fs = 48000;
+        EQ[4].Fs = 48000;
+        EQ[5].Fs = 48000;
+        EQ[6].Fs = 48000;
+        EQ[7].Fs = 48000;
+        EQ[8].Fs = 48000;
+        EQ[9].Fs = 48000;
+
+        EQ[0].low = 22;
+        EQ[1].low = 44;
+        EQ[2].low = 88;
+        EQ[3].low = 177;
+        EQ[4].low = 355;
+        EQ[5].low = 710;
+        EQ[6].low = 1420;
+        EQ[7].low = 2840;
+        EQ[8].low = 5680;
+        EQ[9].low = 11360;
+
+        EQ[0].high = 44;
+        EQ[1].high = 88;
+        EQ[2].high = 177;
+        EQ[3].high = 355;
+        EQ[4].high = 710;
+        EQ[5].high = 1420;
+        EQ[6].high = 2840;
+        EQ[7].high = 5680;
+        EQ[8].high = 11360;
+        EQ[9].high = 22720;
+
+        //initialize default parameters and coefficients
+        for(int i = 0; i < 10; i++)
+        {
+            updateParameters(&EQ[i], 0.0, EQ[i].fCenter, 1.414);
+        }
 }

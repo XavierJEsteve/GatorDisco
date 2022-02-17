@@ -24,6 +24,8 @@
 interrupt void Spi_RxINTB_ISR(void);
 interrupt void Mcbsp_RxINTB_ISR(void);
 
+void GPIO_INIT();
+
 int16 sample_L = 0;
 int16 sample_R = 0;
 int16 sampleIn = 0;
@@ -84,7 +86,7 @@ int main(void)
     EALLOW;
     GpioDataRegs.GPADAT.all |= 0xFFFFFFFF;
 
-
+    EQ = initializeBiquads();
 
     while(1)
     {
@@ -92,7 +94,7 @@ int main(void)
         if(eqflag == 1)
         {
 
-            sampleOut = processBiquads(sampleIn);
+            sampleOut = processBiquads(EQ, sampleIn);
             eqflag = 0;
 
         }
@@ -113,7 +115,7 @@ int main(void)
         if(srrflag == 1)
         {
 
-            sampleOut = processSampleRateReduction(sampleIn);
+            sampleOut = ProcessSampleRateReduction(sampleIn);
             srrflag = 0;
 
         }
@@ -178,7 +180,7 @@ interrupt void Spi_RxINTB_ISR(void){
         if(EQUpdateFcenter == 1)
         {
             EQUpdateFcenter = 0;
-            Fcenter = (EQ[freqband].low * (float)(SPIdata/255.0f)) + EQ[freqBand].low;
+            Fcenter = (EQ[freqBand].low * (float)(SPIdata/255.0f)) + EQ[freqBand].low;
             EQUpdateGain = 1;
         }
         else if(EQUpdateGain == 1)
@@ -202,7 +204,11 @@ interrupt void Spi_RxINTB_ISR(void){
             EQUpdateFcenter = 1;
         }
         else
+        {
+            resetEQ(EQ);
             eqEnable = 0;
+        }
+
     }
 
 
@@ -223,12 +229,12 @@ interrupt void Spi_RxINTB_ISR(void){
 
         if(SPIdata >> 7 == 1)
         {
-            pitchenable = 1;
+            pitchEnable = 1;
             PitchStep = (1.5f * (float)((SPIdata & 0x0F)/15.0f)) + 0.5f;
             updatePitch(PitchStep);
         }
         else
-            pitchenable = 0;
+            pitchEnable = 0;
 
     }
     else if(EffectSel == 3)
@@ -247,8 +253,8 @@ interrupt void Spi_RxINTB_ISR(void){
         //ECHO EFFECT
         if(SPIdata >> 7 == 1)
         {
-            updateEchoParams((SPIdata & 0x0F) + 1);
-            echoEnable = 1;
+            //updateEchoParams((SPIdata & 0x0F) + 1);
+            echoEnable = 0;
         }
         else
             echoEnable = 0;

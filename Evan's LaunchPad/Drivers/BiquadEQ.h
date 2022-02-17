@@ -41,6 +41,7 @@ typedef struct
 
 
 Biquad* initializeBiquads();
+void resetEQ(Biquad* Biquad);
 void updateParameters(Biquad* Biquad, float32 dbGain, float32 fCenter, float32 Q); //will send a pointer
 void calculateCoefficients(Biquad* Biquad);
 int16 processBiquads(Biquad* EQ, int16 sampleIn);
