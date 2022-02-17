@@ -15,7 +15,10 @@
 #include "Drivers/SPIB.h"
 #include "Drivers/InitAIC23.h"
 #include "Audio_FX/PitchShift.h"
+#include "Audio_FX/BitCrush.h"
+#include "Audio_FX/Echo.h"
 #include "Drivers/SPIDriver.h"
+#include "Drivers/BiquadEQ.h"
 
 
 interrupt void Spi_RxINTB_ISR(void);
@@ -26,11 +29,26 @@ int16 sample_R = 0;
 int16 sampleIn = 0;
 int16 sampleOut = 0;
 
-float32 PitchStep = 0;
-volatile Uint16 pitchenable = 0;
+//================================== Immportant Flags ================================
+volatile Uint16 eqEnable = 0;
+volatile Uint16 bitcrushEnable = 0;
+volatile Uint16 pitchEnable = 0;
+volatile Uint16 srrEnable = 0;
+volatile Uint16 echoEnable = 0;
+volatile Uint16 eqflag = 0;
+volatile Uint16 bitcrushflag = 0;
 volatile Uint16 pitchflag = 0;
+volatile Uint16 srrflag = 0;
+volatile Uint16 echoflag = 0;
+volatile Uint16 EQUpdateFcenter, EQUpdateGain, EQUpdateQ = 0;
+
+//====================== Globals to view in Watch Window ==================================================
 
 Uint16 SPIdata = 0;
+Biquad* EQ;
+float32 PitchStep = 0;
+Uint16 freqBand = 0;
+float32 Fcenter, Gain, Q = 0;
 
 int main(void)
 {
@@ -71,14 +89,41 @@ int main(void)
     while(1)
     {
 
+        if(eqflag == 1)
+        {
+
+            sampleOut = processBiquads(sampleIn);
+            eqflag = 0;
+
+        }
+        if(bitcrushflag == 1)
+        {
+
+            sampleOut = ProcessBitCrush(sampleIn);
+            bitcrushflag = 0;
+
+        }
         if(pitchflag == 1)
         {
-            GpioDataRegs.GPADAT.bit.GPIO7 = 1;
+
             sampleOut = processPitchShift(sampleIn);
             pitchflag = 0;
+
+        }
+        if(srrflag == 1)
+        {
+
+            sampleOut = processSampleRateReduction(sampleIn);
+            srrflag = 0;
+
+        }
+        if(echoflag == 1)
+        {
+            GpioDataRegs.GPADAT.bit.GPIO7 = 1;
+            sampleOut = processEcho(sampleIn);
+            echoflag = 0;
             GpioDataRegs.GPADAT.bit.GPIO7 = 0;
         }
-
 
 
     }
@@ -91,8 +136,16 @@ int main(void)
 interrupt void Mcbsp_RxINTB_ISR(void)
 {
     //will have multiple flags to set depending on the enable flag in the SPI interrupt
-    if(pitchenable == 1)
+    if(eqEnable == 1)
+        eqflag = 1;
+    if(bitcrushEnable == 1)
+        bitcrushflag = 1;
+    if(pitchEnable == 1)
         pitchflag = 1;
+    if(srrEnable == 1)
+        srrflag = 1;
+    if(echoEnable == 1)
+        echoflag = 1;
 
     sample_L = McbspbRegs.DRR2.all; // store high word of left channel
     sample_R = McbspbRegs.DRR1.all;
@@ -118,14 +171,51 @@ interrupt void Spi_RxINTB_ISR(void){
 
     //====================================CONTROLS WHAT EFFECT WILL BE UPDATED=============================================================
 
-    if(EffectSel == 0) //add an OR later to add an additional condition which the eq can be updated by. Saves having to repeat bits we send
+    if(EffectSel == 0 || EQUpdateFcenter == 1 || EQUpdateGain == 1 || EQUpdateQ == 1)
+    {
         //EQ EFFECT
-        GpioDataRegs.GPADAT.bit.GPIO7 = 0;
+
+        if(EQUpdateFcenter == 1)
+        {
+            EQUpdateFcenter = 0;
+            Fcenter = (EQ[freqband].low * (float)(SPIdata/255.0f)) + EQ[freqBand].low;
+            EQUpdateGain = 1;
+        }
+        else if(EQUpdateGain == 1)
+        {
+            EQUpdateGain = 0;
+            Gain = (30 * (float)(SPIdata/255.0f)) + -15.0;
+            EQUpdateQ = 1;
+
+        }
+        else if(EQUpdateQ == 1)
+        {
+            EQUpdateQ = 0;
+            Q = (9.9f * (float)(SPIdata/255.0f)) + 0.1f;
+            updateParameters(&EQ[freqBand], Gain, Fcenter, Q);
+            eqEnable = 1;
+
+        }
+        else if(SPIdata >> 7 == 1)
+        {
+            freqBand = SPIdata & 0x0F;
+            EQUpdateFcenter = 1;
+        }
+        else
+            eqEnable = 0;
+    }
+
 
     else if(EffectSel == 1)
     {
         //BITCRUSH EFFECT (will probably be a toggle)
-        GpioDataRegs.GPADAT.bit.GPIO7 = 0;
+        if(SPIdata >> 7 == 1)
+        {
+            updateBitDepth((SPIdata & 0x0F) + 1);
+            bitcrushEnable = 1;
+        }
+        else
+            bitcrushEnable = 0;
     }
     else if(EffectSel == 2)
     {
@@ -144,12 +234,25 @@ interrupt void Spi_RxINTB_ISR(void){
     else if(EffectSel == 3)
     {
         //SAMPLE RATE REDUCTIION EFFECT
-        GpioDataRegs.GPADAT.bit.GPIO7 = 0;
+        if(SPIdata >> 7 == 1)
+        {
+            updateSampleRate((SPIdata & 0x0F) + 1);
+            srrEnable = 1;
+        }
+        else
+            srrEnable = 0;
     }
     else if(EffectSel == 4)
     {
         //ECHO EFFECT
-        GpioDataRegs.GPADAT.bit.GPIO7 = 0;
+        if(SPIdata >> 7 == 1)
+        {
+            updateEchoParams((SPIdata & 0x0F) + 1);
+            echoEnable = 1;
+        }
+        else
+            echoEnable = 0;
+
 
     }
     else
