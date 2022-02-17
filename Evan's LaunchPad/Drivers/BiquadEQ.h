@@ -19,6 +19,8 @@ typedef struct
     float32 dbGain; //keep between +/- 15dB
     float32 Q;    //Q controls bandwidth
     float32 fCenter; //vary center frequency
+    float32 low;    //holds the Lower limit of the freq band in Hz
+    float32 high;   //holds the upper limit of the freq band in Hz
 
     float32 alpha;
     float32 A;    //this will control the gain

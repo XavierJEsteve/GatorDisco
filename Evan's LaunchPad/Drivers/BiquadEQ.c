@@ -42,6 +42,28 @@ Biquad* initializeBiquads()
     EQ[8].Fs = 48000;
     EQ[9].Fs = 48000;
 
+    EQ[0].low = 22;
+    EQ[1].low = 44;
+    EQ[2].low = 88;
+    EQ[3].low = 177;
+    EQ[4].low = 355;
+    EQ[5].low = 710;
+    EQ[6].low = 1420;
+    EQ[7].low = 2840;
+    EQ[8].low = 5680;
+    EQ[9].low = 11360;
+
+    EQ[0].high = 44;
+    EQ[1].high = 88;
+    EQ[2].high = 177;
+    EQ[3].high = 355;
+    EQ[4].high = 710;
+    EQ[5].high = 1420;
+    EQ[6].high = 2840;
+    EQ[7].high = 5680;
+    EQ[8].high = 11360;
+    EQ[9].high = 22720;
+
     //initialize default parameters and coefficients
     for(int i = 0; i < 9; i++)
     {
