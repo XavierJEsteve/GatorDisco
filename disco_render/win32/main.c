@@ -30,7 +30,6 @@ static const int CHANNEL = 0;
 
 typedef struct{
     bool black;
-    float frequency;
     bool pressed;
     int xPos;
 } Key;
@@ -285,7 +284,6 @@ void drawKeys(int height){
         }
     }
 }
-int test_button_counter = 0;
 void drawButtons(){
     for(int i = 0; i < NUM_BUTTONS; i++){
         Button tempButton = buttons[i];
