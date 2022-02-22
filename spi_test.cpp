@@ -21,14 +21,13 @@ int main()
    // 500000 indicates bus speed.
    fd = wiringPiSPISetup(CHANNEL, 500000);
 
-
+   int spiData = 0;
    while(1)
    {
-   	buffer[0] = 128;
-	result = wiringPiSPIDataRW(CHANNEL, buffer, 1);	
-	buffer[0] = 0;
-	result = wiringPiSPIDataRW(CHANNEL, buffer, 1);
-	delay(1000);
-	buffer[0]
+   	buffer[0] = spiData;
+      spiData++;
+      buffer[1] = spiData;
+      spiData++;
+      result = wiringPiSPIDataRW(CHANNEL, buffer, 2);
    }
 }
