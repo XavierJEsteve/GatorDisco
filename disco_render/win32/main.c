@@ -113,8 +113,6 @@ void processSpiInput(int byte){
             synth.env.release = (float)byte / 128;
             else if(spiHandler.param == 4){ // gate
                 synth.env.gate = byte;
-                printf("key pressed: %d\n", synth.env.gate);
-                printf("key: %d\n", synth.keys.key);
             }
             spiHandler.byte = 0;
         }

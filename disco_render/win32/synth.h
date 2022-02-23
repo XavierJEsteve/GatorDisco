@@ -3,9 +3,11 @@
     created on: Feb 15, 2022
     Author: Luke Jones
 */
-#include <stdbool.h>
 #ifndef SYNTH_H
 #define SYNTH_H
+
+#include <stdbool.h>
+#include "effects.h"
 
 #define MAX_ATTACK_TIME 3
 #define MAX_DECAY_TIME 5
@@ -85,6 +87,7 @@ typedef struct{
     Oscillator osc;
     LFO lfo;
     Envelope env;
+    Effects fx;
     float output;
 } Synth;
 

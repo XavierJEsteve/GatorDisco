@@ -98,8 +98,10 @@ void initSynth(Synth* synth){
     synth->keys.frequency = &synth->osc.frequency;
     //connect oscillator to envelope
     synth->osc.output = &synth->env.oscOutput;
-    //connect envelope to synth output
-    synth->env.output = &synth->output;
+    //connect envelope to effects input
+    synth->env.output = &synth->fx.input;
+    //connect effects unit to synth output
+    synth->fx.output = &synth->output;
     //configure lfo targets
     synth->lfo.targets[0] = &synth->keys.lfo_input;
     synth->lfo.targets[1] = &synth->osc.lfo_input;
@@ -107,11 +109,16 @@ void initSynth(Synth* synth){
     //init lfo target
     synth->lfo.target = 0;
     synth->lfo.output = synth->lfo.targets[0];
+    //hard code effects parameters
+    synth->fx.param1 = 1;
+    synth->fx.param2 = 0.7;
+    synth->fx.effectType = 1;
 }
 float updateSynth(Synth* synth){
     updateLFO(&synth->lfo);
     updateKeyboard(&synth->keys);
     updateOscillator(&synth->osc);
     updateEnvelope(&synth->env);
+    updateEffects(&synth->fx);
     return synth->output;
 }
