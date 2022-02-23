@@ -11,6 +11,7 @@
 //#include <sys/soundcard.h>
 #include <fcntl.h>
 #include "synth.h"
+#include "spiConstants.h"
 // channel is the wiringPi name for the chip select (or chip enable) pin.
 // Set this to 0 or 1, depending on how it's connected.
 static const int CHANNEL = 0;
@@ -29,6 +30,11 @@ static const int CHANNEL = 0;
 #define MIDI_DEVICE "/dev/midi2"
 
 typedef struct{
+    int byte;
+    int module;
+    int param;
+} SpiHandler;
+typedef struct{
     bool black;
     bool pressed;
     int xPos;
@@ -38,7 +44,7 @@ typedef struct{
     int xPos;
     int yPos;
     char* name;
-    float* param;
+    int param;
 } Slider;
 typedef struct{
     int xPos;
@@ -64,6 +70,62 @@ Button buttons[NUM_BUTTONS];
 unsigned char spi_buffer[100];
 
 Synth synth;
+SpiHandler spiHandler;
+
+void processSpiInput(int byte){
+    if(spiHandler.byte == 0 && (byte >> 7) == 1){
+        spiHandler.module = (byte >> 4) & 7;
+        spiHandler.param = byte & 15;
+        spiHandler.byte++;
+    }
+    else if(byte >> 7 == 0 && spiHandler.byte > 0){
+        if(spiHandler.module == 0){ // oscillator
+            if(spiHandler.param == 0) // oscSelect
+            synth.osc.oscType = byte;
+            else if(spiHandler.param == 1) // oscParam
+            synth.osc.param1 = (float)byte / 128;
+            spiHandler.byte = 0;
+        }
+        else if(spiHandler.module == 1){ // keyboard
+            if(spiHandler.param == 0) //select key
+            synth.keys.key = byte;
+            else if(spiHandler.param == 1) //select octave
+            synth.keys.octave = (float)byte / 128;
+            spiHandler.byte = 0;
+        } 
+        else if(spiHandler.module == 2){ // LFO
+            if(spiHandler.param == 0) // lfo speed
+            synth.lfo.speed = (float)byte / 128;
+            else if(spiHandler.param == 1) // lfo value
+            synth.lfo.val = (float)byte / 128;
+            else if(spiHandler.param == 2) // lfo target
+            synth.lfo.target = byte;
+            spiHandler.byte = 0;
+        }
+        else if(spiHandler.module == 3){ // envelope
+            if(spiHandler.param == 0) // attack
+            synth.env.attack = (float)byte / 128;
+            else if(spiHandler.param == 1) // decay
+            synth.env.decay = (float)byte / 128;
+            else if(spiHandler.param == 2) // sustain
+            synth.env.sustain = (float)byte / 128;
+            else if(spiHandler.param == 3) // release
+            synth.env.release = (float)byte / 128;
+            else if(spiHandler.param == 4){ // gate
+                synth.env.gate = byte;
+                printf("key pressed: %d\n", synth.env.gate);
+                printf("key: %d\n", synth.keys.key);
+            }
+            spiHandler.byte = 0;
+        }
+        else if(spiHandler.module == 4){ // effects
+
+        }
+        else if(spiHandler.module == 5){ // EQ
+
+        }
+    }
+}
 
 Input masterInput;
 void initMasterInput(){
@@ -188,56 +250,56 @@ void buildSliders(){
     octave.xPos = 200;
     octave.yPos = 100;
     octave.value = 0;
-    octave.param = &synth.keys.octave;
+    octave.param = SPI_MODULE_KEYBOARD | SPI_KEYBAORD_OCTAVE;
     octave.name = "OCTAVE";
     sliders[0] = octave;
     Slider oscParam1;
     oscParam1.xPos = 300;
     oscParam1.yPos = 100;
     oscParam1.value = 0;
-    oscParam1.param = &synth.osc.param1;
+    oscParam1.param = SPI_MODULE_OSC | SPI_OSCPARAM1;
     oscParam1.name = "OSC PARAM";
     sliders[1] = oscParam1;
     Slider oscParam2;
     oscParam2.xPos = 450;
     oscParam2.yPos = 100;
     oscParam2.value = 0;
-    oscParam2.param = &synth.lfo.speed;
+    oscParam2.param = SPI_MODULE_LFO | SPI_LFO_SPEED;
     oscParam2.name = "LFO Freq";
     sliders[2] = oscParam2;
     Slider oscParam3;
     oscParam3.xPos = 600;
     oscParam3.yPos = 100;
     oscParam3.value = 0;
-    oscParam3.param = &synth.lfo.val;
+    oscParam3.param = SPI_MODULE_LFO | SPI_LFO_VAL;
     oscParam3.name = "LFO Val";
     sliders[3] = oscParam3;
     Slider Attack;
     Attack.xPos = 200;
     Attack.yPos = 350;
     Attack.value = 0;
-    Attack.param = &synth.env.attack;
+    Attack.param = SPI_MODULE_ENV | SPI_ENV_ATTACK;
     Attack.name = "Attack";
     sliders[4] = Attack;
     Slider Decay;
     Decay.xPos = 300;
     Decay.yPos = 350;
     Decay.value = 0;
-    Decay.param = &synth.env.decay;
+    Decay.param = SPI_MODULE_ENV | SPI_ENV_DECAY;
     Decay.name = "Decay";
     sliders[5] = Decay;
     Slider Sustain;
     Sustain.xPos = 450;
     Sustain.yPos = 350;
     Sustain.value = 0;
-    Sustain.param = &synth.env.sustain;
+    Sustain.param = SPI_MODULE_ENV | SPI_ENV_SUSTAIN;
     Sustain.name = "Sustain";
     sliders[6] = Sustain;
     Slider Release;
     Release.xPos = 600;
     Release.yPos = 350;
     Release.value = 0;
-    Release.param = &synth.env.release;
+    Release.param = SPI_MODULE_ENV | SPI_ENV_RELEASE;
     Release.name = "Release";
     sliders[7] = Release;
 }
@@ -322,7 +384,9 @@ void clearKeyPress(){
             spi_buffer[1] = 0;
             //wiringPiSPIDataRW(CHANNEL, spi_buffer, 2);
         }
-        *masterInput.keyPressed = false;
+        //*masterInput.keyPressed = false;
+        processSpiInput(SPI_MODULE_ENV | SPI_GATE);
+        processSpiInput(0);
     }
 }
 void processInput(){
@@ -341,7 +405,9 @@ void processInput(){
                 spi_buffer[1] = 1;
                 //wiringPiSPIDataRW(CHANNEL, spi_buffer, 2);
             }
-            *masterInput.keyPressed = true;
+            //*masterInput.keyPressed = true;
+            processSpiInput(SPI_MODULE_ENV | SPI_GATE);
+            processSpiInput(1);
             bool checkBlack = false;
             bool foundKey = false;
             int keyIndex = -1;
@@ -374,7 +440,9 @@ void processInput(){
                     }
                 }
             }
-            *masterInput.key = keyIndex;
+            //*masterInput.key = keyIndex;
+            processSpiInput(SPI_MODULE_KEYBOARD | SPI_KEYBOARD_KEY);
+            processSpiInput(keyIndex);
             if(keyIndex != keySelection){
                 /*
                 printf("SPI COMMAND\n");
@@ -396,7 +464,9 @@ void processInput(){
                 if(masterInput.x > tempSlider.xPos && masterInput.x -tempSlider.xPos < SLIDER_WIDTH && masterInput.y > tempSlider.yPos && masterInput.y -tempSlider.yPos < SLIDER_HEIGHT){
                     tempSlider.value = (float)(tempSlider.yPos + SLIDER_HEIGHT - masterInput.y)/SLIDER_HEIGHT;
                     if(tempSlider.value < 0.05) tempSlider.value = 0;
-                    *tempSlider.param = tempSlider.value;
+                    //*tempSlider.param = tempSlider.value;
+                    processSpiInput(tempSlider.param);
+                    processSpiInput(tempSlider.value * 127);
                     sliders[i] = tempSlider;
                     //printf("SPI COMMAND\n");
                     //printf("%d (%s)\n", i+2,tempSlider.name);
