@@ -19,15 +19,10 @@ float ProcessBitCrush(float input)
 {
     //we shift right by (16-bitDepth)
     //we then shift back left to maintain original magnitude
-    int sampleIn = (int)256*128*input;
-    int sampleOut;
-    int n = 16-bitDepth;
+    float resolution = (float)pow(2,bitDepth) / ((float)(256*256));
+    int units = (int)(input/resolution);
 
-
-    sampleOut = (sampleIn >> n);
-    sampleOut <<= n;
-
-    return (float)sampleOut/(256*128);
+    return (float)units*resolution;
 }
 
 
