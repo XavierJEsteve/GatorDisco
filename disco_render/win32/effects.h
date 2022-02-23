@@ -2,7 +2,8 @@
 #define EFFECTS_H
 
 #include "Effects/Echo.h"
-
+#include "Effects/BitCrush.h"
+#define NUM_EFFECTS 4
 typedef struct{
     //inputs
     int effectType;
@@ -10,11 +11,15 @@ typedef struct{
     /*
     0:  off
     1:  ECHO
+    2:  Bit Crush
+    3:  Sample Rate Reduction
     */
     float param1;
     float param2;
     /*
-    ECHO: echo time and echo volume
+    ECHO:       echo time and echo volume
+    Bit Crush:  bit crush factor
+    SRR:        Sample Rate Reduction factor
     */
     //internal variables
 

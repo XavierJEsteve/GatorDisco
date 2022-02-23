@@ -25,8 +25,8 @@ static const int CHANNEL = 0;
 #define SLIDER_VISIBLE_WIDTH 10
 #define MAX_ATTACK_TIME 3
 #define MAX_DECAY_TIME 5
-#define NUM_SLIDERS 8
-#define NUM_BUTTONS 3
+#define NUM_SLIDERS 10
+#define NUM_BUTTONS 4
 #define MIDI_DEVICE "/dev/midi2"
 
 typedef struct{
@@ -58,12 +58,21 @@ typedef struct{
 typedef struct{
     int x;
     int y;
-    bool* keyPressed;
-    int* key;
+    int gatePointer;
+    int keyPointer;
+    bool keyPressed;
 } Input;
 char* oscNames[NUM_OSCILLATORS] = {"PULSE WAVE", "SAWTOOTH"};
 char* oscParamNames[NUM_OSCILLATORS] = {"PULSE WIDTH", "DETUNE"};
+int oscTypePointer = 0;
+char* effectNames[NUM_EFFECTS] = {"OFF", "ECHO", "BIT CRUSH", "FS REDUCTION"};
+char* effectParam1Names[NUM_EFFECTS] = {"", "TIME", "BIT DEPTH", "FS RATIO"};
+char* effectParam2Names[NUM_EFFECTS] = {"", "VOLUME", "", ""};
+int effectTypePointer = 0;
 char* lfoTargetNames[NUM_LFO_TARGETS] = {"Frequency", "Osc Parameter", "Amplitude"};
+int lfoTargetPointer = 0;
+
+
 Key keys[17];
 Slider sliders[NUM_SLIDERS];
 Button buttons[NUM_BUTTONS];
@@ -80,8 +89,11 @@ void processSpiInput(int byte){
     }
     else if(byte >> 7 == 0 && spiHandler.byte > 0){
         if(spiHandler.module == 0){ // oscillator
-            if(spiHandler.param == 0) // oscSelect
-            synth.osc.oscType = byte;
+            if(spiHandler.param == 0){ // oscSelect
+                synth.osc.oscType = byte;
+                synth.osc.phase = 0;
+                synth.osc.phase2 = 0;
+            }
             else if(spiHandler.param == 1) // oscParam
             synth.osc.param1 = (float)byte / 128;
             spiHandler.byte = 0;
@@ -98,8 +110,10 @@ void processSpiInput(int byte){
             synth.lfo.speed = (float)byte / 128;
             else if(spiHandler.param == 1) // lfo value
             synth.lfo.val = (float)byte / 128;
-            else if(spiHandler.param == 2) // lfo target
-            synth.lfo.target = byte;
+            else if(spiHandler.param == 2){ // lfo target
+                synth.lfo.target = byte;
+                synth.lfo.output = synth.lfo.targets[synth.lfo.target];
+            }
             spiHandler.byte = 0;
         }
         else if(spiHandler.module == 3){ // envelope
@@ -111,13 +125,18 @@ void processSpiInput(int byte){
             synth.env.sustain = (float)byte / 128;
             else if(spiHandler.param == 3) // release
             synth.env.release = (float)byte / 128;
-            else if(spiHandler.param == 4){ // gate
-                synth.env.gate = byte;
-            }
+            else if(spiHandler.param == 4) // gate
+            synth.env.gate = byte;
             spiHandler.byte = 0;
         }
         else if(spiHandler.module == 4){ // effects
-
+            if(spiHandler.param == SPI_FX_SEL)
+            synth.fx.effectType = byte;
+            else if(spiHandler.param == SPI_FX_PARAM1)
+            synth.fx.param1 = (float)byte / 128;
+            else if(spiHandler.param == SPI_FX_PARAM2)
+            synth.fx.param2 = (float)byte / 128;
+            spiHandler.byte = 0;
         }
         else if(spiHandler.module == 5){ // EQ
 
@@ -127,8 +146,8 @@ void processSpiInput(int byte){
 
 Input masterInput;
 void initMasterInput(){
-    masterInput.key = &synth.keys.key;
-    masterInput.keyPressed = &synth.env.gate;
+    masterInput.keyPointer = SPI_MODULE_KEYBOARD | SPI_KEYBOARD_KEY;
+    masterInput.gatePointer = SPI_MODULE_ENV | SPI_GATE;
 }
 float buffer[STREAM_BUFFER_SIZE];
 int keySelection = -1;
@@ -202,17 +221,28 @@ void loadConfig(void){
     }            
 }
 void changeOsc(void){
-    synth.osc.oscType++;
-    synth.osc.oscType %= NUM_OSCILLATORS;
-    buttons[1].text = oscNames[synth.osc.oscType];
-    sliders[1].name = oscParamNames[synth.osc.oscType];
-    synth.osc.phase = 0;
-    synth.osc.phase2 = 0;
+    oscTypePointer++;
+    oscTypePointer %= NUM_OSCILLATORS;
+    processSpiInput(SPI_MODULE_OSC | SPI_OSCTYPE);
+    processSpiInput(oscTypePointer);
+    buttons[1].text = oscNames[oscTypePointer];
+    sliders[1].name = oscParamNames[oscTypePointer];
 }
 void changeLfo(void){
-    synth.lfo.target = (synth.lfo.target + 1) % NUM_LFO_TARGETS;
-    synth.lfo.output = synth.lfo.targets[synth.lfo.target];
-    buttons[2].text = lfoTargetNames[synth.lfo.target];
+    lfoTargetPointer++;
+    lfoTargetPointer %= NUM_LFO_TARGETS;
+    processSpiInput(SPI_MODULE_LFO | SPI_LFO_TARGET);
+    processSpiInput(lfoTargetPointer);
+    buttons[2].text = lfoTargetNames[lfoTargetPointer];
+}
+void changeEffect(void){
+    effectTypePointer++;
+    effectTypePointer %= NUM_EFFECTS;
+    processSpiInput(SPI_MODULE_FX | SPI_FX_SEL);
+    processSpiInput(effectTypePointer);
+    buttons[3].text = effectNames[effectTypePointer];
+    sliders[8].name = effectParam1Names[effectTypePointer];
+    sliders[9].name = effectParam2Names[effectTypePointer];
 }
 void buildButtons(){
     Button load_config;
@@ -242,6 +272,15 @@ void buildButtons(){
     lfoSelect.text = "Frequency";
     lfoSelect.buttonAction = &changeLfo;
     buttons[2] = lfoSelect;
+    Button effectSelect;
+    effectSelect.xPos = 12* SCREEN_WIDTH/16;
+    effectSelect.yPos = SCREEN_HEIGHT/2;
+    effectSelect.width = SCREEN_WIDTH/8;
+    effectSelect.height = SCREEN_HEIGHT/12;
+    effectSelect.color = GREEN;
+    effectSelect.text = "OFF";
+    effectSelect.buttonAction = &changeEffect;
+    buttons[3] = effectSelect;
 }
 void buildSliders(){
     Slider octave;
@@ -300,21 +339,37 @@ void buildSliders(){
     Release.param = SPI_MODULE_ENV | SPI_ENV_RELEASE;
     Release.name = "Release";
     sliders[7] = Release;
+    Slider Effect1;
+    Effect1.xPos = 750;
+    Effect1.yPos = 350;
+    Effect1.value = 0;
+    Effect1.param = SPI_MODULE_FX | SPI_FX_PARAM1;
+    Effect1.name = "";
+    sliders[8] = Effect1;
+    Slider Effect2;
+    Effect2.xPos = 900;
+    Effect2.yPos = 350;
+    Effect2.value = 0;
+    Effect2.param = SPI_MODULE_FX | SPI_FX_PARAM2;
+    Effect2.name = "";
+    sliders[9] = Effect2;
 }
 void drawSliders(){
     for(int i = 0; i < NUM_SLIDERS; i++){
         Slider tempSlider = sliders[i];
-        //draw black rectangle
-        int visibleXPos = tempSlider.xPos + SLIDER_WIDTH/2 - SLIDER_VISIBLE_WIDTH/2;
-        DrawRectangle(visibleXPos, tempSlider.yPos, SLIDER_VISIBLE_WIDTH, SLIDER_HEIGHT, BLACK);
-        //draw white rectangle representing current value
-        int whiteRectHeight = SLIDER_HEIGHT*tempSlider.value;
-        DrawRectangle(visibleXPos, tempSlider.yPos+SLIDER_HEIGHT-whiteRectHeight, SLIDER_VISIBLE_WIDTH, whiteRectHeight, WHITE);
-        //draw circle at end of white rectangle
-        //DrawCircle(int centerX, int centerY, float radius, Color color);
-        DrawCircle(tempSlider.xPos+SLIDER_WIDTH/2, tempSlider.yPos+SLIDER_HEIGHT-whiteRectHeight, SLIDER_WIDTH/2, RED);
-        //draw text
-        DrawText(tempSlider.name, tempSlider.xPos, tempSlider.yPos + SLIDER_HEIGHT + 30, 15, BLACK);
+        if(strlen(tempSlider.name) > 0){
+            //draw black rectangle
+            int visibleXPos = tempSlider.xPos + SLIDER_WIDTH/2 - SLIDER_VISIBLE_WIDTH/2;
+            DrawRectangle(visibleXPos, tempSlider.yPos, SLIDER_VISIBLE_WIDTH, SLIDER_HEIGHT, BLACK);
+            //draw white rectangle representing current value
+            int whiteRectHeight = SLIDER_HEIGHT*tempSlider.value;
+            DrawRectangle(visibleXPos, tempSlider.yPos+SLIDER_HEIGHT-whiteRectHeight, SLIDER_VISIBLE_WIDTH, whiteRectHeight, WHITE);
+            //draw circle at end of white rectangle
+            //DrawCircle(int centerX, int centerY, float radius, Color color);
+            DrawCircle(tempSlider.xPos+SLIDER_WIDTH/2, tempSlider.yPos+SLIDER_HEIGHT-whiteRectHeight, SLIDER_WIDTH/2, RED);
+            //draw text
+            DrawText(tempSlider.name, tempSlider.xPos, tempSlider.yPos + SLIDER_HEIGHT + 30, 15, BLACK);
+        }
     }
 }
 void drawKeys(int height){
@@ -372,7 +427,7 @@ void clearKeyPress(){
         for(int i = 0; i < 17; i++){
             keys[i].pressed = false;
         }
-        if(*masterInput.keyPressed == true){
+        if(masterInput.keyPressed == true){
             /*
             printf("SPI COMMAND\n");
             printf("00000000 (Keypressed)\n");
@@ -382,8 +437,8 @@ void clearKeyPress(){
             spi_buffer[1] = 0;
             //wiringPiSPIDataRW(CHANNEL, spi_buffer, 2);
         }
-        //*masterInput.keyPressed = false;
-        processSpiInput(SPI_MODULE_ENV | SPI_GATE);
+        masterInput.keyPressed = false;
+        processSpiInput(masterInput.gatePointer);
         processSpiInput(0);
     }
 }
@@ -393,7 +448,7 @@ void processInput(){
 
     if(IsMouseButtonDown(0)){
         if(masterInput.y > (3*SCREEN_HEIGHT / 4)){
-            if(*masterInput.keyPressed == false){
+            if(masterInput.keyPressed == false){
                 /*
                 printf("SPI COMMAND\n");
                 printf("00000000 (Keypressed)\n");
@@ -403,8 +458,8 @@ void processInput(){
                 spi_buffer[1] = 1;
                 //wiringPiSPIDataRW(CHANNEL, spi_buffer, 2);
             }
-            //*masterInput.keyPressed = true;
-            processSpiInput(SPI_MODULE_ENV | SPI_GATE);
+            masterInput.keyPressed = true;
+            processSpiInput(masterInput.gatePointer);
             processSpiInput(1);
             bool checkBlack = false;
             bool foundKey = false;
@@ -439,7 +494,7 @@ void processInput(){
                 }
             }
             //*masterInput.key = keyIndex;
-            processSpiInput(SPI_MODULE_KEYBOARD | SPI_KEYBOARD_KEY);
+            processSpiInput(masterInput.keyPointer);
             processSpiInput(keyIndex);
             if(keyIndex != keySelection){
                 /*

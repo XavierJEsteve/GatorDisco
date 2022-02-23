@@ -110,9 +110,6 @@ void initSynth(Synth* synth){
     synth->lfo.target = 0;
     synth->lfo.output = synth->lfo.targets[0];
     //hard code effects parameters
-    synth->fx.param1 = 1;
-    synth->fx.param2 = 0.7;
-    synth->fx.effectType = 1;
 }
 float updateSynth(Synth* synth){
     updateLFO(&synth->lfo);
