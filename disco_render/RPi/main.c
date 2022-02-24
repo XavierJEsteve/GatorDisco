@@ -615,6 +615,7 @@ void main() {
            printf("Byte 0: %d\n", midipacket[0]);
            printf("Byte 1: %d\n", midipacket[1]);
            printf("Byte 2: %d\n\n", midipacket[2]);
+           sleep(500);
         }
     }
     CloseAudioDevice();
