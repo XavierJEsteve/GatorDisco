@@ -25,7 +25,7 @@ static const int CHANNEL = 0;
 #define SLIDER_VISIBLE_WIDTH 10
 #define MAX_ATTACK_TIME 3
 #define MAX_DECAY_TIME 5
-#define NUM_SLIDERS 10
+#define NUM_SLIDERS 11
 #define NUM_BUTTONS 4
 #define MIDI_DEVICE "/dev/midi2"
 
@@ -63,7 +63,8 @@ typedef struct{
     bool keyPressed;
 } Input;
 char* oscNames[NUM_OSCILLATORS] = {"PULSE WAVE", "SAWTOOTH", "OSCILLATOR 3", "OSCILLATOR 4"};
-char* oscParamNames[NUM_OSCILLATORS] = {"PULSE WIDTH", "DETUNE", "OSC3 PARAM", "OSC4 PARAM"};
+char* oscParam1Names[NUM_OSCILLATORS] = {"PULSE WIDTH", "DETUNE", "OSC3 PARAM", "OSC4 PARAM"};
+char* oscParam2Names[NUM_OSCILLATORS] = {"", "", "OSC3 PARAM2", "OSC4 PARAM2"};
 int oscTypePointer = 0;
 char* effectNames[NUM_EFFECTS] = {"OFF", "ECHO", "BIT CRUSH", "FS REDUCTION", "EFFECT 4", "EFFECT 5"};
 char* effectParam1Names[NUM_EFFECTS] = {"", "TIME", "BIT DEPTH", "FS RATIO", "PARAM1", "PARAM1"};
@@ -94,8 +95,10 @@ void processSpiInput(int byte){
                 synth.osc.phase = 0;
                 synth.osc.phase2 = 0;
             }
-            else if(spiHandler.param == 1) // oscParam
+            else if(spiHandler.param == 1) // oscParam1
             synth.osc.param1 = (float)byte / 128;
+            else if(spiHandler.param == 2) // oscParam2
+            synth.osc.param2 = (float)byte / 128;
             spiHandler.byte = 0;
         }
         else if(spiHandler.module == 1){ // keyboard
@@ -226,7 +229,8 @@ void changeOsc(void){
     processSpiInput(SPI_MODULE_OSC | SPI_OSCTYPE);
     processSpiInput(oscTypePointer);
     buttons[1].text = oscNames[oscTypePointer];
-    sliders[1].name = oscParamNames[oscTypePointer];
+    sliders[1].name = oscParam1Names[oscTypePointer];
+    sliders[2].name = oscParam2Names[oscTypePointer];
 }
 void changeLfo(void){
     lfoTargetPointer++;
@@ -246,7 +250,7 @@ void changeEffect(void){
 }
 void buildButtons(){
     Button load_config;
-    load_config.xPos = (3*SCREEN_WIDTH/5);
+    load_config.xPos = 900;
     load_config.yPos = SCREEN_HEIGHT/3;
     load_config.width = SCREEN_WIDTH/5;
     load_config.height = SCREEN_HEIGHT/12;
@@ -264,7 +268,7 @@ void buildButtons(){
     oscSelect.buttonAction = &changeOsc;
     buttons[1] = oscSelect;
     Button lfoSelect;
-    lfoSelect.xPos = 9* SCREEN_WIDTH/16;
+    lfoSelect.xPos = 720;
     lfoSelect.yPos = SCREEN_HEIGHT/5;
     lfoSelect.width = SCREEN_WIDTH/8;
     lfoSelect.height = SCREEN_HEIGHT/12;
@@ -295,64 +299,71 @@ void buildSliders(){
     oscParam1.yPos = 100;
     oscParam1.value = 0;
     oscParam1.param = SPI_MODULE_OSC | SPI_OSCPARAM1;
-    oscParam1.name = "OSC PARAM";
+    oscParam1.name = "PULSE WIDTH";
     sliders[1] = oscParam1;
     Slider oscParam2;
-    oscParam2.xPos = 450;
+    oscParam2.xPos = 420;
     oscParam2.yPos = 100;
     oscParam2.value = 0;
-    oscParam2.param = SPI_MODULE_LFO | SPI_LFO_SPEED;
-    oscParam2.name = "LFO Freq";
+    oscParam2.param = SPI_MODULE_OSC | SPI_OSCPARAM1;
+    oscParam2.name = "";
     sliders[2] = oscParam2;
-    Slider oscParam3;
-    oscParam3.xPos = 600;
-    oscParam3.yPos = 100;
-    oscParam3.value = 0;
-    oscParam3.param = SPI_MODULE_LFO | SPI_LFO_VAL;
-    oscParam3.name = "LFO Val";
-    sliders[3] = oscParam3;
+    Slider lfoSpeed;
+    lfoSpeed.xPos = 540;
+    lfoSpeed.yPos = 100;
+    lfoSpeed.value = 0;
+    lfoSpeed.param = SPI_MODULE_LFO | SPI_LFO_SPEED;
+    lfoSpeed.name = "LFO Freq";
+    sliders[3] = lfoSpeed;
+    Slider lfoval;
+    lfoval.xPos = 690;
+    lfoval.yPos = 100;
+    lfoval.value = 0;
+    lfoval.param = SPI_MODULE_LFO | SPI_LFO_VAL;
+    lfoval.name = "LFO Val";
+    sliders[4] = lfoval;
     Slider Attack;
     Attack.xPos = 200;
     Attack.yPos = 350;
     Attack.value = 0;
     Attack.param = SPI_MODULE_ENV | SPI_ENV_ATTACK;
     Attack.name = "Attack";
-    sliders[4] = Attack;
+    sliders[5] = Attack;
     Slider Decay;
     Decay.xPos = 300;
     Decay.yPos = 350;
     Decay.value = 0;
     Decay.param = SPI_MODULE_ENV | SPI_ENV_DECAY;
     Decay.name = "Decay";
-    sliders[5] = Decay;
+    sliders[6] = Decay;
     Slider Sustain;
     Sustain.xPos = 450;
     Sustain.yPos = 350;
     Sustain.value = 0;
     Sustain.param = SPI_MODULE_ENV | SPI_ENV_SUSTAIN;
     Sustain.name = "Sustain";
-    sliders[6] = Sustain;
+    sliders[7] = Sustain;
     Slider Release;
     Release.xPos = 600;
     Release.yPos = 350;
     Release.value = 0;
     Release.param = SPI_MODULE_ENV | SPI_ENV_RELEASE;
     Release.name = "Release";
-    sliders[7] = Release;
+    sliders[8] = Release;
     Slider Effect1;
     Effect1.xPos = 750;
     Effect1.yPos = 350;
     Effect1.value = 0;
     Effect1.param = SPI_MODULE_FX | SPI_FX_PARAM1;
     Effect1.name = "";
-    sliders[8] = Effect1;
+    sliders[9] = Effect1;
     Slider Effect2;
     Effect2.xPos = 900;
     Effect2.yPos = 350;
     Effect2.value = 0;
     Effect2.param = SPI_MODULE_FX | SPI_FX_PARAM2;
     Effect2.name = "";
-    sliders[9] = Effect2;
+    sliders[10] = Effect2;
 }
 void drawSliders(){
     for(int i = 0; i < NUM_SLIDERS; i++){

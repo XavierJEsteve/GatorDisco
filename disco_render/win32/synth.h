@@ -38,6 +38,7 @@ typedef struct{
     */
     float frequency;
     float param1;
+    float param2;
     /*
     PULSE WAVE: threshold
     SAWTOOTH:   detune
