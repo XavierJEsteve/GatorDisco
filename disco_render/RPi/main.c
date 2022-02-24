@@ -599,14 +599,14 @@ void main() {
             //updateSignal(buffer);
             drawGUI();
 		    read(seqfd, &midipacket, sizeof(midipacket));
-            if(firstByte != midipacket[1] || secondByte != midipacket[2]){
+            if((firstByte != midipacket[1] || secondByte != midipacket[2]) && midipacket[1] < 109 && midipacket[1] > 23){
                 //send gate
                 processSpiInput(SPI_MODULE_ENV | SPI_GATE);
                 if(midipacket[2] > 0) processSpiInput(1);
                 else processSpiInput(0);
                 //send key
                 processSpiInput(SPI_MODULE_KEYBOARD | SPI_KEYBOARD_KEY);
-                processSpiInput(midipacket[1]);
+                processSpiInput(midipacket[1] - 24);
                 firstByte = midipacket[1];
                 secondByte = midipacket[2];
             }
