@@ -561,19 +561,19 @@ void main() {
     PlayAudioStream(synthStream);
     
     //spi config
-    //int fd, result;
+    int fd, result;
 
     //cout << "Initializing" << endl ;
 
     // Configure the interface.
     // CHANNEL insicates chip select,
     // 50000 indicates bus speed.
-    //fd = wiringPiSPISetup(CHANNEL, 50000);
+    fd = wiringPiSPISetup(CHANNEL, 50000);
 
     //cout << "Init result: " << fd << endl;
 
     // clear display
-	/*
+	
     spi_buffer[0] = 0x76;
     wiringPiSPIDataRW(CHANNEL, spi_buffer, 1);
         unsigned char firstByte = 0;
@@ -587,7 +587,7 @@ void main() {
         }
 	
     sleep(5);
-*/
+
     while(WindowShouldClose() == false)
     {
         if(IsAudioStreamProcessed(synthStream)){
