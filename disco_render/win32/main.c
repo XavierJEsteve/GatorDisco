@@ -62,12 +62,12 @@ typedef struct{
     int keyPointer;
     bool keyPressed;
 } Input;
-char* oscNames[NUM_OSCILLATORS] = {"PULSE WAVE", "SAWTOOTH"};
-char* oscParamNames[NUM_OSCILLATORS] = {"PULSE WIDTH", "DETUNE"};
+char* oscNames[NUM_OSCILLATORS] = {"PULSE WAVE", "SAWTOOTH", "OSCILLATOR 3", "OSCILLATOR 4"};
+char* oscParamNames[NUM_OSCILLATORS] = {"PULSE WIDTH", "DETUNE", "OSC3 PARAM", "OSC4 PARAM"};
 int oscTypePointer = 0;
-char* effectNames[NUM_EFFECTS] = {"OFF", "ECHO", "BIT CRUSH", "FS REDUCTION"};
-char* effectParam1Names[NUM_EFFECTS] = {"", "TIME", "BIT DEPTH", "FS RATIO"};
-char* effectParam2Names[NUM_EFFECTS] = {"", "VOLUME", "", ""};
+char* effectNames[NUM_EFFECTS] = {"OFF", "ECHO", "BIT CRUSH", "FS REDUCTION", "EFFECT 4", "EFFECT 5"};
+char* effectParam1Names[NUM_EFFECTS] = {"", "TIME", "BIT DEPTH", "FS RATIO", "PARAM1", "PARAM1"};
+char* effectParam2Names[NUM_EFFECTS] = {"", "VOLUME", "", "", "PARAM2", "PARAM2"};
 int effectTypePointer = 0;
 char* lfoTargetNames[NUM_LFO_TARGETS] = {"Frequency", "Osc Parameter", "Amplitude"};
 int lfoTargetPointer = 0;

@@ -3,7 +3,10 @@
 
 #include "Effects/Echo.h"
 #include "Effects/BitCrush.h"
-#define NUM_EFFECTS 4
+#include "Effects/Effect4.h"
+#include "Effects/Effect5.h"
+
+#define NUM_EFFECTS 6
 typedef struct{
     //inputs
     int effectType;
@@ -13,6 +16,8 @@ typedef struct{
     1:  ECHO
     2:  Bit Crush
     3:  Sample Rate Reduction
+    4:  Effect 4
+    5:  Effect 5
     */
     float param1;
     float param2;
@@ -20,6 +25,8 @@ typedef struct{
     ECHO:       echo time and echo volume
     Bit Crush:  bit crush factor
     SRR:        Sample Rate Reduction factor
+    Effect4:    ???
+    Effect5:    ???
     */
     //internal variables
 
