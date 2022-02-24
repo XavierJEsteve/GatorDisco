@@ -8,7 +8,7 @@
 #include <errno.h>
 #include "include/wiringPiSPI.h"
 #include <unistd.h>
-//#include <sys/soundcard.h>
+#include <sys/soundcard.h>
 #include <fcntl.h>
 #include "synth.h"
 #include "spiConstants.h"
