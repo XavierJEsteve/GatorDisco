@@ -268,7 +268,7 @@ void buildButtons(){
     oscSelect.buttonAction = &changeOsc;
     buttons[1] = oscSelect;
     Button lfoSelect;
-    lfoSelect.xPos = 720;
+    lfoSelect.xPos = 750;
     lfoSelect.yPos = SCREEN_HEIGHT/5;
     lfoSelect.width = SCREEN_WIDTH/8;
     lfoSelect.height = SCREEN_HEIGHT/12;
@@ -305,11 +305,11 @@ void buildSliders(){
     oscParam2.xPos = 420;
     oscParam2.yPos = 100;
     oscParam2.value = 0;
-    oscParam2.param = SPI_MODULE_OSC | SPI_OSCPARAM1;
+    oscParam2.param = SPI_MODULE_OSC | SPI_OSCPARAM2;
     oscParam2.name = "";
     sliders[2] = oscParam2;
     Slider lfoSpeed;
-    lfoSpeed.xPos = 540;
+    lfoSpeed.xPos = 570;
     lfoSpeed.yPos = 100;
     lfoSpeed.value = 0;
     lfoSpeed.param = SPI_MODULE_LFO | SPI_LFO_SPEED;
