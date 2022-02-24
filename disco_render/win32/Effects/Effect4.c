@@ -1,4 +1,6 @@
-
+/*
+    Possible Effects: Chorus, Flanger, Phaser
+*/
 
 #include "Effect4.h"
 
