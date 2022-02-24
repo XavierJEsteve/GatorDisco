@@ -465,6 +465,7 @@ void processInput(){
             masterInput.keyPressed = true;
             processSpiInput(masterInput.gatePointer);
             processSpiInput(1);
+            printf("mouse button down\n");
             bool checkBlack = false;
             bool foundKey = false;
             int keyIndex = -1;
