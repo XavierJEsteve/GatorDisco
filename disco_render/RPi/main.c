@@ -153,12 +153,13 @@ void initMasterInput(){
 }
 float buffer[STREAM_BUFFER_SIZE];
 int keySelection = -1;
-
+/*
 void updateSignal(float* signal){
     for(int i = 0; i < STREAM_BUFFER_SIZE; i++){
         signal[i] = updateSynth(&synth);
     }
 }
+*/
 void drawWaveform(float* signal,int width,int height,int x, int y){
     DrawRectangle(x, y, width, height, WHITE);
     int offset = (int)(synth.osc.phase * (SAMPLE_RATE/synth.osc.frequency));
@@ -593,7 +594,7 @@ void main() {
         if(IsAudioStreamProcessed(synthStream)){
             UpdateAudioStream(synthStream, buffer, STREAM_BUFFER_SIZE);
             processInput();
-            updateSignal(buffer);
+            //updateSignal(buffer);
             drawGUI();
 		    read(seqfd, &midipacket, sizeof(midipacket));
             if(firstByte != midipacket[1] || secondByte != midipacket[2]){
