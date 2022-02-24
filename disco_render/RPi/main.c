@@ -549,7 +549,7 @@ void main() {
     SetTargetFPS(60);
     InitAudioDevice();
     initMasterInput();
-    initSynth(&synth);
+    //initSynth(&synth);
     buildKeys();
     buildSliders();
     buildButtons();
