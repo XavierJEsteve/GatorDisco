@@ -10,7 +10,7 @@
 #include <unistd.h>
 #include <sys/soundcard.h>
 #include <fcntl.h>
-#include "synth.h"
+#include "include/synth.h"
 #include "spiConstants.h"
 // channel is the wiringPi name for the chip select (or chip enable) pin.
 // Set this to 0 or 1, depending on how it's connected.
