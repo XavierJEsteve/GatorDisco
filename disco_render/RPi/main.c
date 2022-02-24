@@ -599,7 +599,7 @@ void main() {
             //updateSignal(buffer);
             drawGUI();
 		    read(seqfd, &midipacket, sizeof(midipacket));
-            /*
+            
             if((firstByte != midipacket[1] || secondByte != midipacket[2]) && midipacket[1] < 109 && midipacket[1] > 23){
                 //send gate
                 processSpiInput(SPI_MODULE_ENV | SPI_GATE);
@@ -611,11 +611,7 @@ void main() {
                 firstByte = midipacket[1];
                 secondByte = midipacket[2];
             }
-            */
-           printf("Byte 0: %d\n", midipacket[0]);
-           printf("Byte 1: %d\n", midipacket[1]);
-           printf("Byte 2: %d\n\n", midipacket[2]);
-           sleep(1);
+            
         }
     }
     CloseAudioDevice();
