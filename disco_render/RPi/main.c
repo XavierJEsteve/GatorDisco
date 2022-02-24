@@ -82,6 +82,7 @@ Synth synth;
 SpiHandler spiHandler;
 
 void processSpiInput(int byte){
+    printf("sent byte: %d\n", byte);
     spi_buffer[0] = byte;
     wiringPiSPIDataRW(CHANNEL, spi_buffer, 1);
     if(spiHandler.byte == 0 && (byte >> 7) == 1){
