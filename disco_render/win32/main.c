@@ -245,8 +245,8 @@ void changeEffect(void){
     processSpiInput(SPI_MODULE_FX | SPI_FX_SEL);
     processSpiInput(effectTypePointer);
     buttons[3].text = effectNames[effectTypePointer];
-    sliders[8].name = effectParam1Names[effectTypePointer];
-    sliders[9].name = effectParam2Names[effectTypePointer];
+    sliders[9].name = effectParam1Names[effectTypePointer];
+    sliders[10].name = effectParam2Names[effectTypePointer];
 }
 void buildButtons(){
     Button load_config;
