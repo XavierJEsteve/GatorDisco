@@ -8,6 +8,7 @@
 
 #include <stdbool.h>
 #include "effects.h"
+#include "BiquadEQ.h"
 
 #define MAX_ATTACK_TIME 3
 #define MAX_DECAY_TIME 5
@@ -69,7 +70,7 @@ typedef struct{
     float decay;
     float sustain;
     float release;
-    float oscOutput;
+    float input;
     bool gate;
     float lfo_input;
     //internal variables
@@ -80,10 +81,18 @@ typedef struct{
 } Envelope;
 void updateEnvelope(Envelope* env);
 typedef struct{
+    //inputs
+    float input;
     float fCenter;
     float gain;
     float qFactor;
+    //internal variables
+    Biquad* EQ;
+    bool updateFlag;
+    //output
+    float* output;
 } Filter;
+void updateFilter(Filter* filter);
 typedef struct{
     Keyboard keys;
     Oscillator osc;

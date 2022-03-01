@@ -99,6 +99,8 @@ Synth synth;
 SpiHandler spiHandler;
 
 void processSpiInput(int byte){
+    //spi_buffer[0] = byte;
+    //wiringPiSPIDataRW(CHANNEL, spi_buffer, 1);
     printf("SPI Byte: %d\n", byte);
     if(spiHandler.byte == 0 && (byte >> 7) == 1){
         spiHandler.module = (byte >> 4) & 7;
@@ -173,6 +175,12 @@ void processSpiInput(int byte){
             else if(spiHandler.byte == 3){
                 synth.filter.qFactor = (float)byte / 128;
                 //update filter
+                float Fcenter = (synth.filter.EQ[spiHandler.param].low * synth.filter.fCenter) + synth.filter.EQ[spiHandler.param].low;
+                float Gain = (30 * synth.filter.gain) + -15.0;
+                float Q = (9.9f * synth.filter.qFactor) + 0.1f;
+                synth.filter.updateFlag = true;
+                updateParameters(&synth.filter.EQ[spiHandler.param],Gain,Fcenter,Q);
+                synth.filter.updateFlag = false;
                 spiHandler.byte = 0;
             }
         }
@@ -549,8 +557,8 @@ void drawEQSliders(){
         yPos,
         width,
         height
-    },leftFreqText,
-    rightFreqText,
+    },"",
+    "Center Frequency",
     bands[currentBand].fCenter,
     bandLimits[currentBand], 
     bandLimits[currentBand + 1]));
@@ -561,8 +569,8 @@ void drawEQSliders(){
         yPos,
         width,
         height
-    },"left",
-    "right",
+    },"",
+    "Gain (dB)",
     bands[currentBand].gain,
     -15, 
     15);
@@ -573,8 +581,8 @@ void drawEQSliders(){
         yPos,
         width,
         height
-    },"left",
-    "right",
+    },"",
+    "Q Factor",
     bands[currentBand].qFactor,
     0.1, 
     10);

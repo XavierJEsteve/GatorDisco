@@ -96,9 +96,16 @@ void updateEnvelope(Envelope* env){
             env->amplitude -= 1.0/(SAMPLE_RATE*MAX_ATTACK_TIME*(env->release+0.001));
         }
     }
-    *env->output = env->amplitude * env->oscOutput * (env->lfo_input + 1);
+    *env->output = env->amplitude * env->input * (env->lfo_input + 1);
+}
+void updateFilter(Filter* filter){
+    if(filter->updateFlag == false)
+    *filter->output = processBiquads(filter->EQ, filter->input);
+    else
+    *filter->output = filter->input;
 }
 void initSynth(Synth* synth){
+    synth->filter.EQ = initializeBiquads();
     //keyboard init
     //fill frequency table
     float tempFreq = 261.6/4;
@@ -110,9 +117,11 @@ void initSynth(Synth* synth){
     synth->keys.midiKeys = false;
     //connect keyboard to oscillator and envelope
     synth->keys.frequency = &synth->osc.frequency;
-    //connect oscillator to envelope
-    synth->osc.output = &synth->env.oscOutput;
-    //connect envelope to effects input
+    //connect oscillator to filter
+    synth->osc.output = &synth->filter.input;
+    //connect filter to envelope
+    synth->filter.output = &synth->env.input;
+    //connect filter to effects input
     synth->env.output = &synth->fx.input;
     //connect effects unit to synth output
     synth->fx.output = &synth->output;
@@ -129,6 +138,7 @@ float updateSynth(Synth* synth){
     updateLFO(&synth->lfo);
     updateKeyboard(&synth->keys);
     updateOscillator(&synth->osc);
+    updateFilter(&synth->filter);
     updateEnvelope(&synth->env);
     updateEffects(&synth->fx);
     return synth->output;
