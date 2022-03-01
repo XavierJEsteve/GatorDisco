@@ -23,7 +23,7 @@ void updateKeyboard(Keyboard* keys){
         keyIndex += octaveFactor*12;
     }
     //printf("table freq: %f\n",keys->freq_table[keyIndex]);
-    *keys->frequency = keys->freq_table[keyIndex]*pow(2,keys->lfo_input);
+    *keys->frequency = keys->freq_table[keyIndex]*pow(1.5,keys->lfo_input);
     //printf("real freq: %f\n", *keys->frequency);
 }
 void updateOscillator(Oscillator* osc){

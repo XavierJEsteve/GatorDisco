@@ -14,7 +14,7 @@
 #define NUM_OSCILLATORS 4
 #define NUM_LFO_TARGETS 3
 #define SAMPLE_RATE 48000
-#define MAX_LFO_SPEED 100
+#define MAX_LFO_SPEED 20
 
 typedef struct{
     //inputs
@@ -80,8 +80,9 @@ typedef struct{
 } Envelope;
 void updateEnvelope(Envelope* env);
 typedef struct{
-    float highPass;
-    float cutoff;
+    float fCenter;
+    float gain;
+    float qFactor;
 } Filter;
 typedef struct{
     Keyboard keys;
@@ -89,6 +90,7 @@ typedef struct{
     LFO lfo;
     Envelope env;
     Effects fx;
+    Filter filter;
     float output;
 } Synth;
 
