@@ -272,7 +272,8 @@ void changeOsc(void){
     processSpiInput(SPI_MODULE_OSC | SPI_OSCTYPE);
     processSpiInput(oscTypePointer);
     buttons[1].text = oscNames[oscTypePointer];
-    sliders[1].name = oscParamNames[oscTypePointer];
+    sliders[1].name = oscParam1Names[oscTypePointer];
+    sliders[2].name = oscParam2Names[oscTypePointer];
 }
 void changeMode(int input){
     if(GUI_MODE == SYNTH_MODE){
