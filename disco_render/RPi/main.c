@@ -56,7 +56,7 @@ typedef struct{
     int height;
     Color color;
     char* text;
-    int (*buttonAction)(void);
+    int (*buttonAction)(int input);
 } Button;
 typedef struct{
     int x;
