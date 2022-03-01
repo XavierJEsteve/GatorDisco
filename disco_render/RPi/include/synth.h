@@ -8,13 +8,14 @@
 
 #include <stdbool.h>
 #include "effects.h"
+#include "BiquadEQ.h"
 
 #define MAX_ATTACK_TIME 3
 #define MAX_DECAY_TIME 5
 #define NUM_OSCILLATORS 4
 #define NUM_LFO_TARGETS 3
 #define SAMPLE_RATE 48000
-#define MAX_LFO_SPEED 100
+#define MAX_LFO_SPEED 20
 
 typedef struct{
     //inputs
@@ -38,6 +39,7 @@ typedef struct{
     */
     float frequency;
     float param1;
+    float param2;
     /*
     PULSE WAVE: threshold
     SAWTOOTH:   detune
@@ -68,7 +70,7 @@ typedef struct{
     float decay;
     float sustain;
     float release;
-    float oscOutput;
+    float input;
     bool gate;
     float lfo_input;
     //internal variables
@@ -79,15 +81,25 @@ typedef struct{
 } Envelope;
 void updateEnvelope(Envelope* env);
 typedef struct{
-    float highPass;
-    float cutoff;
+    //inputs
+    float input;
+    float fCenter;
+    float gain;
+    float qFactor;
+    //internal variables
+    Biquad* EQ;
+    bool updateFlag;
+    //output
+    float* output;
 } Filter;
+void updateFilter(Filter* filter);
 typedef struct{
     Keyboard keys;
     Oscillator osc;
     LFO lfo;
     Envelope env;
     Effects fx;
+    Filter filter;
     float output;
 } Synth;
 
