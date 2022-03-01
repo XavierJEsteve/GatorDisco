@@ -181,7 +181,7 @@ void processSpiInput(int byte){
                 float Gain = (30 * synth.filter.gain) + -15.0;
                 float Q = (9.9f * synth.filter.qFactor) + 0.1f;
                 synth.filter.updateFlag = true;
-                updateParameters(&synth.filter.EQ[spiHandler.param],Gain,Fcenter,Q);
+                //updateParameters(&synth.filter.EQ[spiHandler.param],Gain,Fcenter,Q);
                 synth.filter.updateFlag = false;
                 spiHandler.byte = 0;
             }
