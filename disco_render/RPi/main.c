@@ -509,7 +509,7 @@ void drawButtons(){
         tempButton.height
         }, tempButton.text);
         if(pressed){
-            tempButton.buttonAction();
+            tempButton.buttonAction(0);
         }
     } 
 }
