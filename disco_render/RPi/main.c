@@ -711,9 +711,12 @@ void main() {
     {
         //if(IsAudioStreamProcessed(synthStream)){
             //UpdateAudioStream(synthStream, buffer, STREAM_BUFFER_SIZE);
+            printf("process input fault\n");
             processInput();
             //updateSignal(buffer);
+            printf("drawGUI fault\n");
             drawGUI();
+            printf("midi packet fault\n");
 		    read(seqfd, &midipacket, sizeof(midipacket));
             
             if((firstByte != midipacket[1] || secondByte != midipacket[2]) && midipacket[1] < 109 && midipacket[1] > 23){
