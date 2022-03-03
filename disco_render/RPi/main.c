@@ -521,9 +521,13 @@ void drawGUI(){
     BeginDrawing();
     ClearBackground(GRAY);
     if(GUI_MODE == SYNTH_MODE){
+        printf("draw waveform fault\n");
         drawWaveform(buffer,SCREEN_WIDTH/6,SCREEN_HEIGHT/6,SCREEN_WIDTH-(SCREEN_WIDTH*1.5/6),SCREEN_HEIGHT/12);
+        printf("drawkeys fault\n");
         drawKeys(SCREEN_HEIGHT/4);
+        printf("draw sliders fault\n");
         drawSliders();
+        printf("draw buttons fault\n");
         drawButtons();
     }
     else{
@@ -656,20 +660,13 @@ void main() {
     InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Synth");
     SetTargetFPS(60);
     //InitAudioDevice();
-    printf("no fault\n");
     initMasterInput();
     //initSynth(&synth);
-    printf("no fault\n");
     buildKeys();
-    printf("no fault\n");
     buildSliders();
-    printf("no fault\n");
     buildBandGUIs();
-    printf("no fault\n");
     buildButtons();
-    printf("no fault\n");
     buildEQButtons();
-    printf("no fault\n");
     /*
     SetAudioStreamBufferSizeDefault(STREAM_BUFFER_SIZE);
     AudioStream synthStream = LoadAudioStream(SAMPLE_RATE,
@@ -706,17 +703,13 @@ void main() {
         }
 	
     sleep(5);
-    printf("no fault\n");
     while(WindowShouldClose() == false)
     {
         //if(IsAudioStreamProcessed(synthStream)){
             //UpdateAudioStream(synthStream, buffer, STREAM_BUFFER_SIZE);
-            printf("process input fault\n");
             processInput();
             //updateSignal(buffer);
-            printf("drawGUI fault\n");
             drawGUI();
-            printf("midi packet fault\n");
 		    read(seqfd, &midipacket, sizeof(midipacket));
             
             if((firstByte != midipacket[1] || secondByte != midipacket[2]) && midipacket[1] < 109 && midipacket[1] > 23){
