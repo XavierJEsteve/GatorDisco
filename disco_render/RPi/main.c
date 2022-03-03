@@ -660,8 +660,11 @@ void main() {
     //initSynth(&synth);
     buildKeys();
     buildSliders();
+    printf("no fault\n");
     buildBandGUIs();
+    printf("no fault\n");
     buildButtons();
+    printf("no fault\n");
     buildEQButtons();
     printf("no fault\n");
     SetAudioStreamBufferSizeDefault(STREAM_BUFFER_SIZE);
