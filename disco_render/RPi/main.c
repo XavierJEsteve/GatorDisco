@@ -663,6 +663,7 @@ void main() {
     buildBandGUIs();
     buildButtons();
     buildEQButtons();
+    printf("no fault\n");
     SetAudioStreamBufferSizeDefault(STREAM_BUFFER_SIZE);
     AudioStream synthStream = LoadAudioStream(SAMPLE_RATE,
         32 ,
