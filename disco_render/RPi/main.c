@@ -531,7 +531,6 @@ void drawGUI(){
         drawWaveform(buffer,SCREEN_WIDTH/6,SCREEN_HEIGHT/6,SCREEN_WIDTH-(SCREEN_WIDTH*1.5/6),SCREEN_HEIGHT/12);
         drawKeys(SCREEN_HEIGHT/4);
         drawSliders();
-        printf("draw buttons fault\n");
         drawButtons();
     }
     else{
@@ -706,7 +705,7 @@ void main() {
                 exit(1);
         }
 	
-    sleep(5);
+    //sleep(5);
     while(WindowShouldClose() == false)
     {
         //if(IsAudioStreamProcessed(synthStream)){
