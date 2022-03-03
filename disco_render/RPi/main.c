@@ -707,8 +707,11 @@ void main() {
 	
     sleep(5);
     printf("no fault\n");
+    int faultCounter = 0;
     while(WindowShouldClose() == false)
     {
+        printf("no fault in loop: %d\n", faultCounter);
+        faultCounter++;
         //if(IsAudioStreamProcessed(synthStream)){
             //UpdateAudioStream(synthStream, buffer, STREAM_BUFFER_SIZE);
             processInput();
