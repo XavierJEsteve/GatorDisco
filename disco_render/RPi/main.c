@@ -655,7 +655,8 @@ void processInput(){
 void main() {
     InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Synth");
     SetTargetFPS(60);
-    InitAudioDevice();
+    //InitAudioDevice();
+    printf("no fault\n");
     initMasterInput();
     //initSynth(&synth);
     printf("no fault\n")
@@ -669,6 +670,7 @@ void main() {
     printf("no fault\n");
     buildEQButtons();
     printf("no fault\n");
+    /*
     SetAudioStreamBufferSizeDefault(STREAM_BUFFER_SIZE);
     AudioStream synthStream = LoadAudioStream(SAMPLE_RATE,
         32 ,
@@ -676,7 +678,7 @@ void main() {
     );
     SetAudioStreamVolume(synthStream, 0.25f);
     PlayAudioStream(synthStream);
-    
+    */
     //spi config
     int fd, result;
 
@@ -704,7 +706,7 @@ void main() {
         }
 	
     sleep(5);
-
+    printf("no fault\n");
     while(WindowShouldClose() == false)
     {
         if(IsAudioStreamProcessed(synthStream)){
