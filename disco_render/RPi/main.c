@@ -658,7 +658,9 @@ void main() {
     InitAudioDevice();
     initMasterInput();
     //initSynth(&synth);
+    printf("no fault\n")
     buildKeys();
+    printf("no fault\n");
     buildSliders();
     printf("no fault\n");
     buildBandGUIs();
