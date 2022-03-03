@@ -6,6 +6,7 @@ from django.utils.datastructures import MultiValueDictKeyError
 from .forms import AudioForm, SynthForm
 from .models import AudioModel, SynthModel
 
+
 # Create your views here.
 ''' TODO  
         * Change 'Uploaded Files' text color to yellow
@@ -23,9 +24,9 @@ def index(request):
                         # Need to save config settings in a place that the raylib application can load it
                         config_bytes = [
                                 synthform.cleaned_data.get("octave"),
+                                synthform.cleaned_data.get("waveForm"),
                                 synthform.cleaned_data.get("oscParam1"),
                                 synthform.cleaned_data.get("oscParam2"),
-                                synthform.cleaned_data.get("oscParam3"),
                                 synthform.cleaned_data.get("attack"),
                                 synthform.cleaned_data.get("decay"),                        
                                 synthform.cleaned_data.get("sustain"),
