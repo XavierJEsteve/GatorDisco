@@ -659,7 +659,7 @@ void main() {
     printf("no fault\n");
     initMasterInput();
     //initSynth(&synth);
-    printf("no fault\n")
+    printf("no fault\n");
     buildKeys();
     printf("no fault\n");
     buildSliders();
