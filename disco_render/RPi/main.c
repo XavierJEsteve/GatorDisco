@@ -709,8 +709,8 @@ void main() {
     printf("no fault\n");
     while(WindowShouldClose() == false)
     {
-        if(IsAudioStreamProcessed(synthStream)){
-            UpdateAudioStream(synthStream, buffer, STREAM_BUFFER_SIZE);
+        //if(IsAudioStreamProcessed(synthStream)){
+            //UpdateAudioStream(synthStream, buffer, STREAM_BUFFER_SIZE);
             processInput();
             //updateSignal(buffer);
             drawGUI();
@@ -728,7 +728,7 @@ void main() {
                 secondByte = midipacket[2];
             }
             
-        }
+        //}
     }
     CloseAudioDevice();
     CloseWindow();
