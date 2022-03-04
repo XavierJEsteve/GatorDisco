@@ -6,7 +6,11 @@
         <h2 style="color:yellow"> Audio File Upload</h2>
         <form method="POST" enctype="multipart/form-data">
             {% csrf_token %}
-            {{ audioform }}
+            <div class="form-control">
+                <div class="form-group">
+                    {{ audioform.file }}
+                </div>
+            </div>
             <button type="submit">Upload Audio</button>
         </form>
     </div>

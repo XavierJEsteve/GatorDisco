@@ -46,7 +46,9 @@ def index(request):
         context = {
                 'audio_files'   : audio_files,
                 'synth_files'   : synth_files,
-                'synthform'     : synthform
+                'synthform'     : synthform,
+                'audioform'     : audioform
+
         }
         return render(request, 'index.html', context)
 
