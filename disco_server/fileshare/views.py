@@ -13,7 +13,7 @@ from .models import AudioModel, SynthModel
         * Change text color for each DB entry listed in the table
         * CRUD from the main screen
                 '''
-def index(request):
+def index(request,action=-1,id=-1):
         audio_files = AudioModel.objects.all()
         synth_files = SynthModel.objects.all()
 

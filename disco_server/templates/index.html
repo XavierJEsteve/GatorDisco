@@ -32,6 +32,7 @@
     </div>
     
     <div class="audioFiles">
+        <div class="table-responsive">
         <table class= "table table-sm">
             <thead class="thead-dark">
                 <tr>
@@ -49,8 +50,10 @@
             </tbody>
         </table>
     </div>
+    </div>
 
     <div class="synthFiles">
+        <div class="table-responsive">
         <table class= "table table-sm">
             <thead class="thead-dark">
                 <tr>
@@ -63,10 +66,19 @@
                 {% for synth in synth_files %}
                     <tr>
                         <td class="td-bright">{{ synth.name }}</td>
+                        <td>
+                            <!-- Needs a ref to file location -->
+                            <button class='btn btn-primary' name="download_button"> Download</button> 
+                        </td>
+                        <td>
+                            <!-- Nees to sumit a POST to index for deletion (action) of file (id)  -->
+                            <button type="submit" class='btn btn-danger' name="delete_button"> Delete</button>
+                        </td>
                     </tr>
                 {% endfor %}
             </tbody>
         </table>
+        <div class="table-responsive">
     </div>
 
 </div>
