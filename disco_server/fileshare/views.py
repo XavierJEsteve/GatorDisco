@@ -20,31 +20,29 @@ def index(request):
         if request.method == 'POST':
                 synthform = SynthForm(request.POST)
                 if synthform.is_valid():
-                        print(synthform)
+                        print(synthform.cleaned_data)
                         synthform.save()                        
                         # Need to save config settings in a place that the raylib application can load it
-                        # config_bytes = [
-                        #         synthform.cleaned_data.get("octave"),
-                        #         synthform.cleaned_data.get("waveForm"),
-                        #         synthform.cleaned_data.get("oscParam1"),
-                        #         synthform.cleaned_data.get("oscParam2"),
-                        #         synthform.cleaned_data.get("attack"),
-                        #         synthform.cleaned_data.get("decay"),                        
-                        #         synthform.cleaned_data.get("sustain"),
-                        #         synthform.cleaned_data.get("release"),
-                        #         synthform.cleaned_data.get("cutoff"),
-                        #         synthform.cleaned_data.get("hp_lp")
-                        # ]
-                        # synthform = SynthForm() # Clear form after submission
-                        # with open('synth_settings.bin', 'wb') as cfile:
-                        #         cfile.write(bytearray(config_bytes))
+                        config_bytes = [
+
+                                synthform.cleaned_data.get("waveForm"),
+                                synthform.cleaned_data.get("octave"),
+                                synthform.cleaned_data.get("oscParam1"),
+                                synthform.cleaned_data.get("oscParam2"),
+                                synthform.cleaned_data.get("attack"),
+                                synthform.cleaned_data.get("decay"),                        
+                                synthform.cleaned_data.get("sustain"),
+                                synthform.cleaned_data.get("release"),
+                        ]
+                        synthform = SynthForm() # Clear form after submission
+                        with open('synth_settings.bin', 'wb') as cfile:
+                                cfile.write(bytearray(config_bytes))
                 else:
                         print("Synthform is invalid")
 
         else:
-
+                audioform = AudioForm()
                 synthform = SynthForm()
-                # print(synthform)
         context = {
                 'audio_files'   : audio_files,
                 'synth_files'   : synth_files,
