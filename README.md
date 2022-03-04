@@ -2,6 +2,7 @@
 ## By Xavier Esteve, Luke Jones, Evan Rives, Rachel Romaine, and Dylan VanStaden
 ### This is a **prototype** for our 2021-2022 Senior Design capstone project
 ### repo: https://github.com/XavierJEsteve/GatorDisco.git
+### Drive: https://drive.google.com/drive/folders/1sTZ4jzyXcUl2KtpFZlo28Jt-u0QP1QtV?usp=sharing
 
 This application is currently comprised of a pre-compiled raylib library and main.c source file to run the synthesizer, located in disco_render.
 
@@ -9,7 +10,9 @@ The Project involves the GUI handling the control signals, which is sent to the 
 
 Our Alpha build includes the R.PI running the GUI and sending control signals to the DSP via SPI and generating notes via PWM and being able to manipulate the audio by controlling an 7-band equalizer.
 
-Our Beta build has improved to now handle midi signals and transmit them to the DSP. THe DSP handles the midi and outputs corresponding notes via PWM. There is also 4 effects currently done which are: Bitcrushing, sample rate reduction, echo and pitchshift.
+Our Beta build has improved to now handle midi signals and transmit them to the DSP. THe DSP handles the midi and outputs corresponding notes via PWM. There is also 4 effects currently done which are: Bitcrushing, sample rate reduction, echo and pitchshift. 
+
+Our Release Candidate has seen an improvement in the control by now having all of the effects and the equalizers being controlled through SPI commands. There is also a separate page for the EQ with simple controls.
 
 There is also a web server framework built on Django that can be found in disco_server.
 
