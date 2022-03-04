@@ -31,8 +31,17 @@ class SynthForm(ModelForm):
         )
 
         widgets = {
-            'waveForm' : forms.Select(choices=WAVE_CHOICES, attrs={'class': 'form-control'}),
+            'waveForm' : forms.Select(choices=WAVE_CHOICES, attrs={'class': 'form-control','style':'width:100px'}),
         }
+
+        def __init__(self, *args, **kwargs):
+            super(SynthForm,self).__init__(*args, **kwargs)
+            for field in iter(self.fields):
+                self.fields[field].widget.attrs.update({
+                    'class': 'form-control',
+                })
+                self.fields[field].widget.attrs['style'] = 'width:50px;'
+
 
 class AudioForm(ModelForm):
     class Meta:
