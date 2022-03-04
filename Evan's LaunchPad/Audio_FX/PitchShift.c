@@ -19,7 +19,7 @@
 #pragma DATA_SECTION(PitchBuffer, "ramgs1");
 
 #define WRAP_SHIFT 4
-#define OVERLAP 100 //how much overlap before we crossfade and switch read pointer to reduce clicks
+#define OVERLAP 80 //how much overlap before we crossfade and switch read pointer to reduce clicks
 #define PITCHBUFFERSIZE 4096
 #define PITCHBUFFERSIZE_MASK 4095
 

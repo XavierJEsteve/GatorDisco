@@ -1,12 +1,18 @@
 /*
- * effects_demo_presentation.c
+ * FullEQ.c
  *
- *  Created on: Feb 7, 2022
- *      Author: rives
+ *  Created on: Jan 20, 2022 7:29AM
+ *      Author: Evan rives
+ *
+ *      A test program to make sure basic sound in/out functionality works for cascadeded biquad filters
+ *
+ *      Further testing needs to be done on controlling EQ parameters for each biquad
+ *
+ *      SPI communication and format needs to be handled before we can test further
+ *
+ *      TIMINGS:
+ *
  */
-
-
-
 
 
 
@@ -14,9 +20,7 @@
 #include <math.h>
 #include "Drivers/SPIDriver.h"
 #include "Drivers/InitAIC23.h"
-#include "Audio_FX/PitchShift.h"
-#include "Audio_FX/BitCrush.h"
-#include "Audio_FX/Echo.h"
+#include "Drivers/BiquadEQ.h"
 
 interrupt void Mcbsp_RxINTB_ISR(void);
 interrupt void Timer1_isr(void);
@@ -33,25 +37,13 @@ int16 sample_R = 0;
 int16 sampleIn = 0;
 int16 sampleOut = 0;
 
-Uint16 Switches = 0;
+Biquad *EQ;
 
-volatile Uint16 UpdateParams = 0;
-Uint16 CurrentEffect = 0;
-
+volatile Uint16 eqflag = 0;
+Uint16 CurrentBand= 0;
+Uint16 f0,f1,f2,f3,f4,f5,f6,f7,f8,f9 =0;
 volatile Uint16 adcDataCh0, adcDataCh1, adcDataCh2 = 0;
-
-//AUDIO EFFECT PARAMETERS
-float32 pitchstep = 1.0;
-Uint16 sampleRatio = 0;
-float32 time = 0.0;
-float32 ratio = 0.5;
-
-//AUDIO EFFECT FLAGS
-volatile Uint16 SRReduction = 0;
-volatile Uint16 bitCrush = 0;
-volatile Uint16 PitchShift = 0;
-volatile Uint16 Echo = 0;
-
+float32 dbGain = 0.0; //keep between +/- 15dB
 
 int main(void)
 {
@@ -72,69 +64,63 @@ int main(void)
     InitAIC23();        // Initialize CODEC (Currently running DSP mode)
     InitMcBSPb();       // Initalize McbspB (Currently running DSP mode)
 
-
-
     // enabling interrupt in PIE TABLE
-   EALLOW;
-   PieVectTable.MCBSPB_RX_INT = &Mcbsp_RxINTB_ISR; // Assign RX_Int 1 ISR to PIE vector table
-   PieCtrlRegs.PIEIER6.bit.INTx7 = 1;
-   IER |= M_INT6;      // Enable INT6 in CPU
-   EALLOW;
-   InitTimer1();       // Initialize CPU timer 1
-   //EnableInterrupts(); // Enable PIE and CPU interrupts
+    EALLOW;
+    PieVectTable.MCBSPB_RX_INT = &Mcbsp_RxINTB_ISR; // Assign RX_Int 1 ISR to PIE vector table
+    PieCtrlRegs.PIEIER6.bit.INTx7 = 1;
+    IER |= M_INT6;      // Enable INT6 in CPU
+    EALLOW;
+    InitTimer1();       // Initialize CPU timer 1
+    //EnableInterrupts(); // Enable PIE and CPU interrupts
 
-   EALLOW;
-   GpioDataRegs.GPADAT.all |= 0xFFFFFFFF;
+    EALLOW;
+    GpioDataRegs.GPADAT.all |= 0xFFFFFFFF;
 
+    //Initialize EQ
 
+    EQ = initializeBiquads();
 
     while(1)
     {
-        CurrentEffect = (GpioDataRegs.GPADAT.bit.GPIO15 << 2) + (GpioDataRegs.GPADAT.bit.GPIO14 << 1) + GpioDataRegs.GPADAT.bit.GPIO11;
+        CurrentBand = (GpioDataRegs.GPADAT.bit.GPIO15 << 2) + (GpioDataRegs.GPADAT.bit.GPIO14 << 1) + GpioDataRegs.GPADAT.bit.GPIO11;
 
-        // add an if statement which prevents effect from starting.
-        //prevents using old adc data on new effect which may have odd effects
-
-        if(GpioDataRegs.GPADAT.bit.GPIO16 == 1)
+        if(eqflag == 1)
         {
-            if(bitCrush == 1)
-            {
-                //bitcrushing
-                //value of 1 - 16 bits
+            if(CurrentBand == 0)
+                updateParameters(&EQ[0], dbGain, f0, 1.414); //32 hz band
 
-                updateBitDepth(sampleRatio);
-                sampleOut = ProcessBitCrush(sampleIn);
-                bitCrush = 0;
+            else if(CurrentBand == 1)
+                updateParameters(&EQ[1], dbGain, f1, 1.414); //64 hz band
 
-            }
-            else if(SRReduction == 1)
-            {
-                //sample rate reduction
-                //value of 1 - 16
+            else if(CurrentBand == 2)
+                updateParameters(&EQ[2], dbGain, f2, 1.414); //125 hz band
 
-                updateSampleRate(sampleRatio);
-                sampleOut = ProcessSampleRateReduction(sampleIn);
-                SRReduction = 0;
+            else if(CurrentBand == 3)
+                updateParameters(&EQ[3], dbGain, f3, 1.414); //250 hz band
 
-            }
-            else if(Echo == 1)
-            {
-                //echo
-                //
+            else if(CurrentBand == 4)
+                updateParameters(&EQ[4], dbGain, f4, 1.414); //500 hz band
 
-                updateEchoParams(time, ratio);
-                sampleOut = processEcho(sampleIn);
-                Echo = 0;
+            else if(CurrentBand == 5)
+                updateParameters(&EQ[5], dbGain, f5, 1.414); //1000 hz band
 
-            }
-            else if(PitchShift == 1)
-            {
-                //pitchShifting
-                updatePitch(pitchstep);
-                sampleOut = processPitchShift(sampleIn);
-                PitchShift = 0;
-            }
+            else if(CurrentBand == 6)
+                updateParameters(&EQ[6], dbGain, f6, 1.414); //2000 hz band
 
+            else if(CurrentBand == 7)
+                updateParameters(&EQ[7], dbGain, f7, 1.414); //4000 hz band
+
+            else if(CurrentBand == 8)
+                updateParameters(&EQ[8], dbGain, f8, 1.414); //8000 hz band
+
+            else if(CurrentBand == 9)
+                updateParameters(&EQ[9], dbGain, f9, 1.414); //16000 hz band
+
+
+            GpioDataRegs.GPATOGGLE.bit.GPIO7;
+            sampleOut = processBiquads(EQ, sampleIn);
+            GpioDataRegs.GPATOGGLE.bit.GPIO7;
+            eqflag = 0;
         }
 
 
@@ -142,6 +128,22 @@ int main(void)
 
     return 0;
 
+}
+
+
+interrupt void Mcbsp_RxINTB_ISR(void)
+{
+    //8.43us
+    GpioDataRegs.GPADAT.bit.GPIO7 = 1;
+    eqflag = 1;
+    sample_L = McbspbRegs.DRR2.all; // store high word of left channel
+    sample_R = McbspbRegs.DRR1.all;
+
+    sampleIn = (sample_L + sample_R) >> 1;
+
+    McbspbRegs.DXR2.all = (int16)sampleOut; // send out data
+    McbspbRegs.DXR1.all = (int16)sampleOut;// send out data
+    PieCtrlRegs.PIEACK.all = PIEACK_GROUP6;
 }
 
 interrupt void Timer1_isr(void) {
@@ -152,35 +154,48 @@ interrupt void Timer1_isr(void) {
     adcDataCh1 = AdcaResultRegs.ADCRESULT1;
     adcDataCh2 = AdcaResultRegs.ADCRESULT2;
 
-    sampleRatio = (15 * (adcDataCh0/4095.0)) + 1;
-    time = ((0.055f * (float32)(adcDataCh0/4095.0) + 0.030f));
-    ratio  = (float32)(adcDataCh1/4095.0);
-    pitchstep = (1.5*(adcDataCh0 / 4095.0)) + 0.5f;
 
-}
+    switch(CurrentBand)
+    {
+        case 0:
+            f0 = ((22 * (adcDataCh0/4095.0)) + 22);
+            break;
+        case 1:
+            f1 = ((44 * (adcDataCh0/4095.0)) + 44);
+            break;
+        case 2:
+            f2 = ((89 * (adcDataCh0/4095.0)) + 88);
+            break;
+        case 3:
+            f3 = ((178 * (adcDataCh0/4095.0)) + 177);
+            break;
+        case 4:
+            f4 = ((355 * (adcDataCh0/4095.0)) + 355);
+            break;
+        case 5:
+            f5 = ((710 * (adcDataCh0/4095.0)) + 710);
+            break;
+        case 6:
+            f6 = ((1420 * (adcDataCh0/4095.0)) + 1420);
+            break;
+        case 7:
+            f7 = ((2840 * (adcDataCh0/4095.0)) + 2840);
+            break;
+        case 8:
+            f8 = ((5680 * (adcDataCh0/4095.0)) + 5680);
+            break;
+        case 9:
+            f9 = ((11360 * (adcDataCh0/4095.0)) + 11360);
+            break;
+        default:
+            break;
+
+    }
+
+    dbGain  = ((30 * (adcDataCh1/4095.0)) + -15);
+    //Q       = ((9.9 * (adcDataCh2/4095.0)) + 0.1);
 
 
-interrupt void Mcbsp_RxINTB_ISR(void)
-{
-    //8.43us
-    if(CurrentEffect == 0)
-        bitCrush = 1;
-    else if(CurrentEffect == 1)
-        SRReduction = 1;
-    else if(CurrentEffect == 2)
-        Echo = 1;
-    else if(CurrentEffect == 3)
-        PitchShift = 1;
-
-    sample_L = McbspbRegs.DRR2.all; // store high word of left channel
-    sample_R = McbspbRegs.DRR1.all;
-
-    sampleIn = (sample_L + sample_R) >> 1;
-
-    McbspbRegs.DXR2.all = (int16)sampleOut; // send out data
-    McbspbRegs.DXR1.all = (int16)sampleOut;// send out data
-    sampleOut = sampleIn;
-    PieCtrlRegs.PIEACK.all = PIEACK_GROUP6;
 }
 
 void InitAdca(void) {
@@ -210,8 +225,6 @@ void InitTimer1(void) {
     EnableInterrupts();                         // Enable PIE and CPU interrupts
     CpuTimer1.RegsAddr->TCR.bit.TSS = 0;        // Start timer 1
 }
-
-
 
 
 void GPIO_INIT()
