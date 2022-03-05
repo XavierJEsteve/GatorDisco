@@ -702,7 +702,7 @@ void main() {
         int seqfd = open(MIDI_DEVICE, O_RDONLY);
         if (seqfd == -1) {
                 printf("Error: cannot open %s\n", MIDI_DEVICE);
-                exit(1);
+                // exit(1);
         }
 	
     //sleep(5);
