@@ -277,7 +277,7 @@ void buildBandGUIs(){
         //calculate slider values
         tempBand.fCenter = fCenters[i];
         tempBand.gain = 0;
-        tempBand.qFactor = 1;
+        tempBand.qFactor = 1.414;
         tempBand.lowerLimit = bandLimits[i];
         tempBand.upperLimit = bandLimits[i+1];
         bands[i] = tempBand;
