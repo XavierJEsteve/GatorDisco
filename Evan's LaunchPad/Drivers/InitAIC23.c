@@ -33,7 +33,7 @@ void InitAIC23(void) {
     SpiTransmit(command);
     SmallDelay();
 
-    // I2S
+    // DSP
     command = DSPdigaudinterface(); // AIC23 master mode, I2S mode,32-bit data, LRP=1 to match with XDATADLY=1
     SpiTransmit(command);
     SmallDelay();
@@ -45,6 +45,49 @@ void InitAIC23(void) {
     SpiTransmit(command);
     SmallDelay();
     command = nomicpowerup();      // Turn everything on except Mic.
+    SpiTransmit(command);
+}
+
+void InitAIC23_MIC(void) {
+    SmallDelay();
+    uint16_t command;
+    command = reset();
+    SpiTransmit(command);
+    SmallDelay();
+    command = softpowerdown();       // Power down everything except device and clocks
+    SpiTransmit(command);
+    SmallDelay();
+    command = linput_volctl(LIV);    // Unmute left line input and maintain default volume
+    SpiTransmit(command);
+    SmallDelay();
+    command = rinput_volctl(RIV);    // Unmute right line input and maintain default volume
+    SpiTransmit(command);
+    SmallDelay();
+    command = lhp_volctl(LHV);       // Left headphone volume control
+    SpiTransmit(command);
+    SmallDelay();
+    command = rhp_volctl(RHV);       // Right headphone volume control
+    SpiTransmit(command);
+    SmallDelay();
+    command = aaudpath();      // Turn on DAC, mic
+    SpiTransmit(command);
+    SmallDelay();
+    command = digaudiopath();       // Disable DAC mute, add de-emph
+    SpiTransmit(command);
+    SmallDelay();
+
+    // DSP
+    command = DSPdigaudinterface(); // AIC23 master mode, I2S mode,32-bit data, LRP=1 to match with XDATADLY=1
+    SpiTransmit(command);
+    SmallDelay();
+    command = CLKsampleratecontrol (SR48);
+    SpiTransmit(command);
+    SmallDelay();
+
+    command = digact();             // Activate digital interface
+    SpiTransmit(command);
+    SmallDelay();
+    command = fullpowerup();      // Turn everything on except Mic.
     SpiTransmit(command);
 }
 
