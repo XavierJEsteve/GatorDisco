@@ -18,9 +18,13 @@ def index(request,action=-1,id=-1):
         synth_files = SynthModel.objects.all()
 
         if request.method == 'POST':
+                # Retrieve submitted forms, may be valid or invalid in this state.
                 synthform = SynthForm(request.POST)
+                audioform = AudioForm(request.POST)
+                
+
+
                 if synthform.is_valid():
-                        print(synthform.cleaned_data)
                         synthform.save()                        
                         # Need to save config settings in a place that the raylib application can load it
                         config_bytes = [
@@ -37,12 +41,23 @@ def index(request,action=-1,id=-1):
                         synthform = SynthForm() # Clear form after submission
                         with open('synth_settings.bin', 'wb') as cfile:
                                 cfile.write(bytearray(config_bytes))
+                
+                elif audioform.is_valid():
+                        try:
+                                # Save audio file to media folder
+                                uploaded_file = request.FILES['file'] # Dictionary key is based on HTML form <input name=*****> \
+                                fs = FileSystemStorage()
+                                fs.save(uploaded_file.name, uploaded_file)
+                                print(uploaded_file.name, uploaded_file)
+                                audioform.save()
+                        
+                        except MultiValueDictKeyError:
+                                print("Bad audio file")
+                                # return redirect('index')
+                
                 else:
-                        print("Synthform is invalid")
-
-        else:
-                audioform = AudioForm()
-                synthform = SynthForm()
+                        audioform = AudioForm()
+                        synthform = SynthForm()
         context = {
                 'audio_files'   : audio_files,
                 'synth_files'   : synth_files,
@@ -75,6 +90,6 @@ def upload_audio(request):
                 audioform = AudioForm()
 
         return render(request, 'upload_audio.html',{
-                'audioform': audioform
+                'audioform': audiofor0090m
         })
         
