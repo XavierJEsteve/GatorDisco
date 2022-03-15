@@ -107,6 +107,7 @@ void processSpiInput(int byte){
 }
 void loadWavSound(char* fileName, int key){
     wavSound = LoadSound(fileName);
+    SetSoundVolume(wavSound,1);
     processSpiInput(SPI_MODULE_OSC | SPI_OSC_WAVFREQ);
     processSpiInput(key);
 }
