@@ -72,7 +72,7 @@ typedef struct{
     float upperLimit;
     float lowerLimit;
 } BandGUI;
-char* oscNames[NUM_OSCILLATORS] = {"PULSE WAVE", "SAWTOOTH", "OSCILLATOR 3", "OSCILLATOR 4"};
+char* oscNames[NUM_OSCILLATORS] = {"PULSE WAVE", "SAWTOOTH", "WAV FILE", "OSCILLATOR 4"};
 char* oscParam1Names[NUM_OSCILLATORS] = {"PULSE WIDTH", "DETUNE", "OSC3 PARAM", "OSC4 PARAM"};
 char* oscParam2Names[NUM_OSCILLATORS] = {"", "", "OSC3 PARAM2", "OSC4 PARAM2"};
 int oscTypePointer = 0;
@@ -97,6 +97,10 @@ unsigned char spi_buffer[100];
 
 Synth synth;
 SpiHandler spiHandler;
+float wavOutput;
+int wavPointer;
+float* wavBuffer;
+Wave wavSound;
 
 void processSpiInput(int byte){
     //spi_buffer[0] = byte;
@@ -118,6 +122,8 @@ void processSpiInput(int byte){
             synth.osc.param1 = (float)byte / 128;
             else if(spiHandler.param == 2) // oscParam2
             synth.osc.param2 = (float)byte / 128;
+            else if(spiHandler.param == 3) // wav frequency
+            synth.osc.wavFrequency = synth.keys.freq_table[byte];
             spiHandler.byte = 0;
         }
         else if(spiHandler.module == 1){ // keyboard
@@ -187,6 +193,13 @@ void processSpiInput(int byte){
     }
 }
 
+void loadWavSound(char* fileName, int key){
+    wavSound = LoadWave(fileName);
+    wavBuffer = LoadWaveSamples(wavSound);
+    wavPointer = 0;
+    processSpiInput(SPI_MODULE_OSC | SPI_OSC_WAVFREQ);
+    processSpiInput(key);
+}
 Input masterInput;
 void initMasterInput(){
     masterInput.keyPointer = SPI_MODULE_KEYBOARD | SPI_KEYBOARD_KEY;
@@ -198,7 +211,10 @@ int keySelection = -1;
 void updateSignal(float* signal){
     for(int i = 0; i < STREAM_BUFFER_SIZE; i++){
         signal[i] = updateSynth(&synth);
+        synth.osc.wavInput = wavBuffer[wavPointer + i];
     }
+    if(wavPointer < 240000);
+    wavPointer += STREAM_BUFFER_SIZE;
 }
 void drawWaveform(float* signal,int width,int height,int x, int y){
     DrawRectangle(x, y, width, height, WHITE);
@@ -654,6 +670,7 @@ void processInput(){
                 spi_buffer[0] = 128;
                 spi_buffer[1] = 1;
                 //wiringPiSPIDataRW(CHANNEL, spi_buffer, 2);
+                wavPointer = 0;
             }
             masterInput.keyPressed = true;
             processSpiInput(masterInput.gatePointer);
@@ -744,6 +761,7 @@ void main() {
     InitAudioDevice();
     initMasterInput();
     initSynth(&synth);
+    loadWavSound("piano.wav",36);
     buildKeys();
     buildSliders();
     buildBandGUIs();

@@ -8,6 +8,7 @@
 #define SPI_OSCTYPE 0
 #define SPI_OSCPARAM1 1
 #define SPI_OSCPARAM2 2
+#define SPI_OSC_WAVFREQ 3
 #define SPI_KEYBOARD_KEY 0
 #define SPI_KEYBAORD_OCTAVE 1
 #define SPI_LFO_SPEED 0

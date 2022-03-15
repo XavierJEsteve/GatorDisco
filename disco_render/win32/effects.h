@@ -3,7 +3,7 @@
 
 #include "Effects/Echo.h"
 #include "Effects/BitCrush.h"
-#include "Effects/Effect4.h"
+#include "Effects/PitchShift.h"
 #include "Effects/Effect5.h"
 
 #define NUM_EFFECTS 6

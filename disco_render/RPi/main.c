@@ -72,7 +72,7 @@ typedef struct{
     float upperLimit;
     float lowerLimit;
 } BandGUI;
-char* oscNames[NUM_OSCILLATORS] = {"PULSE WAVE", "SAWTOOTH", "OSCILLATOR 3", "OSCILLATOR 4"};
+char* oscNames[NUM_OSCILLATORS] = {"PULSE WAVE", "SAWTOOTH", "WAV FILE", "OSCILLATOR 4"};
 char* oscParam1Names[NUM_OSCILLATORS] = {"PULSE WIDTH", "DETUNE", "OSC3 PARAM", "OSC4 PARAM"};
 char* oscParam2Names[NUM_OSCILLATORS] = {"", "", "OSC3 PARAM2", "OSC4 PARAM2"};
 int oscTypePointer = 0;
@@ -98,13 +98,18 @@ unsigned char spi_buffer[100];
 
 Synth synth;
 SpiHandler spiHandler;
+Sound wavSound;
 
 void processSpiInput(int byte){
     printf("sent byte: %d\n", byte);
     spi_buffer[0] = byte;
     wiringPiSPIDataRW(CHANNEL, spi_buffer, 1);
 }
-
+void loadWavSound(char* fileName, int key){
+    wavSound = LoadSound(fileName);
+    processSpiInput(SPI_MODULE_OSC | SPI_OSC_WAVFREQ);
+    processSpiInput(key);
+}
 Input masterInput;
 void initMasterInput(){
     masterInput.keyPointer = SPI_MODULE_KEYBOARD | SPI_KEYBOARD_KEY;
@@ -574,6 +579,7 @@ void processInput(){
                 spi_buffer[0] = 128;
                 spi_buffer[1] = 1;
                 //wiringPiSPIDataRW(CHANNEL, spi_buffer, 2);
+                PlaySound(wavSound);
             }
             masterInput.keyPressed = true;
             processSpiInput(masterInput.gatePointer);
@@ -662,9 +668,10 @@ void processInput(){
 void main() {
     InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Synth");
     SetTargetFPS(60);
-    //InitAudioDevice();
+    InitAudioDevice();
     initMasterInput();
     //initSynth(&synth);
+    loadWavSound("piano.wav",36);
     buildKeys();
     buildSliders();
     buildBandGUIs();

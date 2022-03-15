@@ -32,6 +32,8 @@ void updateKeyboard(Keyboard* keys);
 typedef struct{
     //inputs
     int oscType;
+    float wavInput;
+    float wavFrequency;
     /*
     0:  PULSE WAVE
     1:  SAWTOOTH

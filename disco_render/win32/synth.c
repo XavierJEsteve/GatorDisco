@@ -52,12 +52,11 @@ void updateOscillator(Oscillator* osc){
         if(osc->phase2 > 1) osc->phase2 -= 1;
         *osc->output = osc->phase + osc->phase2 - 1;
     }
-    else if(osc-> oscType == 2){ // OSCILLATOR 3 (Frequency Modulation? Ring Modulation)
-        //update oscillator phase
-        osc->phase += osc->frequency / SAMPLE_RATE;
-        if(osc->phase > 1) osc->phase -= 1;
-        //write to output
-        *osc->output = sinf(2.0f * PI * osc->phase);
+    else if(osc-> oscType == 2){ // WAV FILE
+        //update pitch shift factor
+        updatePitch(osc->frequency/osc->wavFrequency);
+        //process pitch shift, write to output
+        *osc->output = processPitchShift(osc->wavInput);
     }
     else if(osc-> oscType == 3){ // OSCILLATOR 4
         //update oscillator phase
