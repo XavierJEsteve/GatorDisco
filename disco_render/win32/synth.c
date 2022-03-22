@@ -58,9 +58,17 @@ void updateOscillator(Oscillator* osc){
         //process pitch shift, write to output
         *osc->output = processPitchShift(osc->wavInput);
     }
-    else if(osc-> oscType == 3){ // OSCILLATOR 4
+    else if(osc-> oscType == 3){ // OSCILLATOR 4 (frequency modulation)
+        //calculate modulator frequency
+        float modFreq = osc->frequency * pow(8, osc->param1);
+        osc->phase2 += modFreq / SAMPLE_RATE;
+        if(osc->phase2 > 1) osc->phase2 -=1;
+        //calculate modulation
+        float freqModulation = sinf(2.0f * PI * osc->phase2) * osc->param2;
+        //calculate modulated frequency
+        float frequency = osc->frequency * pow(2, freqModulation);
         //update oscillator phase
-        osc->phase += osc->frequency / SAMPLE_RATE;
+        osc->phase += frequency / SAMPLE_RATE;
         if(osc->phase > 1) osc->phase -= 1;
         //write to output 
         *osc->output = sinf(2.0f * PI * osc->phase);

@@ -73,8 +73,8 @@ typedef struct{
     float lowerLimit;
 } BandGUI;
 char* oscNames[NUM_OSCILLATORS] = {"PULSE WAVE", "SAWTOOTH", "WAV FILE", "OSCILLATOR 4"};
-char* oscParam1Names[NUM_OSCILLATORS] = {"PULSE WIDTH", "DETUNE", "OSC3 PARAM", "OSC4 PARAM"};
-char* oscParam2Names[NUM_OSCILLATORS] = {"", "", "OSC3 PARAM2", "OSC4 PARAM2"};
+char* oscParam1Names[NUM_OSCILLATORS] = {"PULSE WIDTH", "DETUNE", "OSC3 PARAM", "MOD FREQ"};
+char* oscParam2Names[NUM_OSCILLATORS] = {"", "", "OSC3 PARAM2", "MOD AMP"};
 int oscTypePointer = 0;
 char* effectNames[NUM_EFFECTS] = {"OFF", "ECHO", "BIT CRUSH", "FS REDUCTION", "EFFECT 4", "EFFECT 5"};
 char* effectParam1Names[NUM_EFFECTS] = {"", "TIME", "BIT DEPTH", "FS RATIO", "PARAM1", "PARAM1"};
@@ -214,7 +214,7 @@ void updateSignal(float* signal){
         synth.osc.wavInput = wavBuffer[wavPointer + i];
     }
     if(wavPointer < 240000);
-    wavPointer += STREAM_BUFFER_SIZE;
+    //wavPointer += STREAM_BUFFER_SIZE;
 }
 void drawWaveform(float* signal,int width,int height,int x, int y){
     DrawRectangle(x, y, width, height, WHITE);
