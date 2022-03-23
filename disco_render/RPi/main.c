@@ -102,6 +102,11 @@ Synth synth;
 SpiHandler spiHandler;
 Sound wavSound;
 
+// File handling
+char fileNameToLoad[512] = { 0 };
+Texture texture = { 0 };
+
+
 void processSpiInput(int byte){
     printf("sent byte: %d\n", byte);
     spi_buffer[0] = byte;
@@ -390,6 +395,7 @@ void buildSliders(){
     Effect2.name = "";
     sliders[10] = Effect2;
 }
+
 void drawSliders(){
     for(int i = 0; i < NUM_SLIDERS; i++){
         Slider tempSlider = sliders[i];
@@ -538,35 +544,40 @@ void drawEQSliders(){
     }
 }
 
-void drawGUI(){
-    BeginDrawing();
-    ClearBackground(GRAY);
+void drawFileMenu(GuiFileDialogState *fileDialogState){
 
-    /* Prototype for file browser
     DrawText(fileNameToLoad, 208, GetScreenHeight() - 20, 10, GRAY);
-     // raygui: controls drawing
+
+    // raygui: controls drawing
     //----------------------------------------------------------------------------------
-    if (fileDialogState.fileDialogActive) GuiLock(); //When the window is active, LOCK OTHER CONTROLS
-    //----------------------------------------------------------------------------------
-    if (GuiButton((Rectangle){ 20, 20, 140, 30 }, GuiIconText(0,"Open Image"))) fileDialogState.fileDialogActive = true;
-    
+    if (fileDialogState->fileDialogActive) GuiLock();
+
+    // if (GuiButton((Rectangle){ 20, 20, 140, 30 }, GuiIconText(RAYGUI_ICON_FILE_OPEN, "Open Image"))) fileDialogState.fileDialogActive = true;
+    if (GuiButton((Rectangle){ 20, 20, 140, 30 }, GuiIconText(0,"Open Image"))) 
+        fileDialogState->fileDialogActive = true;
+
     GuiUnlock();
 
     // GUI: Dialog Window
     //--------------------------------------------------------------------------------
-    GuiFileDialog(&fileDialogState);
-    */
+    GuiFileDialog(fileDialogState);
+}
 
+void drawGUI(GuiFileDialogState *fileDialogState){
+    BeginDrawing();
+    ClearBackground(GRAY);
 
     if(GUI_MODE == SYNTH_MODE){
         drawWaveform(buffer,SCREEN_WIDTH/6,SCREEN_HEIGHT/6,SCREEN_WIDTH-(SCREEN_WIDTH*1.5/6),SCREEN_HEIGHT/12);
         drawKeys(SCREEN_HEIGHT/4);
         drawSliders();
         drawButtons();
+        drawFileMenu(fileDialogState);
     }
     else{
         drawEQButtons();
         drawEQSliders();
+        drawFileMenu(fileDialogState);
     }
     EndDrawing();
 }
@@ -739,17 +750,13 @@ void main() {
         }
 	
      // Custom file dialog
+    // char fileNameToLoad[512] = { 0 }; //Defined Globally
+    // Texture texture = { 0 };          //Defined Globally
     GuiFileDialogState fileDialogState = InitGuiFileDialog(420, 310, GetWorkingDirectory(), false);
-    char fileNameToLoad[512] = { 0 };
-    Texture texture = { 0 };
 
     while(WindowShouldClose() == false)
     {
         /// FILE BROWSER GUI  ////////////
-        /*
-            - A gui FileDialogState object is created. Defined in gui_file_dialog.h
-                i) GuiFileDialogState fileDialogState
-        */
         if (fileDialogState.SelectFilePressed)
         {
             // Load image file (if supported extension)
@@ -769,7 +776,7 @@ void main() {
             //UpdateAudioStream(synthStream, buffer, STREAM_BUFFER_SIZE);
         processInput();
         //updateSignal(buffer);
-        drawGUI();
+        drawGUI(&fileDialogState);
         read(seqfd, &midipacket, sizeof(midipacket));
         
         if((firstByte != midipacket[1] || secondByte != midipacket[2]) && midipacket[1] < 109 && midipacket[1] > 23){
