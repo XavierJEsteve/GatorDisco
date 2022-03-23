@@ -281,6 +281,8 @@ void buildButtons(){
     eqMode.text = "EQ MODE";
     eqMode.buttonAction = &changeMode;
     buttons[4] = eqMode;
+    // File browser button below
+
 }
 void buildBandGUIs(){
     for(int i = 0; i < NUM_EQ_BANDS; i++){
@@ -445,7 +447,8 @@ void drawButtons(){
         if(pressed){
             tempButton.buttonAction(0);
         }
-    } 
+    }
+
 }
 void drawEQButtons(){
     for(int i = 0; i < NUM_EQ_BANDS; i++){
@@ -538,6 +541,22 @@ void drawEQSliders(){
 void drawGUI(){
     BeginDrawing();
     ClearBackground(GRAY);
+
+    /* Prototype for file browser
+    DrawText(fileNameToLoad, 208, GetScreenHeight() - 20, 10, GRAY);
+     // raygui: controls drawing
+    //----------------------------------------------------------------------------------
+    if (fileDialogState.fileDialogActive) GuiLock(); //When the window is active, LOCK OTHER CONTROLS
+    //----------------------------------------------------------------------------------
+    if (GuiButton((Rectangle){ 20, 20, 140, 30 }, GuiIconText(0,"Open Image"))) fileDialogState.fileDialogActive = true;
+    
+    GuiUnlock();
+
+    // GUI: Dialog Window
+    //--------------------------------------------------------------------------------
+    GuiFileDialog(&fileDialogState);
+    */
+
 
     if(GUI_MODE == SYNTH_MODE){
         drawWaveform(buffer,SCREEN_WIDTH/6,SCREEN_HEIGHT/6,SCREEN_WIDTH-(SCREEN_WIDTH*1.5/6),SCREEN_HEIGHT/12);
