@@ -4,6 +4,8 @@
 #include "include/raylib.h"
 #define RAYGUI_IMPLEMENTATION
 #include "include/raygui.h"
+#define GUI_FILE_DIALOG_IMPLEMENTATION
+#include "include/gui_file_dialog.h"
 #include <math.h>
 #include <errno.h>
 #include "include/wiringPiSPI.h"
@@ -536,6 +538,7 @@ void drawEQSliders(){
 void drawGUI(){
     BeginDrawing();
     ClearBackground(GRAY);
+
     if(GUI_MODE == SYNTH_MODE){
         drawWaveform(buffer,SCREEN_WIDTH/6,SCREEN_HEIGHT/6,SCREEN_WIDTH-(SCREEN_WIDTH*1.5/6),SCREEN_HEIGHT/12);
         drawKeys(SCREEN_HEIGHT/4);
@@ -716,30 +719,55 @@ void main() {
                 //exit(1);
         }
 	
-    //sleep(5);
+     // Custom file dialog
+    GuiFileDialogState fileDialogState = InitGuiFileDialog(420, 310, GetWorkingDirectory(), false);
+    char fileNameToLoad[512] = { 0 };
+    Texture texture = { 0 };
+
     while(WindowShouldClose() == false)
     {
+        /// FILE BROWSER GUI  ////////////
+        /*
+            - A gui FileDialogState object is created. Defined in gui_file_dialog.h
+                i) GuiFileDialogState fileDialogState
+        */
+        if (fileDialogState.SelectFilePressed)
+        {
+            // Load image file (if supported extension)
+            if (IsFileExtension(fileDialogState.fileNameText, ".png"))
+            {
+                strcpy(fileNameToLoad, TextFormat("%s/%s", fileDialogState.dirPathText, fileDialogState.fileNameText));
+                UnloadTexture(texture);
+                texture = LoadTexture(fileNameToLoad);
+            }
+
+            fileDialogState.SelectFilePressed = false;
+        }
+        //////////////////////////////////
+
+        //---
         //if(IsAudioStreamProcessed(synthStream)){
             //UpdateAudioStream(synthStream, buffer, STREAM_BUFFER_SIZE);
-            processInput();
-            //updateSignal(buffer);
-            drawGUI();
-		    read(seqfd, &midipacket, sizeof(midipacket));
-            
-            if((firstByte != midipacket[1] || secondByte != midipacket[2]) && midipacket[1] < 109 && midipacket[1] > 23){
-                //send gate
-                processSpiInput(SPI_MODULE_ENV | SPI_GATE);
-                if(midipacket[2] > 0) processSpiInput(1);
-                else processSpiInput(0);
-                //send key
-                processSpiInput(SPI_MODULE_KEYBOARD | SPI_KEYBOARD_KEY);
-                processSpiInput(midipacket[1] - 24);
-                firstByte = midipacket[1];
-                secondByte = midipacket[2];
-            }
+        processInput();
+        //updateSignal(buffer);
+        drawGUI();
+        read(seqfd, &midipacket, sizeof(midipacket));
+        
+        if((firstByte != midipacket[1] || secondByte != midipacket[2]) && midipacket[1] < 109 && midipacket[1] > 23){
+            //send gate
+            processSpiInput(SPI_MODULE_ENV | SPI_GATE);
+            if(midipacket[2] > 0) processSpiInput(1);
+            else processSpiInput(0);
+            //send key
+            processSpiInput(SPI_MODULE_KEYBOARD | SPI_KEYBOARD_KEY);
+            processSpiInput(midipacket[1] - 24);
+            firstByte = midipacket[1];
+            secondByte = midipacket[2];
+        }
             
         //}
     }
+    UnloadTexture(texture);     // Unload texture
     CloseAudioDevice();
     CloseWindow();
 }
