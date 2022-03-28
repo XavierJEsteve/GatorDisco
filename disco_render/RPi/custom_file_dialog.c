@@ -91,7 +91,6 @@ int main()
             // if (GuiButton((Rectangle){ 20, 20, 140, 30 }, GuiIconText(RAYGUI_ICON_FILE_OPEN, "Open Image"))) fileDialogState.fileDialogActive = true;
             if (GuiButton((Rectangle){ 20, 20, 140, 30 }, GuiIconText(0,"Open Image"))) 
                 fileDialogState.fileDialogActive = true;
-                printf("fileDialogState.fileDialogActive <= true");
 
             GuiUnlock();
 

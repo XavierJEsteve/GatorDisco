@@ -103,6 +103,7 @@ SpiHandler spiHandler;
 Sound wavSound;
 
 // File handling
+const char* configDirectory = "/home/pi/GatorDisco/disco_server/";
 char fileNameToLoad[512] = { 0 };
 Texture texture = { 0 };
 
@@ -752,7 +753,9 @@ void main() {
      // Custom file dialog
     // char fileNameToLoad[512] = { 0 }; //Defined Globally
     // Texture texture = { 0 };          //Defined Globally
-    GuiFileDialogState fileDialogState = InitGuiFileDialog(420, 310, GetWorkingDirectory(), false);
+
+    // GuiFileDialogState fileDialogState = InitGuiFileDialog(420, 310, GetWorkingDirectory(), false);
+    GuiFileDialogState fileDialogState = InitGuiFileDialog(420, 310, configDirectory, false);
 
     while(WindowShouldClose() == false)
     {
