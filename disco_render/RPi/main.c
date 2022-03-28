@@ -105,7 +105,6 @@ Sound wavSound;
 // File handling
 char fileNameToLoad[512] = { 0 };
 Texture texture = { 0 };
-const char *config_files_dir = "/home/pi/GatorDisco/disco_server";
 
 
 void processSpiInput(int byte){
@@ -753,9 +752,7 @@ void main() {
      // Custom file dialog
     // char fileNameToLoad[512] = { 0 }; //Defined Globally
     // Texture texture = { 0 };          //Defined Globally
-    // "/home/pi/"
-    GuiFileDialogState fileDialogState = InitGuiFileDialog(420, 310, config_files_dir, false);
-    // GuiFileDialogState fileDialogState = InitGuiFileDialog(420, 310, GetWorkingDirectory(), false);
+    GuiFileDialogState fileDialogState = InitGuiFileDialog(420, 310, GetWorkingDirectory(), false);
 
     while(WindowShouldClose() == false)
     {
