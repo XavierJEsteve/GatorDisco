@@ -7,3 +7,5 @@ disco_render/bin/
 disco_render/build/
 disco_render/out/
 disco_render/CMakeSettings.json
+*.pyc
+*/*.pyc
