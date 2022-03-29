@@ -59,6 +59,7 @@ typedef struct{
     Color color;
     char* text;
     int (*buttonAction)(int input);
+    void (*menuAction)(GuiFileDialogState *fileDialogState)
 } Button;
 typedef struct{
     int x;
@@ -103,9 +104,10 @@ SpiHandler spiHandler;
 Sound wavSound;
 
 // File handling
-const char* configDirectory = "/home/pi/GatorDisco/disco_server/";
+GuiFileDialogState fileDialogState;
+char* configDirectory = "/home/pi/GatorDisco/disco_server/";
 char fileNameToLoad[512] = { 0 };
-Texture texture = { 0 };
+Texture texture = { 1 };
 
 
 void processSpiInput(int byte){
@@ -443,7 +445,14 @@ void drawKeys(int height){
     }
 }
 void drawButtons(){
+
+    DrawText(fileNameToLoad, 208, GetScreenHeight() - 20, 10, GRAY);
+
     for(int i = 0; i < NUM_BUTTONS; i++){
+        // raygui: controls drawing
+        //----------------------------------------------------------------------------------
+        
+
         Button tempButton = buttons[i];
         bool pressed = GuiButton((Rectangle){
         tempButton.xPos,
@@ -452,11 +461,24 @@ void drawButtons(){
         tempButton.height
         }, tempButton.text);
         if(pressed){
-            tempButton.buttonAction(0);
-        }
-    }
+            if (!strcmp(tempButton.text, "LOAD CONFIG"))
+            {   
+                fileDialogState.fileDialogActive = true;
 
+            }
+            else
+            {
+                tempButton.buttonAction(0);
+            }
+
+        }
+        GuiUnlock();
+        // GUI: Dialog Window
+        //--------------------------------------------------------------------------------
+        GuiFileDialog(&fileDialogState);
+    }
 }
+
 void drawEQButtons(){
     for(int i = 0; i < NUM_EQ_BANDS; i++){
         Button tempButton = EQButtons[i];
@@ -545,26 +567,26 @@ void drawEQSliders(){
     }
 }
 
-void drawFileMenu(GuiFileDialogState *fileDialogState){
+// void drawFileMenu(){
 
-    DrawText(fileNameToLoad, 208, GetScreenHeight() - 20, 10, GRAY);
+//     DrawText(fileNameToLoad, 208, GetScreenHeight() - 20, 10, GRAY);
 
-    // raygui: controls drawing
-    //----------------------------------------------------------------------------------
-    if (fileDialogState->fileDialogActive) GuiLock();
+//     // raygui: controls drawing
+//     //----------------------------------------------------------------------------------
+//     if (fileDialogState.fileDialogActive) GuiLock();
 
-    // if (GuiButton((Rectangle){ 20, 20, 140, 30 }, GuiIconText(RAYGUI_ICON_FILE_OPEN, "Open Image"))) fileDialogState.fileDialogActive = true;
-    if (GuiButton((Rectangle){ 20, 20, 140, 30 }, GuiIconText(0,"Open Image"))) 
-        fileDialogState->fileDialogActive = true;
+//     // if (GuiButton((Rectangle){ 20, 20, 140, 30 }, GuiIconText(RAYGUI_ICON_FILE_OPEN, "Open Image"))) fileDialogState.fileDialogActive = true;
+//     if (buttons[0]) 
+//         fileDialogState.fileDialogActive = true;
 
-    GuiUnlock();
+//     GuiUnlock();
 
-    // GUI: Dialog Window
-    //--------------------------------------------------------------------------------
-    GuiFileDialog(fileDialogState);
-}
+//     // GUI: Dialog Window
+//     //--------------------------------------------------------------------------------
+//     GuiFileDialog(&fileDialogState);
+// }
 
-void drawGUI(GuiFileDialogState *fileDialogState){
+void drawGUI(){
     BeginDrawing();
     ClearBackground(GRAY);
 
@@ -573,12 +595,12 @@ void drawGUI(GuiFileDialogState *fileDialogState){
         drawKeys(SCREEN_HEIGHT/4);
         drawSliders();
         drawButtons();
-        drawFileMenu(fileDialogState);
+        // drawFileMenu();
     }
     else{
         drawEQButtons();
         drawEQSliders();
-        drawFileMenu(fileDialogState);
+        // drawFileMenu();
     }
     EndDrawing();
 }
@@ -750,15 +772,17 @@ void main() {
                 //exit(1);
         }
 	
-     // Custom file dialog
-    // char fileNameToLoad[512] = { 0 }; //Defined Globally
-    // Texture texture = { 0 };          //Defined Globally
-
     // GuiFileDialogState fileDialogState = InitGuiFileDialog(420, 310, GetWorkingDirectory(), false);
-    GuiFileDialogState fileDialogState = InitGuiFileDialog(420, 310, configDirectory, false);
+    // TODO: Make the dialog size dependent on the window size
+    fileDialogState = InitGuiFileDialog(800, 600, configDirectory, false);
+    // Choose an extenstion to filter by
+    char* filterExt = ".bin";
+    strcpy(fileDialogState.filterExt,filterExt);
 
     while(WindowShouldClose() == false)
-    {
+    {            
+        if (fileDialogState.fileDialogActive) GuiLock();
+
         /// FILE BROWSER GUI  ////////////
         if (fileDialogState.SelectFilePressed)
         {
@@ -772,6 +796,7 @@ void main() {
 
             fileDialogState.SelectFilePressed = false;
         }
+
         //////////////////////////////////
 
         //---
@@ -779,7 +804,7 @@ void main() {
             //UpdateAudioStream(synthStream, buffer, STREAM_BUFFER_SIZE);
         processInput();
         //updateSignal(buffer);
-        drawGUI(&fileDialogState);
+        drawGUI();
         read(seqfd, &midipacket, sizeof(midipacket));
         
         if((firstByte != midipacket[1] || secondByte != midipacket[2]) && midipacket[1] < 109 && midipacket[1] > 23){
