@@ -1,37 +1,85 @@
 {% extends 'base.html' %}
 
 {% block content_index %}
-    <h2>Uploaded files</h2>
-    <table style="width: 30%" class= "table table-sm">
-        <thead class="thead-dark">
-            <tr>
-                <th style="width: 30%">
-                    <a href="{% url 'upload_audio' %}">Audio Name</a>
-                </th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for audio in audio_files %}
+<div class="container">
+    <div class="AudioUpload">
+        <h2 style="color:yellow"> Audio File Upload</h2>
+        <form method="POST" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div class="form-control">
+                <div class="form-group">
+                    {{ audioform.file }}
+                </div>
+            </div>
+            <button type="submit">Upload Audio</button>
+        </form>
+    </div>
+    
+    <div class="synthForm">
+        <h2 style="color:yellow">Synth Settings Upload</h2>
+        <form method="POST" enctype="multipart/form-data">
+            {% csrf_token %}
+                {% for field in synthform %}
+                    <div class="form-control">
+                        <div class="form-group">
+                            {{ field }}
+                            <label>{{ field.name }}</label>                        
+                        </div>
+                    </div>
+                {% endfor %}
+            <button type="submit">Upload Synth Settings</button>
+        </form>
+    </div>
+    
+    <div class="audioFiles">
+        <div class="table-responsive">
+        <table class= "table table-sm">
+            <thead class="thead-dark">
                 <tr>
-                    <td>{{ audio.name }}</td>
+                    <th>
+                        <h2 style="color:yellow"> Audio Name</h2>
+                    </th>
                 </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-    <table style="width: 30%" class= "table table-sm">
-        <thead class="thead-dark">
-            <tr>
-                <th>
-                    <a href="{% url 'upload_config' %}">Config Name</a>
-                </th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for synth in synth_files %}
+            </thead>
+            <tbody>
+                {% for audio in audio_files %}
+                    <tr>
+                        <td class="td-bright">{{ audio.name }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    </div>
+
+    <div class="synthFiles">
+        <div class="table-responsive">
+        <table class= "table table-sm">
+            <thead class="thead-dark">
                 <tr>
-                    <td>{{ synth.name }}</td>
+                    <th>
+                        <h2 style="color:yellow">Synth Name</h2>
+                    </th>
                 </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+            </thead>
+            <tbody>
+                {% for synth in synth_files %}
+                    <tr>
+                        <td class="td-bright">{{ synth.name }}</td>
+                        <td>
+                            <!-- Needs a ref to file location -->
+                            <button class='btn btn-primary' name="download_button"> Download</button> 
+                        </td>
+                        <td>
+                            <!-- Nees to sumit a POST to index for deletion (action) of file (id)  -->
+                            <button type="submit" class='btn btn-danger' name="delete_button"> Delete</button>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <div class="table-responsive">
+    </div>
+
+</div>
 {% endblock %}

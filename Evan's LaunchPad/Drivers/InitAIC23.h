@@ -22,6 +22,7 @@
 void InitMcBSPb();
 void InitSPIA();
 void InitAIC23();
+void InitAIC23_MIC();
 void SpiTransmit(uint16_t data);
 
 
