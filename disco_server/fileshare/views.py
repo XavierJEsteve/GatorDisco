@@ -55,9 +55,9 @@ def index(request,action=-1,id=-1):
                                 print("Bad audio file")
                                 # return redirect('index')
                 
-                else:
-                        audioform = AudioForm()
-                        synthform = SynthForm()
+        else:
+                audioform = AudioForm()
+                synthform = SynthForm()
         context = {
                 'audio_files'   : audio_files,
                 'synth_files'   : synth_files,
