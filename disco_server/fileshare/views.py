@@ -53,8 +53,7 @@ def index(request,action=-1,id=-1):
                         
                         except MultiValueDictKeyError:
                                 print("Bad audio file")
-                                # return redirect('index')
-                
+     
         else:
                 audioform = AudioForm()
                 synthform = SynthForm()
@@ -67,7 +66,6 @@ def index(request,action=-1,id=-1):
         }
         return render(request, 'index.html', context)
 
-###############################################
 def upload_audio(request):
         ''' Area for uploading audio files'''
 
@@ -92,4 +90,11 @@ def upload_audio(request):
         return render(request, 'upload_audio.html',{
                 'audioform': audiofor0090m
         })
-        
+
+def delete_config(request, synth_id=None):
+        config = SynthModel.objects.get(pk=synth_id)
+        config.delete()
+        return redirect('index')
+
+def download_config(request, synth_id=None):
+        return None

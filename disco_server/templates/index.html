@@ -71,8 +71,9 @@
                             <button class='btn btn-primary' name="download_button"> Download</button> 
                         </td>
                         <td>
-                            <!-- Nees to sumit a POST to index for deletion (action) of file (id)  -->
-                            <button type="submit" class='btn btn-danger' name="delete_button"> Delete</button>
+                            <!-- Needs to sumit a POST to index for deletion (action) of file (id)  -->
+                            <a href = "{% url 'delete-config' synth.id %}" class='btn btn-danger'> Delete </a>
+                            <!-- <button type="submit" class='btn btn-danger' name="delete_button"> Delete</button> -->
                         </td>
                     </tr>
                 {% endfor %}
