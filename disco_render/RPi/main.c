@@ -108,6 +108,8 @@ char* configDirectory = "/home/pi/GatorDisco/disco_server/MEDIA/";
 char fileNameToLoad[512] = { 0 };
 Texture texture = { 1 };
 
+bool screenshotNeeded = false;
+
 
 void processSpiInput(int byte){
     printf("sent byte: %d\n", byte);
@@ -222,6 +224,11 @@ void saveConfig(void){
         fwrite(configData, sizeof(int), sizeof(configData), confPtr);
         fclose(confPtr);
     }
+    // Lastly take a screenshot with <config_name>.png and save to the same directory
+    // TakeScreenshot("../../disco_server/MEDIA/config.png"); 
+    // Taking a screenshot here may lead to incomplete capture (usually just the background)
+    // TESTING: setting a boolean to true and checking it at after endDrawing()
+    screenshotNeeded = true;
 }
 
 void loadConfig(void){
@@ -658,6 +665,10 @@ void drawGUI(){
         // drawFileMenu();
     }
     EndDrawing();
+    if (screenshotNeeded){
+        TakeScreenshot("../../disco_server/MEDIA/config.png"); 
+        screenshotNeeded = false;
+    }
 }
 void clearKeyPress(){
     if(masterInput.keyPressed){
