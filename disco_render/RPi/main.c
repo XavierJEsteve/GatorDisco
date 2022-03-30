@@ -472,7 +472,7 @@ void drawButtons(){
             }
 
         }
-        GuiUnlock();
+
         // GUI: Dialog Window
         //--------------------------------------------------------------------------------
         GuiFileDialog(&fileDialogState);
@@ -772,9 +772,7 @@ void main() {
                 // exit(1);
         }
 	
-    // GuiFileDialogState fileDialogState = InitGuiFileDialog(420, 310, GetWorkingDirectory(), false);
-    // TODO: Make the dialog size dependent on the window size
-    fileDialogState = InitGuiFileDialog(800, 600, configDirectory, false);
+    fileDialogState = InitGuiFileDialog(3*SCREEN_HEIGHT/4, 3*SCREEN_HEIGHT/4, configDirectory, false);
     // Choose an extenstion to filter by
     char* filterExt = ".bin";
     strcpy(fileDialogState.filterExt,filterExt);
@@ -787,15 +785,17 @@ void main() {
         if (fileDialogState.SelectFilePressed)
         {
             // Load image file (if supported extension)
-            if (IsFileExtension(fileDialogState.fileNameText, ".png"))
+            if (IsFileExtension(fileDialogState.fileNameText, filterExt))
             {
                 strcpy(fileNameToLoad, TextFormat("%s/%s", fileDialogState.dirPathText, fileDialogState.fileNameText));
+                printf("%s",fileNameToLoad);
                 UnloadTexture(texture);
                 texture = LoadTexture(fileNameToLoad);
             }
 
             fileDialogState.SelectFilePressed = false;
         }
+        GuiUnlock();
 
         //////////////////////////////////
 
