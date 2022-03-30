@@ -28,7 +28,7 @@ static const int CHANNEL = 0;
 #define MAX_ATTACK_TIME 3
 #define MAX_DECAY_TIME 5
 #define NUM_SLIDERS 11
-#define NUM_BUTTONS 5
+#define NUM_BUTTONS 6
 #define MIDI_DEVICE "/dev/midi2"
 #define SYNTH_MODE 0
 #define EQ_MODE 1
@@ -59,7 +59,6 @@ typedef struct{
     Color color;
     char* text;
     int (*buttonAction)(int input);
-    void (*menuAction)(GuiFileDialogState *fileDialogState)
 } Button;
 typedef struct{
     int x;
@@ -105,7 +104,7 @@ Sound wavSound;
 
 // File handling
 GuiFileDialogState fileDialogState;
-char* configDirectory = "/home/pi/GatorDisco/disco_server/";
+char* configDirectory = "/home/pi/GatorDisco/disco_server/MEDIA/";
 char fileNameToLoad[512] = { 0 };
 Texture texture = { 1 };
 
@@ -178,6 +177,72 @@ void buildKeys(){
         keys[i] = tempKey;
     }
 }
+
+void saveConfig(void){
+    // This funciton will save the 'state' of the synthesizer. 
+    // Reads:
+    //  - Active effects and any assoc. slider values
+    //  - All other slider values
+    // Writes:
+    //  - All read data to a file given a random name
+    //      - Considering random selection from a noun dictionary and a verb dictionary
+    // - TO configDirectory
+
+    // First, read consistent parameters sliders := {ADSR, OCTAVE}
+    int configData[NUM_SLIDERS+3]; // Plus 3 since there is also oscType, effType, and lfoTarget
+    // int osc_pointer, fx_pointer, lfo_pointer;
+
+    //This can all probably be optimized to not include copying, but it's tiny data anyways and I want debugging to be easy
+    
+    // Sliders
+    // for (u_int8_t i = 0; i < NUM_SLIDERS; i++)
+    // {
+        // printf( "Slider %s has value %d\n",
+        //         sliders[i].name, configData[i] );
+    // }
+    // // Button states
+    // configData[NUM_SLIDERS] = oscTypePointer;
+    // printf("Oscillator %d type is %s\n", 
+    //         osc_pointer, configData[NUM_SLIDERS] );
+    
+    // configData[NUM_SLIDERS+1]  = effectTypePointer;
+    // printf("Effect %d type is %s\n", 
+    //     configData[NUM_SLIDERS+1], configData[NUM_SLIDERS+1] );
+    
+    // configData[NUM_SLIDERS+2] = lfoTargetPointer;
+    // printf("LFO %d target is %s\n", 
+    //     configData[NUM_SLIDERS+2], configData[NUM_SLIDERS+2] );
+
+    for (u_int8_t i = 0; i < NUM_SLIDERS; i++)
+    {
+        configData[i] = sliders[i].value;
+    }
+    configData[NUM_SLIDERS] = oscTypePointer;
+    configData[NUM_SLIDERS+1] = effectTypePointer;
+    configData[NUM_SLIDERS+2] = lfoTargetPointer;
+    for (u_int8_t i = 0; i < NUM_SLIDERS+3; i++)
+    {
+        printf( "Writing value %d\n",
+                configData[i] );
+    }
+    
+    // Print statments check out when ints are used. Now to actually write to a config file
+    // char* confPath = ""; // Strictly the path to cconfig directory
+    // char* confName = "config1.gat"; // The name of the actual configuration file 
+    // strcpy(confPath,configDirectory); // need a new confPath variable so that unique config names can be appended with strcat(confPath,<name>)
+    // strcat(confPath,confName);
+    
+    FILE* confPtr;
+    confPtr = fopen("/home/pi/GatorDisco/disco_server/MEDIA/config0.gat","Wb"); //WRITE Binary
+    if (! confPtr)
+        printf("Failed to save config file\n");
+    else
+    {
+        fwrite(configData, sizeof(int), sizeof(configData), confPtr);
+        fclose(confPtr);
+    }
+}
+
 void loadConfig(void){
     //Verify config data saved by python code can be read
     unsigned char config_buffer[11];
@@ -245,7 +310,7 @@ void changeEffect(void){
 }
 void buildButtons(){
     Button load_config;
-    load_config.xPos = (3*SCREEN_WIDTH/5);
+    load_config.xPos = (7*SCREEN_WIDTH/10);
     load_config.yPos = SCREEN_HEIGHT/3;
     load_config.width = SCREEN_WIDTH/5;
     load_config.height = SCREEN_HEIGHT/12;
@@ -289,7 +354,16 @@ void buildButtons(){
     eqMode.text = "EQ MODE";
     eqMode.buttonAction = &changeMode;
     buttons[4] = eqMode;
-    // File browser button below
+    // Save Config
+    Button save_config;
+    save_config.xPos = (7*SCREEN_WIDTH/10); //(3*SCREEN_WIDTH/5)
+    save_config.yPos = (SCREEN_HEIGHT/3)+SCREEN_HEIGHT/12;
+    save_config.width = SCREEN_WIDTH/5;
+    save_config.height = SCREEN_HEIGHT/12;
+    save_config.color = BLACK;
+    save_config.text = "SAVE CONFIG";
+    save_config.buttonAction = &saveConfig;
+    buttons[5] = save_config;
 
 }
 void buildBandGUIs(){
