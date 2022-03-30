@@ -193,54 +193,35 @@ void saveConfig(void){
     // int osc_pointer, fx_pointer, lfo_pointer;
 
     //This can all probably be optimized to not include copying, but it's tiny data anyways and I want debugging to be easy
-    
-    // Sliders
-    // for (u_int8_t i = 0; i < NUM_SLIDERS; i++)
-    // {
-        // printf( "Slider %s has value %d\n",
-        //         sliders[i].name, configData[i] );
-    // }
-    // // Button states
-    // configData[NUM_SLIDERS] = oscTypePointer;
-    // printf("Oscillator %d type is %s\n", 
-    //         osc_pointer, configData[NUM_SLIDERS] );
-    
-    // configData[NUM_SLIDERS+1]  = effectTypePointer;
-    // printf("Effect %d type is %s\n", 
-    //     configData[NUM_SLIDERS+1], configData[NUM_SLIDERS+1] );
-    
-    // configData[NUM_SLIDERS+2] = lfoTargetPointer;
-    // printf("LFO %d target is %s\n", 
-    //     configData[NUM_SLIDERS+2], configData[NUM_SLIDERS+2] );
-
     for (u_int8_t i = 0; i < NUM_SLIDERS; i++)
     {
         configData[i] = (int)(sliders[i].value*127);
-        printf( "Read slider FLOAT value %f\n",
-                (sliders[i].value) );
-        printf( "Saved slider config INT value %d\n",
-                configData[i]);
+        // printf( "Read slider FLOAT value %f\n",
+        //         (sliders[i].value) );
+        // printf( "Saved slider config INT value %d\n",
+        //         configData[i]);
     }
     configData[NUM_SLIDERS]   = oscTypePointer;
     configData[NUM_SLIDERS+1] = effectTypePointer;
     configData[NUM_SLIDERS+2] = lfoTargetPointer;
     
-    
-    // Print statments check out when ints are used. Now to actually write to a config file
+    // TODO: Fix segmentation fault caused by string chenanigans
     // char* confPath = ""; // Strictly the path to cconfig directory
     // char* confName = "config1.gat"; // The name of the actual configuration file 
     // strcpy(confPath,configDirectory); // need a new confPath variable so that unique config names can be appended with strcat(confPath,<name>)
     // strcat(confPath,confName);
     
-    // FILE* confPtr;
-    // confPtr = fopen("/home/pi/GatorDisco/disco_server/MEDIA/config0.gat","Wb"); //WRITE Binary
-    // if (! confPtr)
-    //     printf("Failed to save config file\n");
-    // else
-    // {
-    //     fwrite(configData, sizeof(int), sizeof(configData), confPtr);
-    //     fclose(confPtr);
-    // }
+    FILE* confPtr;
+    confPtr = fopen("/home/pi/GatorDisco/disco_server/MEDIA/config.gat","wb"); //WRITE Binary
+    // confPtr = fopen(confPath,"wb"); //Replace with this once string induced segmentation fault stops 
+    
+    if (! confPtr)
+        printf("Failed to save config file\n");
+    else
+    {
+        fwrite(configData, sizeof(int), sizeof(configData), confPtr);
+        fclose(confPtr);
+    }
 }
 
 void loadConfig(void){
