@@ -215,16 +215,16 @@ void saveConfig(void){
 
     for (u_int8_t i = 0; i < NUM_SLIDERS; i++)
     {
-        configData[i] = sliders[i].value;
+        configData[i] = (int)(sliders[i].value*127);
+        printf( "Read slider FLOAT value %f\n",
+                (sliders[i].value) );
+        printf( "Saved slider config INT value %d\n",
+                configData[i]);
     }
-    configData[NUM_SLIDERS] = oscTypePointer;
+    configData[NUM_SLIDERS]   = oscTypePointer;
     configData[NUM_SLIDERS+1] = effectTypePointer;
     configData[NUM_SLIDERS+2] = lfoTargetPointer;
-    for (u_int8_t i = 0; i < NUM_SLIDERS+3; i++)
-    {
-        printf( "Writing value %d\n",
-                configData[i] );
-    }
+    
     
     // Print statments check out when ints are used. Now to actually write to a config file
     // char* confPath = ""; // Strictly the path to cconfig directory
@@ -232,15 +232,15 @@ void saveConfig(void){
     // strcpy(confPath,configDirectory); // need a new confPath variable so that unique config names can be appended with strcat(confPath,<name>)
     // strcat(confPath,confName);
     
-    FILE* confPtr;
-    confPtr = fopen("/home/pi/GatorDisco/disco_server/MEDIA/config0.gat","Wb"); //WRITE Binary
-    if (! confPtr)
-        printf("Failed to save config file\n");
-    else
-    {
-        fwrite(configData, sizeof(int), sizeof(configData), confPtr);
-        fclose(confPtr);
-    }
+    // FILE* confPtr;
+    // confPtr = fopen("/home/pi/GatorDisco/disco_server/MEDIA/config0.gat","Wb"); //WRITE Binary
+    // if (! confPtr)
+    //     printf("Failed to save config file\n");
+    // else
+    // {
+    //     fwrite(configData, sizeof(int), sizeof(configData), confPtr);
+    //     fclose(confPtr);
+    // }
 }
 
 void loadConfig(void){
