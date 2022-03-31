@@ -198,10 +198,10 @@ void saveConfig(void){
     for (u_int8_t i = 0; i < NUM_SLIDERS; i++)
     {
         configData[i] = (int)(sliders[i].value*127);
-        // printf( "Read slider FLOAT value %f\n",
-        //         (sliders[i].value) );
-        // printf( "Saved slider config INT value %d\n",
-        //         configData[i]);
+        printf( "Read slider FLOAT value %f\n",
+                (sliders[i].value) );
+        printf( "Saved slider config INT value %d\n",
+                configData[i]);
     }
     configData[NUM_SLIDERS]   = oscTypePointer;
     configData[NUM_SLIDERS+1] = effectTypePointer;
@@ -214,7 +214,7 @@ void saveConfig(void){
     // strcat(confPath,confName);
     
     FILE* confPtr;
-    confPtr = fopen("/home/pi/GatorDisco/disco_server/MEDIA/config.gat","wb"); //WRITE Binary
+    confPtr = fopen("/home/pi/GatorDisco/disco_server/media/config.gat","wb"); //WRITE Binary
     // confPtr = fopen(confPath,"wb"); //Replace with this once string induced segmentation fault stops 
     
     if (! confPtr)
@@ -666,7 +666,7 @@ void drawGUI(){
     }
     EndDrawing();
     if (screenshotNeeded){
-        TakeScreenshot("../../disco_server/MEDIA/config.png"); 
+        TakeScreenshot("../../disco_server/media/config.png"); 
         screenshotNeeded = false;
     }
 }
