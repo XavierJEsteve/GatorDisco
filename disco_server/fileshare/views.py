@@ -1,3 +1,4 @@
+import os
 from os import name
 from django.shortcuts import redirect, render
 from django.http import HttpResponse
@@ -6,6 +7,12 @@ from django.utils.datastructures import MultiValueDictKeyError
 from .forms import AudioForm, SynthForm
 from .models import AudioModel, SynthModel
 
+# Primarily for dbOperations
+from django.conf import settings
+from django.conf.urls.static import static
+from django.contrib.staticfiles.urls import staticfiles_urlpatterns
+from django.urls import path
+
 
 # Create your views here.
 ''' TODO  
@@ -13,56 +20,39 @@ from .models import AudioModel, SynthModel
         * Change text color for each DB entry listed in the table
         * CRUD from the main screen
                 '''
+# Consider moving the db operations into it's own python library
+# This can be turned into a proper view if a button or redirect sends it a request.
+        # Prioritize the scanning of the media directoy and saving files to the DB
+def config_list(): 
+        # Check media folder for new files
+        files = os.listdir(settings.MEDIA_ROOT)
+        conf_list = []
+        photo_list = []
+        config_dict = {}
+        # Later, when dictionary keys and values will be placed in the database, remember getList(dict.keys())
+        
+        # Split the list into .gats and .pngs
+        for file in files:
+                if file.endswith('.gat'):
+                        conf_list.append(file)
+                if file.endswith('.png'):
+                        photo_list.append(file)
+        # Sort lists in-place
+        photo_list.sort()
+        conf_list.sort()
+        
+        return(conf_list, photo_list)
+
 def index(request,action=-1,id=-1):
         audio_files = AudioModel.objects.all()
         synth_files = SynthModel.objects.all()
+        
+        configs, photos = config_list()
+        
 
-        if request.method == 'POST':
-                # Retrieve submitted forms, may be valid or invalid in this state.
-                synthform = SynthForm(request.POST)
-                audioform = AudioForm(request.POST)
-                
-
-
-                if synthform.is_valid():
-                        synthform.save()                        
-                        # Need to save config settings in a place that the raylib application can load it
-                        config_bytes = [
-
-                                synthform.cleaned_data.get("waveForm"),
-                                synthform.cleaned_data.get("octave"),
-                                synthform.cleaned_data.get("oscParam1"),
-                                synthform.cleaned_data.get("oscParam2"),
-                                synthform.cleaned_data.get("attack"),
-                                synthform.cleaned_data.get("decay"),                        
-                                synthform.cleaned_data.get("sustain"),
-                                synthform.cleaned_data.get("release"),
-                        ]
-                        synthform = SynthForm() # Clear form after submission
-                        with open('synth_settings.bin', 'wb') as cfile:
-                                cfile.write(bytearray(config_bytes))
-                
-                elif audioform.is_valid():
-                        try:
-                                # Save audio file to media folder
-                                uploaded_file = request.FILES['file'] # Dictionary key is based on HTML form <input name=*****> \
-                                fs = FileSystemStorage()
-                                fs.save(uploaded_file.name, uploaded_file)
-                                print(uploaded_file.name, uploaded_file)
-                                audioform.save()
-                        
-                        except MultiValueDictKeyError:
-                                print("Bad audio file")
-     
-        else:
-                audioform = AudioForm()
-                synthform = SynthForm()
         context = {
                 'audio_files'   : audio_files,
                 'synth_files'   : synth_files,
-                'synthform'     : synthform,
-                'audioform'     : audioform
-
         }
         return render(request, 'index.html', context)
 
@@ -86,6 +76,31 @@ def upload_audio(request):
                         print("Bad audio file")
         else:
                 audioform = AudioForm()
+
+        return render(request, 'upload_audio.html',{
+                'audioform': audiofor0090m
+        })
+
+def upload_config(request):
+        ''' Area for uploading audio files'''
+
+        if request.method == 'POST':
+                synthform = SynthForm(request.POST, request.FILES)
+                if synthform.is_valid():
+                        synthform.save()
+                try:
+                        # Save audio file to media folder
+                        uploaded_file = request.FILES['file'] # Dictionary key is based on HTML form <input name=*****> \
+                        fs = FileSystemStorage()
+                        fs.save(uploaded_file.name, uploaded_file)
+                        print(uploaded_file.name, uploaded_file)
+                        # Save config file to db
+                        return redirect('index')
+                        
+                except MultiValueDictKeyError:
+                        print("Bad config file")
+        else:
+                synthform = SynthForm()
 
         return render(request, 'upload_audio.html',{
                 'audioform': audiofor0090m

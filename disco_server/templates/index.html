@@ -2,7 +2,7 @@
 
 {% block content_index %}
 <div class="container">
-    <div class="AudioUpload">
+    <!-- <div class="AudioUpload">
         <h2 style="color:yellow"> Audio File Upload</h2>
         <form method="POST" enctype="multipart/form-data">
             {% csrf_token %}
@@ -29,29 +29,7 @@
                 {% endfor %}
             <button type="submit">Upload Synth Settings</button>
         </form>
-    </div>
-    
-    <div class="audioFiles">
-        <div class="table-responsive">
-        <table class= "table table-sm">
-            <thead class="thead-dark">
-                <tr>
-                    <th>
-                        <h2 style="color:yellow"> Audio Name</h2>
-                    </th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for audio in audio_files %}
-                    <tr>
-                        <td class="td-bright">{{ audio.name }}</td>
-                    </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-    </div>
-
+    </div> -->
     <div class="synthFiles">
         <div class="table-responsive">
         <table class= "table table-sm">
@@ -80,6 +58,36 @@
             </tbody>
         </table>
         <div class="table-responsive">
+    </div>
+
+    <div class="card" style="width: 18rem;">
+        <img class="card-img-top" src="media/config.png" alt="synth image">
+        <div class="card-body">
+          <h5 class="card-title">Synth One</h5>
+          <p class="card-text">Example content.</p>
+          <a href="#" class="btn btn-primary">Go somewhere</a>
+        </div>
+    </div>
+
+    <div class="audioFiles">
+        <div class="table-responsive">
+        <table class= "table table-sm">
+            <thead class="thead-dark">
+                <tr>
+                    <th>
+                        <h2 style="color:yellow"> Audio Name</h2>
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for audio in audio_files %}
+                    <tr>
+                        <td class="td-bright">{{ audio.name }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        </div>
     </div>
 
 </div>

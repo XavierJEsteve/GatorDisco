@@ -52,15 +52,13 @@ body {
 
 .container {
   display: grid; 
-  grid-template-columns: 1fr 1fr; 
-  grid-template-rows: 1fr 1fr; 
+  grid-template-columns: 1fr 1fr;
   gap: 10px 10px; 
   grid-template-areas: 
-    "synthForm synthFiles"
-    "audioUpload audioFiles"; 
+    "audioFiles"  "synthFiles"; 
 }
-.audioUpload { grid-area: audioUpload; }
-.synthForm { grid-area: synthForm; }
+/* .audioUpload { grid-area: audioUpload; } */
+/* .synthForm { grid-area: synthForm; } */
 .audioFiles { grid-area: audioFiles; }
 .synthFiles { grid-area: synthFiles; }
 
