@@ -64,7 +64,16 @@ typedef struct{
     int gatePointer;
     int keyPointer;
     bool keyPressed;
+    int keyIndex;
 } Input;
+typedef struct{
+    int xPos;
+    int yPos;
+    int width;
+    int height;
+    char* title;
+    bool noTitle;
+} GUI_Section;
 typedef struct{
     float fCenter;
     float gain;
@@ -72,9 +81,9 @@ typedef struct{
     float upperLimit;
     float lowerLimit;
 } BandGUI;
-char* oscNames[NUM_OSCILLATORS] = {"PULSE WAVE", "SAWTOOTH", "WAV FILE", "OSCILLATOR 4"};
-char* oscParam1Names[NUM_OSCILLATORS] = {"PULSE WIDTH", "DETUNE", "OSC3 PARAM", "OSC4 PARAM"};
-char* oscParam2Names[NUM_OSCILLATORS] = {"", "", "OSC3 PARAM2", "OSC4 PARAM2"};
+char* oscNames[NUM_OSCILLATORS] = {"PULSE WAVE", "SAWTOOTH", "WAV FILE", "FREQ MOD", "RING MOD"};
+char* oscParam1Names[NUM_OSCILLATORS] = {"PULSE WIDTH", "DETUNE", "PARAM 1", "MOD FREQ", "MOD FREQ"};
+char* oscParam2Names[NUM_OSCILLATORS] = {"", "", "PARAM2", "MOD AMP", ""};
 int oscTypePointer = 0;
 char* effectNames[NUM_EFFECTS] = {"OFF", "ECHO", "BIT CRUSH", "FS REDUCTION", "EFFECT 4", "EFFECT 5"};
 char* effectParam1Names[NUM_EFFECTS] = {"", "TIME", "BIT DEPTH", "FS RATIO", "PARAM1", "PARAM1"};
@@ -93,6 +102,7 @@ float fCenters[NUM_EQ_BANDS] = {32,64,125,250,500,1000,2000,4000,8000,16000};
 Slider sliders[NUM_SLIDERS];
 Button buttons[NUM_BUTTONS];
 Button EQButtons[NUM_EQ_BANDS];
+GUI_Section guiSections[6];
 int currentBand = 0;
 unsigned char spi_buffer[100];
 
@@ -141,6 +151,63 @@ void drawWaveform(float* signal,int width,int height,int x, int y){
         current.y = (height/2)+0.5*(int)(signal[index]*100)+y;
         DrawLineEx(current, prev, 1.0f, RED);
         prev = current;
+    }
+}
+void buildGuiSections(){
+    //build oscillator section
+    GUI_Section tempSection;
+    tempSection.title = "OSCILLATOR";
+    tempSection.xPos = 0;
+    tempSection.yPos = 0;
+    tempSection.height = SCREEN_HEIGHT*3/8;
+    tempSection.width = SCREEN_WIDTH*7/16;
+    guiSections[0] = tempSection;
+    tempSection.title = "ENVELOPE";
+    tempSection.xPos = SCREEN_WIDTH*7/16;
+    tempSection.yPos = 0;
+    tempSection.height = SCREEN_HEIGHT*3/8;
+    tempSection.width = SCREEN_WIDTH*5/16;
+    guiSections[1] = tempSection;
+    tempSection.title = "WAVEFORM";
+    tempSection.xPos = SCREEN_WIDTH*3/4;
+    tempSection.yPos = 0;
+    tempSection.height = SCREEN_HEIGHT*3/8;
+    tempSection.width = SCREEN_WIDTH/4;
+    guiSections[2] = tempSection;
+    tempSection.title = "LFO";
+    tempSection.xPos = 0;
+    tempSection.yPos = SCREEN_HEIGHT*3/8;
+    tempSection.height = SCREEN_HEIGHT*3/8;
+    tempSection.width = SCREEN_WIDTH*11/32;
+    guiSections[3] = tempSection;
+    tempSection.title = "EFFECTS";
+    tempSection.xPos = SCREEN_WIDTH*11/32;
+    tempSection.yPos = SCREEN_HEIGHT*3/8;
+    tempSection.height = SCREEN_HEIGHT*3/8;
+    tempSection.width = SCREEN_WIDTH*11/32;
+    guiSections[4] = tempSection;
+    tempSection.title = "";
+    tempSection.noTitle = true;
+    tempSection.xPos = SCREEN_WIDTH*11/16;
+    tempSection.yPos = SCREEN_HEIGHT*3/8;
+    tempSection.height = SCREEN_HEIGHT*3/8;
+    tempSection.width = SCREEN_WIDTH*5/16;
+    guiSections[5] = tempSection;
+}
+void drawGuiSections(){
+    for(int i = 0; i < 6; i++){
+        GUI_Section temp = guiSections[i];
+        //top line
+        DrawLine(temp.xPos, temp.yPos, temp.xPos + temp.width,temp.yPos,BLACK);
+        //line under title
+        if(!temp.noTitle)
+        DrawLine(temp.xPos, temp.yPos + 50, temp.xPos + temp.width,temp.yPos + 50,BLACK);
+        //left border
+        DrawLine(temp.xPos, temp.yPos, temp.xPos,temp.yPos + temp.height,BLACK);
+        //right border
+        DrawLine(temp.xPos + temp.width, temp.yPos, temp.xPos + temp.width,temp.yPos + temp.height,BLACK);
+        if(!temp.noTitle)
+        DrawText(temp.title, temp.xPos + temp.width/2 - 6*strlen(temp.title),temp.yPos + 25,20,BLACK);
     }
 }
 void buildKeys(){
@@ -204,10 +271,14 @@ void changeMode(int input){
     if(GUI_MODE == SYNTH_MODE){
         GUI_MODE = EQ_MODE;
         buttons[4].text = "SYNTH MODE";
+        buttons[4].xPos = 100;
+        buttons[4].yPos = 100;
     }
     else{
         GUI_MODE = SYNTH_MODE;
         buttons[4].text = "EQ MODE";
+        buttons[4].xPos = 930;
+        buttons[4].yPos = 350;
     }
 }
 void changeLfo(void){
@@ -230,50 +301,50 @@ void changeEffect(void){
     processSpiInput(SPI_MODULE_FX | SPI_FX_SEL);
     processSpiInput(effectTypePointer);
     buttons[3].text = effectNames[effectTypePointer];
-    sliders[8].name = effectParam1Names[effectTypePointer];
-    sliders[9].name = effectParam2Names[effectTypePointer];
+    sliders[9].name = effectParam1Names[effectTypePointer];
+    sliders[10].name = effectParam2Names[effectTypePointer];
 }
 void buildButtons(){
     Button load_config;
-    load_config.xPos = (3*SCREEN_WIDTH/5);
-    load_config.yPos = SCREEN_HEIGHT/3;
-    load_config.width = SCREEN_WIDTH/5;
+    load_config.xPos = 1090;
+    load_config.yPos = 350;
+    load_config.width = SCREEN_WIDTH/10;
     load_config.height = SCREEN_HEIGHT/12;
     load_config.color = BLACK;
     load_config.text = "LOAD CONFIG";
     load_config.buttonAction = &loadConfig;
     buttons[0] = load_config;
     Button oscSelect;
-    oscSelect.xPos = (SCREEN_WIDTH/32);
+    oscSelect.xPos = 40;
     oscSelect.yPos = SCREEN_HEIGHT/5;
-    oscSelect.width = SCREEN_WIDTH/8;
+    oscSelect.width = SCREEN_WIDTH/10;
     oscSelect.height = SCREEN_HEIGHT/12;
     oscSelect.color = GREEN;
     oscSelect.text = "PULSE WAVE";
     oscSelect.buttonAction = &changeOsc;
     buttons[1] = oscSelect;
     Button lfoSelect;
-    lfoSelect.xPos = 9* SCREEN_WIDTH/16;
-    lfoSelect.yPos = SCREEN_HEIGHT/5;
-    lfoSelect.width = SCREEN_WIDTH/8;
+    lfoSelect.xPos = 40;
+    lfoSelect.yPos = SCREEN_HEIGHT/2;
+    lfoSelect.width = SCREEN_WIDTH/10;
     lfoSelect.height = SCREEN_HEIGHT/12;
     lfoSelect.color = GREEN;
     lfoSelect.text = "Frequency";
     lfoSelect.buttonAction = &changeLfo;
     buttons[2] = lfoSelect;
     Button effectSelect;
-    effectSelect.xPos = 12* SCREEN_WIDTH/16;
+    effectSelect.xPos = 480;
     effectSelect.yPos = SCREEN_HEIGHT/2;
-    effectSelect.width = SCREEN_WIDTH/8;
+    effectSelect.width = SCREEN_WIDTH/10;
     effectSelect.height = SCREEN_HEIGHT/12;
     effectSelect.color = GREEN;
     effectSelect.text = "OFF";
     effectSelect.buttonAction = &changeEffect;
     buttons[3] = effectSelect;
     Button eqMode;
-    eqMode.xPos = (SCREEN_WIDTH/32);
-    eqMode.yPos = SCREEN_HEIGHT/10;
-    eqMode.width = SCREEN_WIDTH/8;
+    eqMode.xPos = 930;
+    eqMode.yPos = 350;
+    eqMode.width = SCREEN_WIDTH/10;
     eqMode.height = SCREEN_HEIGHT/12;
     eqMode.color = GREEN;
     eqMode.text = "EQ MODE";
@@ -286,7 +357,7 @@ void buildBandGUIs(){
         //calculate slider values
         tempBand.fCenter = fCenters[i];
         tempBand.gain = 0;
-        tempBand.qFactor = 1.414;
+        tempBand.qFactor = 1;
         tempBand.lowerLimit = bandLimits[i];
         tempBand.upperLimit = bandLimits[i+1];
         bands[i] = tempBand;
@@ -310,77 +381,77 @@ void buildEQButtons(){
 void buildSliders(){
     Slider octave;
     octave.xPos = 200;
-    octave.yPos = 100;
+    octave.yPos = 80;
     octave.value = 0;
-    octave.param = SPI_MODULE_KEYBOARD | SPI_KEYBAORD_OCTAVE;
+    octave.param = SPI_MODULE_KEYBOARD | SPI_KEYBOARD_OCTAVE;
     octave.name = "OCTAVE";
     sliders[0] = octave;
     Slider oscParam1;
     oscParam1.xPos = 300;
-    oscParam1.yPos = 100;
+    oscParam1.yPos = 80;
     oscParam1.value = 0;
     oscParam1.param = SPI_MODULE_OSC | SPI_OSCPARAM1;
     oscParam1.name = "PULSE WIDTH";
     sliders[1] = oscParam1;
     Slider oscParam2;
     oscParam2.xPos = 420;
-    oscParam2.yPos = 100;
+    oscParam2.yPos = 80;
     oscParam2.value = 0;
     oscParam2.param = SPI_MODULE_OSC | SPI_OSCPARAM2;
     oscParam2.name = "";
     sliders[2] = oscParam2;
-    Slider lfoSpeed;
-    lfoSpeed.xPos = 570;
-    lfoSpeed.yPos = 100;
-    lfoSpeed.value = 0;
-    lfoSpeed.param = SPI_MODULE_LFO | SPI_LFO_SPEED;
-    lfoSpeed.name = "LFO Freq";
-    sliders[3] = lfoSpeed;
-    Slider lfoval;
-    lfoval.xPos = 690;
-    lfoval.yPos = 100;
-    lfoval.value = 0;
-    lfoval.param = SPI_MODULE_LFO | SPI_LFO_VAL;
-    lfoval.name = "LFO Val";
-    sliders[4] = lfoval;
     Slider Attack;
-    Attack.xPos = 200;
-    Attack.yPos = 350;
+    Attack.xPos = 600;
+    Attack.yPos = 80;
     Attack.value = 0;
     Attack.param = SPI_MODULE_ENV | SPI_ENV_ATTACK;
-    Attack.name = "Attack";
-    sliders[5] = Attack;
+    Attack.name = "A";
+    sliders[3] = Attack;
     Slider Decay;
-    Decay.xPos = 300;
-    Decay.yPos = 350;
+    Decay.xPos = 700;
+    Decay.yPos = 80;
     Decay.value = 0;
     Decay.param = SPI_MODULE_ENV | SPI_ENV_DECAY;
-    Decay.name = "Decay";
-    sliders[6] = Decay;
+    Decay.name = "D";
+    sliders[4] = Decay;
     Slider Sustain;
-    Sustain.xPos = 450;
-    Sustain.yPos = 350;
+    Sustain.xPos = 800;
+    Sustain.yPos = 80;
     Sustain.value = 0;
     Sustain.param = SPI_MODULE_ENV | SPI_ENV_SUSTAIN;
-    Sustain.name = "Sustain";
-    sliders[7] = Sustain;
+    Sustain.name = "S";
+    sliders[5] = Sustain;
     Slider Release;
-    Release.xPos = 600;
-    Release.yPos = 350;
+    Release.xPos = 900;
+    Release.yPos = 80;
     Release.value = 0;
     Release.param = SPI_MODULE_ENV | SPI_ENV_RELEASE;
-    Release.name = "Release";
-    sliders[8] = Release;
+    Release.name = "R";
+    sliders[6] = Release;
+    Slider lfoSpeed;
+    lfoSpeed.xPos = 200;
+    lfoSpeed.yPos = 380;
+    lfoSpeed.value = 0;
+    lfoSpeed.param = SPI_MODULE_LFO | SPI_LFO_SPEED;
+    lfoSpeed.name = "SPEED";
+    sliders[7] = lfoSpeed;
+    Slider lfoval;
+    lfoval.xPos = 320;
+    lfoval.yPos = 380;
+    lfoval.value = 0;
+    lfoval.param = SPI_MODULE_LFO | SPI_LFO_VAL;
+    lfoval.name = "VALUE";
+    sliders[8] = lfoval;
     Slider Effect1;
-    Effect1.xPos = 750;
-    Effect1.yPos = 350;
+    Effect1.xPos = 640;
+    Effect1.yPos = 380;
     Effect1.value = 0;
     Effect1.param = SPI_MODULE_FX | SPI_FX_PARAM1;
     Effect1.name = "";
     sliders[9] = Effect1;
     Slider Effect2;
-    Effect2.xPos = 900;
-    Effect2.yPos = 350;
+    Effect2.xPos = 760;
+    Effect2.yPos = 380;
     Effect2.value = 0;
     Effect2.param = SPI_MODULE_FX | SPI_FX_PARAM2;
     Effect2.name = "";
@@ -400,7 +471,7 @@ void drawSliders(){
             //DrawCircle(int centerX, int centerY, float radius, Color color);
             DrawCircle(tempSlider.xPos+SLIDER_WIDTH/2, tempSlider.yPos+SLIDER_HEIGHT-whiteRectHeight, SLIDER_WIDTH/2, RED);
             //draw text
-            DrawText(tempSlider.name, tempSlider.xPos, tempSlider.yPos + SLIDER_HEIGHT + 30, 15, BLACK);
+            DrawText(tempSlider.name, tempSlider.xPos, tempSlider.yPos + SLIDER_HEIGHT + 30, 20, BLACK);
         }
     }
 }
@@ -537,10 +608,11 @@ void drawGUI(){
     BeginDrawing();
     ClearBackground(GRAY);
     if(GUI_MODE == SYNTH_MODE){
-        drawWaveform(buffer,SCREEN_WIDTH/6,SCREEN_HEIGHT/6,SCREEN_WIDTH-(SCREEN_WIDTH*1.5/6),SCREEN_HEIGHT/12);
+        drawWaveform(buffer,SCREEN_WIDTH*3/16,SCREEN_HEIGHT*7/32,SCREEN_WIDTH*25/32,80);
         drawKeys(SCREEN_HEIGHT/4);
         drawSliders();
         drawButtons();
+        drawGuiSections();
     }
     else{
         drawEQButtons();
@@ -548,24 +620,26 @@ void drawGUI(){
     }
     EndDrawing();
 }
+int clearPressCounter;
 void clearKeyPress(){
-    if(masterInput.keyPressed){
+    int octave = 0;
+    if(sliders[0].value > 0.75) octave = 3;
+    else if(sliders[0].value > 0.5) octave = 2;
+    else if(sliders[0].value > 0.25) octave = 1;
+    if(masterInput.keyPressed == true){
+        printf("clear key press %d\n", clearPressCounter);
+        clearPressCounter++;
         for(int i = 0; i < 17; i++){
+            if(keys[i].pressed == true){
+                processSpiInput(masterInput.keyPointer);
+                processSpiInput(i + 12*octave);
+                if(octave != 0)
+                printf("octave command\n");
+                processSpiInput(0);
+            }
             keys[i].pressed = false;
         }
-        if(masterInput.keyPressed == true){
-            /*
-            printf("SPI COMMAND\n");
-            printf("00000000 (Keypressed)\n");
-            printf("00000000\n");
-            */
-            spi_buffer[0] = 128;
-            spi_buffer[1] = 0;
-            //wiringPiSPIDataRW(CHANNEL, spi_buffer, 2);
-        }
         masterInput.keyPressed = false;
-        processSpiInput(masterInput.gatePointer);
-        processSpiInput(0);
     }
 }
 void processInput(){
@@ -574,24 +648,16 @@ void processInput(){
 
     if(IsMouseButtonDown(0)){
         if(masterInput.y > (3*SCREEN_HEIGHT / 4)){
+            int octave = 0;
+            if(sliders[0].value > 0.75) octave = 3;
+            else if(sliders[0].value > 0.5) octave = 2;
+            else if(sliders[0].value > 0.25) octave = 1;
             if(masterInput.keyPressed == false){
-                /*
-                printf("SPI COMMAND\n");
-                printf("00000000 (Keypressed)\n");
-                printf("00000001\n");
-                */
-                spi_buffer[0] = 128;
-                spi_buffer[1] = 1;
-                //wiringPiSPIDataRW(CHANNEL, spi_buffer, 2);
-                PlaySound(wavSound);
+                wavPointer = 0;
+                masterInput.keyPressed = true;
             }
-            masterInput.keyPressed = true;
-            processSpiInput(masterInput.gatePointer);
-            processSpiInput(1);
-            printf("mouse button down\n");
             bool checkBlack = false;
             bool foundKey = false;
-            int keyIndex = -1;
             if(masterInput.y < 7*SCREEN_HEIGHT/8) checkBlack = true;
             for(int i = 0; i < 17; i++){
                 keys[i].pressed = false;
@@ -600,7 +666,8 @@ void processInput(){
                     if(tempKey.black){
                         if(checkBlack){
                             if(masterInput.x > tempKey.xPos && masterInput.x < tempKey.xPos + WHITE_KEY_WIDTH/2){
-                                keyIndex = i;
+                                masterInput.keyIndex = i + 12*octave;
+                                keys[i].pressed = true;
                                 foundKey = true;
                             }
                         }
@@ -608,13 +675,23 @@ void processInput(){
                     else{
                         if(!checkBlack){
                             if(masterInput.x > tempKey.xPos && masterInput.x < tempKey.xPos + WHITE_KEY_WIDTH){
-                                keyIndex = i;
+                                if(masterInput.keyIndex != i + 12*octave){
+                                    processSpiInput(masterInput.keyPointer);
+                                    processSpiInput(masterInput.keyIndex);
+                                    processSpiInput(0);
+                                    masterInput.keyIndex = i +12*octave;
+                                }
                                 foundKey = true;
                             }
                         }
                         else{
                             if(masterInput.x > tempKey.xPos && masterInput.x < tempKey.xPos + WHITE_KEY_WIDTH*0.75){
-                                keyIndex = i;
+                                if(masterInput.keyIndex != i + 12*octave){
+                                    processSpiInput(masterInput.keyPointer);
+                                    processSpiInput(masterInput.keyIndex);
+                                    processSpiInput(0);
+                                    masterInput.keyIndex = i +12*octave;
+                                }
                                 foundKey = true;
                             }
                         }
@@ -623,19 +700,9 @@ void processInput(){
             }
             //*masterInput.key = keyIndex;
             processSpiInput(masterInput.keyPointer);
-            processSpiInput(keyIndex);
-            if(keyIndex != keySelection){
-                /*
-                printf("SPI COMMAND\n");
-                printf("00000001 (Key Selection)\n");
-                printf("%d\n", keyIndex);
-                */
-                spi_buffer[0] = 129;
-                spi_buffer[1] = keyIndex;
-                //wiringPiSPIDataRW(CHANNEL, spi_buffer, 2);
-                keySelection = keyIndex;
-            }
-            keys[keyIndex].pressed = true;
+            processSpiInput(masterInput.keyIndex);
+            processSpiInput(1);
+            keys[masterInput.keyIndex - 12*octave].pressed = true;
         }
         else{
             clearKeyPress();
@@ -644,7 +711,7 @@ void processInput(){
                 Slider tempSlider = sliders[i];
                 if(masterInput.x > tempSlider.xPos && masterInput.x -tempSlider.xPos < SLIDER_WIDTH && masterInput.y > tempSlider.yPos && masterInput.y -tempSlider.yPos < SLIDER_HEIGHT){
                     tempSlider.value = (float)(tempSlider.yPos + SLIDER_HEIGHT - masterInput.y)/SLIDER_HEIGHT;
-                    if(tempSlider.value < 0.05) tempSlider.value = 0;
+                    if(tempSlider.value < 0.01) tempSlider.value = 0;
                     //*tempSlider.param = tempSlider.value;
                     processSpiInput(tempSlider.param);
                     processSpiInput(tempSlider.value * 127);
@@ -662,9 +729,6 @@ void processInput(){
     }
     else {
         clearKeyPress();
-        for(int i = 0; i < NUM_BUTTONS; i++){
-            //buttons[i].keyPressed = false;
-        }
     }
 }
 
@@ -681,6 +745,7 @@ void main() {
     buildBandGUIs();
     buildButtons();
     buildEQButtons();
+    buildGuiSections();
     /*
     SetAudioStreamBufferSizeDefault(STREAM_BUFFER_SIZE);
     AudioStream synthStream = LoadAudioStream(SAMPLE_RATE,
@@ -727,13 +792,10 @@ void main() {
 		    read(seqfd, &midipacket, sizeof(midipacket));
             
             if((firstByte != midipacket[1] || secondByte != midipacket[2]) && midipacket[1] < 109 && midipacket[1] > 23){
-                //send gate
-                processSpiInput(SPI_MODULE_ENV | SPI_GATE);
-                if(midipacket[2] > 0) processSpiInput(1);
-                else processSpiInput(0);
-                //send key
-                processSpiInput(SPI_MODULE_KEYBOARD | SPI_KEYBOARD_KEY);
-                processSpiInput(midipacket[1] - 24);
+                //send key and gate
+                processSpiInput(masterInput.keyPointer);
+                processspiinput(midipacket[1]);
+                processSpiInput(midipacket[2]);
                 firstByte = midipacket[1];
                 secondByte = midipacket[2];
             }
