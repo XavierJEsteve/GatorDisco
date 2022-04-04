@@ -415,9 +415,9 @@ void changeEffect(void){
 }
 void buildButtons(){
     Button load_config;
-    load_config.xPos = (7*SCREEN_WIDTH/10);
-    load_config.yPos = SCREEN_HEIGHT/3;
-    load_config.width = SCREEN_WIDTH/5;
+    load_config.xPos = 1070;
+    load_config.yPos = 520;
+    load_config.width = SCREEN_WIDTH/10;
     load_config.height = SCREEN_HEIGHT/12;
     load_config.color = BLACK;
     load_config.text = "LOAD CONFIG";
@@ -461,9 +461,9 @@ void buildButtons(){
     buttons[4] = eqMode;
     // Save Config
     Button save_config;
-    save_config.xPos = (7*SCREEN_WIDTH/10); //(3*SCREEN_WIDTH/5)
-    save_config.yPos = (SCREEN_HEIGHT/3)+SCREEN_HEIGHT/12;
-    save_config.width = SCREEN_WIDTH/5;
+    save_config.xPos = 930;
+    save_config.yPos = 520;
+    save_config.width = SCREEN_WIDTH/10;
     save_config.height = SCREEN_HEIGHT/12;
     save_config.color = BLACK;
     save_config.text = "SAVE CONFIG";
@@ -770,7 +770,7 @@ void drawGUI(){
     ClearBackground(GRAY);
 
     if(GUI_MODE == SYNTH_MODE){
-        drawWaveform(buffer,SCREEN_WIDTH*3/16,SCREEN_HEIGHT*7/32,SCREEN_WIDTH*25/32,80);
+        //drawWaveform(buffer,SCREEN_WIDTH*3/16,SCREEN_HEIGHT*7/32,SCREEN_WIDTH*25/32,80);
         drawKeys(SCREEN_HEIGHT/4);
         drawSliders();
         drawButtons();
@@ -950,7 +950,7 @@ void main() {
 	
     fileDialogState = InitGuiFileDialog(3*SCREEN_HEIGHT/4, 3*SCREEN_HEIGHT/4, configDirectory, false);
     // Choose an extenstion to filter by
-    char* filterExt = ".bin";
+    char* filterExt = ".wav";
     strcpy(fileDialogState.filterExt,filterExt);
 
     while(WindowShouldClose() == false)
@@ -968,6 +968,7 @@ void main() {
                 UnloadTexture(texture);
                 texture = LoadTexture(fileNameToLoad);
             }
+            printf("here: %s",fileNameToLoad);
 
             fileDialogState.SelectFilePressed = false;
         }
