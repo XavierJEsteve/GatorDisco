@@ -775,7 +775,6 @@ void processInput(){
             else if(sliders[0].value > 0.5) octave = 2;
             else if(sliders[0].value > 0.25) octave = 1;
             if(masterInput.keyPressed == false){
-                wavPointer = 0;
                 masterInput.keyPressed = true;
             }
             bool checkBlack = false;
@@ -941,10 +940,14 @@ void main() {
             if((firstByte != midipacket[1] || secondByte != midipacket[2]) && midipacket[1] < 109 && midipacket[1] > 23){
                 //send key and gate
                 processSpiInput(masterInput.keyPointer);
-                processspiinput(midipacket[1]);
-                processSpiInput(midipacket[2]);
+                processSpiInput(midipacket[1]-24);
+                if(midipacket[2] != 0)
+                processSpiInput(1);
+                else 
+                processSpiInput(0);
                 firstByte = midipacket[1];
                 secondByte = midipacket[2];
+                printf("byte 1: %d, byte 2: %d\n", midipacket[1],midipacket[2]);
             }
             
         //}
