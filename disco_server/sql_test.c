@@ -50,22 +50,5 @@ int main(){
         OscType     = sqlite3_column_int(stmt,12);
         effectType  = sqlite3_column_int(stmt,13);
         lfoTarget   = sqlite3_column_int(stmt,14);
-        // printf("Config name: %s\n", name);
-        // printf("Config octave: %d\n", octave);
-        // printf("Config oscParam1: %d\n", oscParam1);
-        // printf("Config oscParam2: %d\n", oscParam2);
-        // printf("Config lfoSpeed: %d\n", lfoSpeed);
-        // printf("Config lfoval: %d\n", lfoval);
-        // printf("Config Attack: %d\n", Attack);
-        // printf("Config Decay: %d\n", Decay);
-        // printf("Config Sustain: %d\n", Sustain);
-        // printf("Config Release: %d\n", Release);
-        // printf("Config Effect1: %d\n", Effect1);
-        // printf("Config Effect2: %d\n", Effect2);
-        // printf("Config OscType: %d\n", OscType);
-        // printf("Config effectType: %d\n", effectType);
-        // printf("Config lfoTarget: %d\n", lfoTarget);
-
-
     }
 }

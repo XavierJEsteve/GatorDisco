@@ -32,6 +32,7 @@ class ConfigModel(models.Model):
     oscType     = models.IntegerField(default=0)
     effectType  = models.IntegerField(default=0)
     lfoTarget   = models.IntegerField(default=0)
+    image       = models.BinaryField(blank=True,editable=True)
 
     def __str__(self):
         return self.name
