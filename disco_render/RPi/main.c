@@ -4,6 +4,8 @@
 #include "include/raylib.h"
 #define RAYGUI_IMPLEMENTATION
 #include "include/raygui.h"
+#define GUI_FILE_DIALOG_IMPLEMENTATION
+#include "include/gui_file_dialog.h"
 #include <math.h>
 #include <errno.h>
 #include "include/wiringPiSPI.h"
@@ -26,7 +28,7 @@ static const int CHANNEL = 0;
 #define MAX_ATTACK_TIME 3
 #define MAX_DECAY_TIME 5
 #define NUM_SLIDERS 11
-#define NUM_BUTTONS 5
+#define NUM_BUTTONS 6
 #define MIDI_DEVICE "/dev/midi2"
 #define SYNTH_MODE 0
 #define EQ_MODE 1
@@ -109,6 +111,15 @@ unsigned char spi_buffer[100];
 Synth synth;
 SpiHandler spiHandler;
 Sound wavSound;
+
+// File handling
+GuiFileDialogState fileDialogState;
+char* configDirectory = "/home/pi/GatorDisco/disco_server/MEDIA/";
+char fileNameToLoad[512] = { 0 };
+Texture texture = { 1 };
+
+bool screenshotNeeded = false;
+
 
 void processSpiInput(int byte){
     printf("sent byte: %d\n", byte);
@@ -235,6 +246,58 @@ void buildKeys(){
         keys[i] = tempKey;
     }
 }
+
+void saveConfig(void){
+    // This funciton will save the 'state' of the synthesizer. 
+    // Reads:
+    //  - Active effects and any assoc. slider values
+    //  - All other slider values
+    // Writes:
+    //  - All read data to a file given a random name
+    //      - Considering random selection from a noun dictionary and a verb dictionary
+    // - TO configDirectory
+
+    // First, read consistent parameters sliders := {ADSR, OCTAVE}
+    int configData[NUM_SLIDERS+3]; // Plus 3 since there is also oscType, effType, and lfoTarget
+    // int osc_pointer, fx_pointer, lfo_pointer;
+
+    //This can all probably be optimized to not include copying, but it's tiny data anyways and I want debugging to be easy
+    for (u_int8_t i = 0; i < NUM_SLIDERS; i++)
+    {
+        configData[i] = (int)(sliders[i].value*127);
+        // printf( "Read slider FLOAT value %f\n",
+        //         (sliders[i].value) );
+        // printf( "Saved slider config INT value %d\n",
+        //         configData[i]);
+    }
+    configData[NUM_SLIDERS]   = oscTypePointer;
+    configData[NUM_SLIDERS+1] = effectTypePointer;
+    configData[NUM_SLIDERS+2] = lfoTargetPointer;
+    
+    // TODO: Fix segmentation fault caused by string chenanigans
+    // char* confPath = ""; // Strictly the path to cconfig directory
+    // char* confName = "config1.gat"; // The name of the actual configuration file 
+    // strcpy(confPath,configDirectory); // need a new confPath variable so that unique config names can be appended with strcat(confPath,<name>)
+    // strcat(confPath,confName);
+    
+    FILE* confPtr;
+    confPtr = fopen("/home/pi/GatorDisco/disco_server/MEDIA/config.gat","wb"); //WRITE Binary
+    // confPtr = fopen(confPath,"wb"); //Replace with this once string induced segmentation fault stops 
+    
+    if (! confPtr)
+        printf("Failed to save config file\n");
+    else
+    {
+        fwrite(configData, sizeof(int), sizeof(configData), confPtr);
+        fclose(confPtr);
+    }
+    // Lastly take a screenshot with <config_name>.png and save to the same directory
+    // TakeScreenshot("../../disco_server/MEDIA/config.png"); 
+    // Taking a screenshot here may lead to incomplete capture (usually just the background)
+    // TESTING: setting a boolean to true and checking it at after endDrawing()
+    screenshotNeeded = true;
+}
+
 void loadConfig(void){
     //Verify config data saved by python code can be read
     unsigned char config_buffer[11];
@@ -306,9 +369,9 @@ void changeEffect(void){
 }
 void buildButtons(){
     Button load_config;
-    load_config.xPos = 1090;
-    load_config.yPos = 350;
-    load_config.width = SCREEN_WIDTH/10;
+    load_config.xPos = (7*SCREEN_WIDTH/10);
+    load_config.yPos = SCREEN_HEIGHT/3;
+    load_config.width = SCREEN_WIDTH/5;
     load_config.height = SCREEN_HEIGHT/12;
     load_config.color = BLACK;
     load_config.text = "LOAD CONFIG";
@@ -350,6 +413,17 @@ void buildButtons(){
     eqMode.text = "EQ MODE";
     eqMode.buttonAction = &changeMode;
     buttons[4] = eqMode;
+    // Save Config
+    Button save_config;
+    save_config.xPos = (7*SCREEN_WIDTH/10); //(3*SCREEN_WIDTH/5)
+    save_config.yPos = (SCREEN_HEIGHT/3)+SCREEN_HEIGHT/12;
+    save_config.width = SCREEN_WIDTH/5;
+    save_config.height = SCREEN_HEIGHT/12;
+    save_config.color = BLACK;
+    save_config.text = "SAVE CONFIG";
+    save_config.buttonAction = &saveConfig;
+    buttons[5] = save_config;
+
 }
 void buildBandGUIs(){
     for(int i = 0; i < NUM_EQ_BANDS; i++){
@@ -457,6 +531,7 @@ void buildSliders(){
     Effect2.name = "";
     sliders[10] = Effect2;
 }
+
 void drawSliders(){
     for(int i = 0; i < NUM_SLIDERS; i++){
         Slider tempSlider = sliders[i];
@@ -503,7 +578,14 @@ void drawKeys(int height){
     }
 }
 void drawButtons(){
+
+    DrawText(fileNameToLoad, 208, GetScreenHeight() - 20, 10, GRAY);
+
     for(int i = 0; i < NUM_BUTTONS; i++){
+        // raygui: controls drawing
+        //----------------------------------------------------------------------------------
+        
+
         Button tempButton = buttons[i];
         bool pressed = GuiButton((Rectangle){
         tempButton.xPos,
@@ -512,10 +594,24 @@ void drawButtons(){
         tempButton.height
         }, tempButton.text);
         if(pressed){
-            tempButton.buttonAction(0);
+            if (!strcmp(tempButton.text, "LOAD CONFIG"))
+            {   
+                fileDialogState.fileDialogActive = true;
+
+            }
+            else
+            {
+                tempButton.buttonAction(0);
+            }
+
         }
-    } 
+
+        // GUI: Dialog Window
+        //--------------------------------------------------------------------------------
+        GuiFileDialog(&fileDialogState);
+    }
 }
+
 void drawEQButtons(){
     for(int i = 0; i < NUM_EQ_BANDS; i++){
         Button tempButton = EQButtons[i];
@@ -604,21 +700,47 @@ void drawEQSliders(){
     }
 }
 
+// void drawFileMenu(){
+
+//     DrawText(fileNameToLoad, 208, GetScreenHeight() - 20, 10, GRAY);
+
+//     // raygui: controls drawing
+//     //----------------------------------------------------------------------------------
+//     if (fileDialogState.fileDialogActive) GuiLock();
+
+//     // if (GuiButton((Rectangle){ 20, 20, 140, 30 }, GuiIconText(RAYGUI_ICON_FILE_OPEN, "Open Image"))) fileDialogState.fileDialogActive = true;
+//     if (buttons[0]) 
+//         fileDialogState.fileDialogActive = true;
+
+//     GuiUnlock();
+
+//     // GUI: Dialog Window
+//     //--------------------------------------------------------------------------------
+//     GuiFileDialog(&fileDialogState);
+// }
+
 void drawGUI(){
     BeginDrawing();
     ClearBackground(GRAY);
+
     if(GUI_MODE == SYNTH_MODE){
         drawWaveform(buffer,SCREEN_WIDTH*3/16,SCREEN_HEIGHT*7/32,SCREEN_WIDTH*25/32,80);
         drawKeys(SCREEN_HEIGHT/4);
         drawSliders();
         drawButtons();
         drawGuiSections();
+        // drawFileMenu();
     }
     else{
         drawEQButtons();
         drawEQSliders();
+        // drawFileMenu();
     }
     EndDrawing();
+    if (screenshotNeeded){
+        TakeScreenshot("../../disco_server/MEDIA/config.png"); 
+        screenshotNeeded = false;
+    }
 }
 int clearPressCounter;
 void clearKeyPress(){
@@ -778,12 +900,37 @@ void main() {
         int seqfd = open(MIDI_DEVICE, O_RDONLY);
         if (seqfd == -1) {
                 printf("Error: cannot open %s\n", MIDI_DEVICE);
-                //exit(1);
+                // exit(1);
         }
 	
-    //sleep(5);
+    fileDialogState = InitGuiFileDialog(3*SCREEN_HEIGHT/4, 3*SCREEN_HEIGHT/4, configDirectory, false);
+    // Choose an extenstion to filter by
+    char* filterExt = ".bin";
+    strcpy(fileDialogState.filterExt,filterExt);
+
     while(WindowShouldClose() == false)
-    {
+    {            
+        if (fileDialogState.fileDialogActive) GuiLock();
+
+        /// FILE BROWSER GUI  ////////////
+        if (fileDialogState.SelectFilePressed)
+        {
+            // Load image file (if supported extension)
+            if (IsFileExtension(fileDialogState.fileNameText, filterExt))
+            {
+                strcpy(fileNameToLoad, TextFormat("%s/%s", fileDialogState.dirPathText, fileDialogState.fileNameText));
+                printf("%s",fileNameToLoad);
+                UnloadTexture(texture);
+                texture = LoadTexture(fileNameToLoad);
+            }
+
+            fileDialogState.SelectFilePressed = false;
+        }
+        GuiUnlock();
+
+        //////////////////////////////////
+
+        //---
         //if(IsAudioStreamProcessed(synthStream)){
             //UpdateAudioStream(synthStream, buffer, STREAM_BUFFER_SIZE);
             processInput();
@@ -802,6 +949,7 @@ void main() {
             
         //}
     }
+    UnloadTexture(texture);     // Unload texture
     CloseAudioDevice();
     CloseWindow();
 }
