@@ -23,7 +23,7 @@ from django.urls import path
 # Consider moving the db operations into it's own python library
 # This can be turned into a proper view if a button or redirect sends it a request.
         # Prioritize the scanning of the media directoy and saving files to the DB
-def dbRefresh(): 
+def config_list(): 
         # Check media folder for new files
         files = os.listdir(settings.MEDIA_ROOT)
         conf_list = []
@@ -41,16 +41,15 @@ def dbRefresh():
         photo_list.sort()
         conf_list.sort()
         
-        # Now zip the lists and create DB Entries
-        for c,p in zip(conf_list,photo_list):
-                name = c.rsplit('.', 1)[0]
-                print(name)
-                # newSynth = SynthModel(name=name,synFile=) 
+        return(conf_list, photo_list)
 
 def index(request,action=-1,id=-1):
         audio_files = AudioModel.objects.all()
         synth_files = SynthModel.objects.all()
-        dbRefresh()
+        
+        configs, photos = config_list()
+        
+
         context = {
                 'audio_files'   : audio_files,
                 'synth_files'   : synth_files,
