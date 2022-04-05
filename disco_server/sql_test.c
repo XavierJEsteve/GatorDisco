@@ -154,26 +154,6 @@ void loadConfig(int dir){
     }
 }
 
-void viewTables(){
-    sqlite3* dbTest;
-    sqlite3* dbDisco;
-    sqlite3_stmt* stmt;
-    int rcTest, rcDjango;
-    char *err;
-
-    // rcTest = sqlite3_open("./dbspot/test.sqlite3", &dbTest);
-    rcDjango = sqlite3_open("/home/pi/GatorDisco/disco_server/dbspot/gdiscoDb.sqlite3", &dbDisco);
-    printf("Received return code %d upon opening Gdiscodb.\n", rcDjango );
-    // printf("Received return code %d upon opening testdb.\n", rcTest );
-
-    // rcDjango = sqlite3_exec(dbDisco, "SELECT * from fileshare_configmodel",NULL,NULL,&err);
-    // if (rcDjango != SQLITE_OK){
-    //     printf("Error: %s",err);
-    // }
-    sqlite3_prepare_v2(dbDisco, "select name, octave, oscParam1, oscParam2, lfoSpeed, lfoval, Attack, Decay, Sustain, Release, Effect1, Effect2, OscType, effectType, lfoTarget from fileshare_configmodel", -1, &stmt, 0);
-
-}
-
 int main(){
     openDB();
     int nConfigs;
@@ -181,6 +161,6 @@ int main(){
     setNumConfigs();
     printf("Found %d config files.\n",numConfigs);
     listConfigs();
-    loadConfig(1);
+    loadConfig(0);
     closeDB();
 }

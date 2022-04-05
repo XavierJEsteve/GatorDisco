@@ -115,6 +115,9 @@ Synth synth;
 SpiHandler spiHandler;
 Sound wavSound;
 
+// Static Database 
+sqlite3* dbDisco;
+
 // File handling
 GuiFileDialogState fileDialogState;
 char* configDirectory = "/home/pi/GatorDisco/disco_server/MEDIA/";
@@ -302,28 +305,8 @@ void saveConfig(void){
 }
 
 void loadConfig(void){
-    //Verify config data saved by python code can be read
-    // unsigned char config_buffer[11];
-    // FILE *ptr;
-    // ptr = fopen("../synth_settings.bin","rb");
-    // if (! ptr)
-    // {
-    //     printf("Failed to open synth-settings file\n");
 
-    // }
-    // else
-    // {
-    //     printf("Successfully opened synth-settings file\n");
-    //     fread(config_buffer,sizeof(config_buffer),10,ptr); //read 8 bytes from config_data.data
-    //     for (int i = 0; i < 10; i++){
-    //         printf("%d\n", config_buffer[i]);
-    //     }
-    //     fclose(ptr);
-    // }            
-    
     //Changing to a DB approach
-    sqlite3* dbTest;
-    sqlite3* dbDisco;
     sqlite3_stmt* stmt;
     int rcTest, rcDjango;
     char *err;
