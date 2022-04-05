@@ -9,7 +9,7 @@
 #include <time.h>
 #include "sqlite/sqlite3.h"
 
-int configPointer = 0;
+int configPointer = 3;
 int numConfigs;
 sqlite3* dbDisco;
 
@@ -77,26 +77,52 @@ void listConfigs(){
 }
 
 void loadConfig(int dir){
-    // Check DB for number of configs
-    // if (current_config == num_configs)
-    //      configPointer = 1; //Reset
-    // else (there is a config after this one)
-    //      configPointer = current_config+1
-    
-    // select <configPointer> from fileshare_configmodel
-    // -> store the data from this and set corresponding values
-    // Close the db connection 
+   
     sqlite3_stmt* stmt;
     int rc;
     char *err;
-    // if (checkDB() == SQLITE_OK)
-    setNumConfigs(); // set numConfigs
-    char* baseQ = "SELECT * FROM fileshare_configmodel LIMIT 1 OFFSET ";
-    char query[sizeof(baseQ)];
-    sprintf(query, "%d", 2 );
-    strcat(query, ";");
+    int baselen;
+    int OFFSET;
+    int nConfigs;
+    
+    //logic for setting index    
+    nConfigs = setNumConfigs(); // set numConfigs
+    
+    // The DB is empty
+    if (nConfigs == 0){
+        // Load values of 0
+        return;
+    }
 
-    sqlite3_prepare_v2(dbDisco, query, -1, &stmt, 0);
+    // Moving to the NEXT config
+    else if (dir == 1){
+        // Make sure there is a next row
+        if (configPointer < nConfigs){
+            OFFSET = configPointer; //
+        }
+
+        else{ // We are at the last row, or there is only 1 row anyways
+            OFFSET = 0; // to get the first row 
+        } 
+    }
+    else if (dir == 0) {
+        // Make sure there is a prev row
+        if (configPointer > 1){
+            OFFSET = configPointer-2;
+        }
+        else{ // We are at the first row, or there is only 1 row anyways
+            OFFSET = nConfigs-1;
+        } 
+    }
+
+    char baseQ[100];
+    
+    strcpy(baseQ, "SELECT * FROM fileshare_configmodel LIMIT 1 OFFSET ");
+    baselen = strlen(baseQ);
+    baseQ[baselen] = OFFSET+'0'; //Requested index goes HERE
+    baseQ[baselen+1] = ';';
+    
+    sqlite3_prepare_v2(dbDisco, baseQ, -1, &stmt, 0);
     char* name;
     int octave, oscParam1, oscParam2, 
     lfoSpeed,   lfoval, 
@@ -105,21 +131,26 @@ void loadConfig(int dir){
     OscType,    effectType, lfoTarget;
 
     while (sqlite3_step(stmt) != SQLITE_DONE){
-        name        = sqlite3_column_text(stmt,0);
-        octave      = sqlite3_column_int(stmt,1);
-        oscParam1   = sqlite3_column_int(stmt,2);
-        oscParam2   = sqlite3_column_int(stmt,3);
-        lfoSpeed    = sqlite3_column_int(stmt,4);
-        lfoval      = sqlite3_column_int(stmt,5);
-        Attack      = sqlite3_column_int(stmt,6);
-        Decay       = sqlite3_column_int(stmt,7);
-        Sustain     = sqlite3_column_int(stmt,8);
-        Release     = sqlite3_column_int(stmt,9);
-        Effect1     = sqlite3_column_int(stmt,10);
-        Effect2     = sqlite3_column_int(stmt,11);
-        OscType     = sqlite3_column_int(stmt,12);
-        effectType  = sqlite3_column_int(stmt,13);
-        lfoTarget   = sqlite3_column_int(stmt,14);
+
+        configPointer = sqlite3_column_int(stmt,0) - 1; // Use index as the pointer
+
+        name        = sqlite3_column_text(stmt,1);
+        printf("Loaded config: %s\n", name);
+        octave      = sqlite3_column_int(stmt,2);
+        oscParam1   = sqlite3_column_int(stmt,3);
+        oscParam2   = sqlite3_column_int(stmt,4);
+        lfoSpeed    = sqlite3_column_int(stmt,5);
+        lfoval      = sqlite3_column_int(stmt,6);
+        Attack      = sqlite3_column_int(stmt,7);
+        Decay       = sqlite3_column_int(stmt,8);
+        Sustain     = sqlite3_column_int(stmt,9);
+        Release     = sqlite3_column_int(stmt,10);
+        Effect1     = sqlite3_column_int(stmt,11);
+        Effect2     = sqlite3_column_int(stmt,12);
+        OscType     = sqlite3_column_int(stmt,13);
+        effectType  = sqlite3_column_int(stmt,14);
+        lfoTarget   = sqlite3_column_int(stmt,15);
+        
     }
 }
 
@@ -150,6 +181,6 @@ int main(){
     setNumConfigs();
     printf("Found %d config files.\n",numConfigs);
     listConfigs();
-    loadConfig(0);
+    loadConfig(1);
     closeDB();
 }
