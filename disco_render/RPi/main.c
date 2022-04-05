@@ -290,24 +290,26 @@ void saveConfig(void){
     sqlite3_stmt *stmt;
     
     //List of VARS
-    /* 0. ID
-    // 1. name
-    // 2. octave
-    // 3. oscParam1
-    // 4. oscParam2
-    // 5. lfoSpeed
-    // 6. lfoval
-    // 7. Attack
-    // 8. Decay
-    // 9. Sustain
-    // 10. Release
-    // 11. Effect1
-    // 12. Effect2
-    // 13. OscType
-    // 14. effectType
-    // 15. lfoTarget
-    // 16. image
-    */
+    // 0. ID
+    // int name
+    int octave = (int)(sliders[0].value*127);
+    int oscParam1 = (int)(sliders[1].value*127);
+    int oscParam2 = (int)(sliders[2].value*127);
+
+    int Attack = (int)(sliders[3].value*127);
+    int Decay = (int)(sliders[4].value*127);
+    int Sustain = (int)(sliders[5].value*127);
+    int Release = (int)(sliders[6].value*127);
+
+    int lfoSpeed = (int)(sliders[7].value*127);
+    int lfoval = (int)(sliders[8].value*127);
+
+    int Effect1 = (int)(sliders[9].value*127);
+    int Effect2 = (int)(sliders[10].value*127);
+    int OscType = oscTypePointer;
+    int effectType = effectTypePointer;
+    int lfoTarget = lfoTargetPointer;
+    
     int rc;
     // rc = sqlite3_prepare_v2(dbDisco, "REPLACE into fileshare_configmodel(id, name, octave, oscParam1, oscParam2, lfoSpeed, lfoval, Attack, Decay, Sustain, Release, Effect1, Effect2, OscType, effectType, lfoTarget, image) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?, ?, ?, ?);", -1, &stmt, NULL);
     // rc = sqlite3_prepare_v2(dbDisco, "UPDATE fileshare_configmodel SET id=?, name='?', octave=?, oscParam1=?, oscParam2=?, lfoSpeed=?, lfoval=?, Attack=?, Decay=?, Sustain=?, Release=?, Effect1=?, Effect2=?, OscType=?, effectType=?, lfoTarget=?, image=? WHERE id=?;",-1,&stmt, NULL);
@@ -322,50 +324,57 @@ void saveConfig(void){
     {
         int paramCount;
         paramCount = sqlite3_bind_parameter_count(stmt);
-        printf("The number of parameters in the statement: %d", paramCount);
-        
-        for (int i = 0; i < 16; i ++){
-            printf("The name at index %d, is %s",i,sqlite3_bind_parameter_name(stmt, i));
-        }
-        
+        printf("The number of parameters in the statement: %d\n", paramCount);
+                
         // Bind the values for the insert:
-        
-        // SET id
-        // sqlite3_bind_int(stmt, 0, configPointer);
-        // name
-        // sqlite3_bind_text(stmt, 1, configNames[configPointer], -1, NULL);
-        // OSC and params
-        sqlite3_bind_int(stmt, 2, sliders[0].value );
-        sqlite3_bind_int(stmt, 3, sliders[1].value );
-        sqlite3_bind_int(stmt, 4, sliders[2].value );
+        sqlite3_bind_int(stmt, 1, octave );
+        printf("Octave : %d\n", octave);
+
+        sqlite3_bind_int(stmt, 2, oscParam1 );
+        printf("oscParam1 : %d\n", oscParam1);
+        sqlite3_bind_int(stmt, 3, oscParam2 );
+        printf("oscParam2 : %d\n", oscParam2);
         // LFO and params 
-        sqlite3_bind_int(stmt, 5, sliders[7].value );
-        sqlite3_bind_int(stmt, 6, sliders[8].value );
+        sqlite3_bind_int(stmt, 4, lfoSpeed );
+        printf("lfoSpeed : %d\n", lfoSpeed);
+        sqlite3_bind_int(stmt, 5, lfoval );
+        printf("lfoval : %d\n", lfoval);
 
         //ADSR
-        sqlite3_bind_int(stmt, 7, sliders[3].value );
-        sqlite3_bind_int(stmt, 8, sliders[4].value );
-        sqlite3_bind_int(stmt, 9, sliders[5].value );
-        sqlite3_bind_int(stmt, 10, sliders[6].value );
+        sqlite3_bind_int(stmt, 6, Attack );
+        printf("Attack : %d\n", Attack);
+        sqlite3_bind_int(stmt, 7, Decay );
+        printf("Decay : %d\n", Decay);
+        sqlite3_bind_int(stmt, 8, Sustain );
+        printf("Sustain : %d\n", Sustain);
+        sqlite3_bind_int(stmt, 9, Release );
+        printf("Release : %d\n", Release);
 
         // Effects 1 and 2
-        sqlite3_bind_int(stmt, 11, sliders[9].value );
-        sqlite3_bind_int(stmt, 12, sliders[10].value );
+        sqlite3_bind_int(stmt, 10, Effect1 );
+        printf("Effect1 : %d\n", Effect1);
+        sqlite3_bind_int(stmt, 11, Effect2 );
+        printf("Effect2 : %d\n", Effect2);
         
         // Type pointers
-        sqlite3_bind_int(stmt, 13, oscTypePointer);
-        sqlite3_bind_int(stmt, 14, effectTypePointer);
-        sqlite3_bind_int(stmt, 15, lfoTargetPointer);
+        sqlite3_bind_int(stmt, 12, OscType);
+        printf("OscType : %d\n", OscType);
+        sqlite3_bind_int(stmt, 13, effectType);
+        printf("effectType : %d\n", effectType);
+        sqlite3_bind_int(stmt, 14, lfoTarget);
+        printf("lfoTarget : %d\n", lfoTarget);
 
         //Image
-        sqlite3_bind_zeroblob(stmt,16,0);
+        sqlite3_bind_zeroblob(stmt,15,0);
 
         // WHERE
-        sqlite3_bind_int(stmt, 17, configPointer);
+        sqlite3_bind_int(stmt, 16, configPointer);
+        printf("configPointer : %d\n", configPointer);
 
         // Do the REPLACMENT:
         sqlite3_step(stmt);
-
+        int last_id = sqlite3_last_insert_rowid(dbDisco);
+        printf("The last Id of the inserted row is %d\n", last_id);
         // Reset the prepared statement to the initial state.
         sqlite3_finalize(stmt);
         closeDB();  
