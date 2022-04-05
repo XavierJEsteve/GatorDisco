@@ -38,6 +38,8 @@ static const int CHANNEL = 0;
 #define EQ_MODE 1
 #define WAV_MODE 2
 #define NUM_EQ_BANDS 10
+#define NUM_CONFIGS 10
+
 
 typedef struct{
     int byte;
@@ -121,6 +123,7 @@ Sound wavSound;
 sqlite3* dbDisco;
 int configPointer = 1; // 1 <= configPOinter <= numConfigs
 int numConfigs;
+char* configNames[NUM_CONFIGS+1]= {"DEBUG","Conf 1","Conf 2","Conf 3","Conf 4","Conf 5","Conf 6","Conf 7","Conf 8","Conf 9","Conf 10"}; 
 
 // File handling
 GuiFileDialogState fileDialogState;
@@ -176,7 +179,7 @@ void drawWaveform(float* signal,int width,int height,int x, int y){
 }
 drawConfigDisplay(){
     DrawRectangle(1050,50,SCREEN_WIDTH/8,SCREEN_HEIGHT/10,WHITE);
-    DrawText("CONFIG FILE",1070,80,20,RED);
+    DrawText(configNames[configPointer],1070,80,20,RED);
 }
 void buildGuiSections(){
     //build oscillator section
@@ -404,11 +407,7 @@ void loadConfig(int dir){
     baseQ[baselen+1] = ';';
     sqlite3_prepare_v2(dbDisco, baseQ, -1, &stmt, 0);
     char* name;
-    int octave, oscParam1, oscParam2, 
-    lfoSpeed,   lfoval, 
-    Attack,     Decay,      Sustain,    Release, 
-    Effect1,    Effect2, 
-    OscType,    effectType, lfoTarget;
+    int oscP, lfoP, effP; 
 
     while (sqlite3_step(stmt) != SQLITE_DONE){
 
@@ -416,31 +415,39 @@ void loadConfig(int dir){
         printf("New config pointer is %d\n", configPointer);
         name        = sqlite3_column_text(stmt,1);
         printf("Loaded config: %s\n", name);
-        sliders[0].value = sqlite3_column_int(stmt,2);
-        sliders[1].value = sqlite3_column_int(stmt,3);
-        sliders[2].value = sqlite3_column_int(stmt,4);
+        sliders[0].value = (float)sqlite3_column_int(stmt,2)/127;
+        sliders[1].value = (float)sqlite3_column_int(stmt,3)/127;
+        sliders[2].value = (float)sqlite3_column_int(stmt,4)/127;
         // LFO params
-        sliders[7].value = sqlite3_column_int(stmt,5);
-        sliders[8].value = sqlite3_column_int(stmt,6);
+        sliders[7].value = (float)sqlite3_column_int(stmt,5)/127;
+        sliders[8].value = (float)sqlite3_column_int(stmt,6)/127;
         //ADSR
-        sliders[3].value = sqlite3_column_int(stmt,7); //atk
-        sliders[4].value = sqlite3_column_int(stmt,8); //decay
-        sliders[5].value = sqlite3_column_int(stmt,9); //sustain
-        sliders[6].value = sqlite3_column_int(stmt,10); //release
+        sliders[3].value = (float)sqlite3_column_int(stmt,7)/127; //atk
+        sliders[4].value = (float)sqlite3_column_int(stmt,8)/127; //decay
+        sliders[5].value = (float)sqlite3_column_int(stmt,9)/127; //sustain
+        sliders[6].value = (float)sqlite3_column_int(stmt,10)/127; //release
         
         //Effects 1 and 2
-        sliders[9].value     = sqlite3_column_int(stmt,11);
-        sliders[10].value    = sqlite3_column_int(stmt,12);
+        sliders[9].value     = (float)sqlite3_column_int(stmt,11)/127;
+        sliders[10].value    = (float)sqlite3_column_int(stmt,12)/127;
         
         // Type pointers
-        oscTypePointer     = sqlite3_column_int(stmt,13);
-        effectTypePointer  = sqlite3_column_int(stmt,14);
-        lfoTargetPointer   = sqlite3_column_int(stmt,15);
+        oscP    = sqlite3_column_int(stmt,13);
+        changeOsc(oscP);
+        effP  = sqlite3_column_int(stmt,14);
+        changeEffect(effP);
+        lfoP   = sqlite3_column_int(stmt,15);
+        changeLfo(lfoP);
     }
     closeDB();
 }
-void changeOsc(void){
-    oscTypePointer++;
+void changeOsc(int p){
+    if (p == 0){
+        oscTypePointer++;
+    }
+    else{
+        oscTypePointer = p;
+    }
     oscTypePointer %= NUM_OSCILLATORS;
     processSpiInput(SPI_MODULE_OSC | SPI_OSCTYPE);
     processSpiInput(oscTypePointer);
@@ -465,8 +472,13 @@ void changeMode(int input){
         buttons[4].yPos = 350;
     }
 }
-void changeLfo(void){
-    lfoTargetPointer++;
+void changeLfo(int p){
+    if (p == 0){
+        lfoTargetPointer++;
+    }
+    else{
+        lfoTargetPointer = p;
+    }
     lfoTargetPointer %= NUM_LFO_TARGETS;
     processSpiInput(SPI_MODULE_LFO | SPI_LFO_TARGET);
     processSpiInput(lfoTargetPointer);
@@ -479,8 +491,15 @@ void updateCenterFreq(float frequency){
     bands[currentBand].fCenter = frequency;
     sprintf(fCenterNames[currentBand], "%d Hz", (int)frequency);
 }
-void changeEffect(void){
-    effectTypePointer++;
+
+// change implemented. Allow manual input of effectTypePointer in order to enable loading configs
+void changeEffect(int p){
+    if (p == 0) {
+        effectTypePointer++;
+    }
+    else{
+        effectTypePointer = p;
+    }    
     effectTypePointer %= NUM_EFFECTS;
     processSpiInput(SPI_MODULE_FX | SPI_FX_SEL);
     processSpiInput(effectTypePointer);
