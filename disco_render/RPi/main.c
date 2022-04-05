@@ -811,7 +811,7 @@ void drawGUI(){
     }
     EndDrawing();
     if (screenshotNeeded){
-        TakeScreenshot("../../disco_server/MEDIA/config.png"); 
+        TakeScreenshot("../../disco_server/media/screen1.png"); 
         screenshotNeeded = false;
     }
 }

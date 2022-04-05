@@ -20,35 +20,11 @@ from django.urls import path
         * Change text color for each DB entry listed in the table
         * CRUD from the main screen
                 '''
-# Consider moving the db operations into it's own python library
-# This can be turned into a proper view if a button or redirect sends it a request.
-        # Prioritize the scanning of the media directoy and saving files to the DB
-def config_list(): 
-        # Check media folder for new files
-        files = os.listdir(settings.MEDIA_ROOT)
-        conf_list = []
-        photo_list = []
-        config_dict = {}
-        # Later, when dictionary keys and values will be placed in the database, remember getList(dict.keys())
-        
-        # Split the list into .gats and .pngs
-        for file in files:
-                if file.endswith('.gat'):
-                        conf_list.append(file)
-                if file.endswith('.png'):
-                        photo_list.append(file)
-        # Sort lists in-place
-        photo_list.sort()
-        conf_list.sort()
-        
-        return(conf_list, photo_list)
-
 def index(request,action=-1,id=-1):
         audio_files = AudioModel.objects.all()
         synth_files = SynthModel.objects.all()
         
         configs, photos = config_list()
-        
 
         context = {
                 'audio_files'   : audio_files,
