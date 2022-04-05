@@ -119,7 +119,7 @@ Sound wavSound;
 
 // Static Database 
 sqlite3* dbDisco;
-int configPointer = 2;
+int configPointer = 1; // 1 <= configPOinter <= numConfigs
 int numConfigs;
 
 // File handling
@@ -328,6 +328,31 @@ void saveConfig(void){
     screenshotNeeded = true;
 }
 
+int setNumConfigs(){ //returns the number of configurations
+    // sqlite3* dbDisco;
+    openDB();
+    sqlite3_stmt* stmt;
+    int rc;
+    char *err;
+    int nByte = -1; //don't care
+    int count;
+    
+    rc = sqlite3_prepare_v2(dbDisco, "SELECT COUNT(*) FROM fileshare_configmodel;", nByte, &stmt, NULL);
+    if (rc != SQLITE_OK) {
+        printf("Failed to connect to db....code %d\nCode info: https://www.sqlite.org/rescode.html\n", rc);
+        return 0;
+    }
+    rc = sqlite3_step(stmt);
+    if (rc != SQLITE_ROW) {
+        printf("no configs found");
+        return 0;
+    }
+    count = sqlite3_column_int(stmt, 0);
+    numConfigs = count;
+    closeDB();
+    return count;
+}
+
 void loadConfig(int dir){
 
     openDB();
@@ -335,7 +360,7 @@ void loadConfig(int dir){
     int rc;
     char *err;
     int baselen;
-    int OFFSET;
+    int OFFSET=0;
     int nConfigs;
     
     //logic for setting index    
@@ -344,29 +369,32 @@ void loadConfig(int dir){
     // The DB is empty
     if (nConfigs == 0){
         // Load values of 0
+        printf("No configurations found\n");
         return;
     }
-
     // Moving to the NEXT config
     else if (dir == 1){
         // Make sure there is a next row
-        if (configPointer < nConfigs){
-            OFFSET = configPointer; //
+        if (configPointer < nConfigs){ // Move up in the middle of the table
+            OFFSET = configPointer; // Offset will point the query to the NEXT ENTRY 
         }
 
-        else{ // We are at the last row, or there is only 1 row anyways
+        else{ // We are at the last row, or there is only 1 row anyways. Loop back to start
             OFFSET = 0; // to get the first row 
         } 
     }
     else if (dir == 0) {
         // Make sure there is a prev row
-        if (configPointer > 1){
+        if (configPointer > 1){ // Move down in the middle of the table
             OFFSET = configPointer-2;
         }
-        else{ // We are at the first row, or there is only 1 row anyways
+        else{ // move "down" (n-1) at the bottom of the table
             OFFSET = nConfigs-1;
         } 
     }
+    printf("Found %d configs\n",nConfigs);
+    printf("Currently at config %d\n",configPointer);
+    printf("Moving in dir %d\n", dir);
 
     char baseQ[100];
     
@@ -374,7 +402,6 @@ void loadConfig(int dir){
     baselen = strlen(baseQ);
     baseQ[baselen] = OFFSET+'0'; //Requested index goes HERE
     baseQ[baselen+1] = ';';
-    
     sqlite3_prepare_v2(dbDisco, baseQ, -1, &stmt, 0);
     char* name;
     int octave, oscParam1, oscParam2, 
@@ -385,31 +412,30 @@ void loadConfig(int dir){
 
     while (sqlite3_step(stmt) != SQLITE_DONE){
 
-        configPointer = sqlite3_column_int(stmt,0) - 1; // Use index as the pointer
-
+        configPointer = sqlite3_column_int(stmt,0); // Use index as the pointer
+        printf("New config pointer is %d\n", configPointer);
         name        = sqlite3_column_text(stmt,1);
         printf("Loaded config: %s\n", name);
-        slider[0].value = sqlite3_column_int(stmt,2);
-        slider[1].value = sqlite3_column_int(stmt,3);
-        slider[2].value = sqlite3_column_int(stmt,4);
+        sliders[0].value = sqlite3_column_int(stmt,2);
+        sliders[1].value = sqlite3_column_int(stmt,3);
+        sliders[2].value = sqlite3_column_int(stmt,4);
         // LFO params
-        slider[7].value = sqlite3_column_int(stmt,5);
-        slider[8].value = sqlite3_column_int(stmt,6);
+        sliders[7].value = sqlite3_column_int(stmt,5);
+        sliders[8].value = sqlite3_column_int(stmt,6);
         //ADSR
-        slider[3].value = sqlite3_column_int(stmt,7); //atk
-        slider[4].value = sqlite3_column_int(stmt,8); //decay
-        slider[5].value = sqlite3_column_int(stmt,9); //sustain
-        slider[6].value = sqlite3_column_int(stmt,10); //release
+        sliders[3].value = sqlite3_column_int(stmt,7); //atk
+        sliders[4].value = sqlite3_column_int(stmt,8); //decay
+        sliders[5].value = sqlite3_column_int(stmt,9); //sustain
+        sliders[6].value = sqlite3_column_int(stmt,10); //release
         
         //Effects 1 and 2
-        slider[9].value     = sqlite3_column_int(stmt,11);
-        slider[10].value    = sqlite3_column_int(stmt,12);
+        sliders[9].value     = sqlite3_column_int(stmt,11);
+        sliders[10].value    = sqlite3_column_int(stmt,12);
         
         // Type pointers
         oscTypePointer     = sqlite3_column_int(stmt,13);
         effectTypePointer  = sqlite3_column_int(stmt,14);
         lfoTargetPointer   = sqlite3_column_int(stmt,15);
-        
     }
     closeDB();
 }

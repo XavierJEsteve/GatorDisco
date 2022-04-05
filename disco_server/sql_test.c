@@ -57,6 +57,7 @@ int setNumConfigs(){ //returns the number of configurations
 }
 
 void listConfigs(){
+    openDB();
     sqlite3_stmt* stmt;
     int rc;
     char *err;
@@ -74,6 +75,7 @@ void listConfigs(){
         printf("%d: %s\n",i,name);
         i += 1;
     }
+    closeDB();
 }
 
 void loadConfig(int dir){
