@@ -127,7 +127,7 @@ char* configNames[NUM_CONFIGS+1]= {"DEBUG","Conf 1","Conf 2","Conf 3","Conf 4","
 
 // File handling
 GuiFileDialogState fileDialogState;
-char* configDirectory = "/home/pi/GatorDisco/disco_server/MEDIA/";
+char* wavDirectory = "/home/pi/GatorDisco/disco_render/RPi/wavs/";
 char fileNameToLoad[512] = { 0 };
 Texture texture = { 1 };
 
@@ -283,26 +283,14 @@ void closeDB(){
 void saveConfig(void){
     // This funciton will save the 'state' of the synthesizer. 
 
-    // First, read consistent parameters sliders := {ADSR, OCTAVE}
-    int configData[NUM_SLIDERS+3]; // Plus 3 since there is also oscType, effType, and lfoTarget
-    // int osc_pointer, fx_pointer, lfo_pointer;
-
-    //This can all probably be optimized to not include copying, but it's tiny data anyways and I want debugging to be easy
-    for (u_int8_t i = 0; i < NUM_SLIDERS; i++)
-    {
-        configData[i] = (int)(sliders[i].value*127);
-    }
-    configData[NUM_SLIDERS]   = oscTypePointer;
-    configData[NUM_SLIDERS+1] = effectTypePointer;
-    configData[NUM_SLIDERS+2] = lfoTargetPointer;
-       
     // REPLACE DB.at(id=configPointer) with new settings
     // By django's grace, it should replace at the ID location by defualt
+    
     openDB();
     sqlite3_stmt *stmt;
     
     //List of VARS
-    /*
+    /* 0. ID
     // 1. name
     // 2. octave
     // 3. oscParam1
@@ -322,7 +310,9 @@ void saveConfig(void){
     */
     int rc;
     // rc = sqlite3_prepare_v2(dbDisco, "REPLACE into fileshare_configmodel(id, name, octave, oscParam1, oscParam2, lfoSpeed, lfoval, Attack, Decay, Sustain, Release, Effect1, Effect2, OscType, effectType, lfoTarget, image) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?, ?, ?, ?);", -1, &stmt, NULL);
-    rc = sqlite3_prepare_v2(dbDisco, "UPDATE fileshare_configmodel SET id=?, name=?, octave=?, oscParam1=?, oscParam2=?, lfoSpeed=?, lfoval=?, Attack=?, Decay=?, Sustain=?, Release=?, Effect1=?, Effect2=?, OscType=?, effectType=?, lfoTarget=?, image=? WHERE id=?;",-1,&stmt, NULL);
+    // rc = sqlite3_prepare_v2(dbDisco, "UPDATE fileshare_configmodel SET id=?, name='?', octave=?, oscParam1=?, oscParam2=?, lfoSpeed=?, lfoval=?, Attack=?, Decay=?, Sustain=?, Release=?, Effect1=?, Effect2=?, OscType=?, effectType=?, lfoTarget=?, image=? WHERE id=?;",-1,&stmt, NULL);
+    rc = sqlite3_prepare_v2(dbDisco, "UPDATE fileshare_configmodel SET octave=?, oscParam1=?, oscParam2=?, lfoSpeed=?, lfoval=?, Attack=?, Decay=?, Sustain=?, Release=?, Effect1=?, Effect2=?, OscType=?, effectType=?, lfoTarget=?, image=? WHERE id=?;",-1,&stmt, NULL);
+    
     if (rc) { // anything but 0 is failure
        printf("Error executing sql statement\n");
        printf("Received rc %d\n",rc);
@@ -330,12 +320,20 @@ void saveConfig(void){
     }
     else
     {
+        int paramCount;
+        paramCount = sqlite3_bind_parameter_count(stmt);
+        printf("The number of parameters in the statement: %d", paramCount);
+        
+        for (int i = 0; i < 16; i ++){
+            printf("The name at index %d, is %s",i,sqlite3_bind_parameter_name(stmt, i));
+        }
+        
         // Bind the values for the insert:
         
         // SET id
-        sqlite3_bind_int(stmt, 0, configPointer);
+        // sqlite3_bind_int(stmt, 0, configPointer);
         // name
-        sqlite3_bind_text(stmt, 1, configNames[configPointer], -1, NULL);
+        // sqlite3_bind_text(stmt, 1, configNames[configPointer], -1, NULL);
         // OSC and params
         sqlite3_bind_int(stmt, 2, sliders[0].value );
         sqlite3_bind_int(stmt, 3, sliders[1].value );
@@ -936,7 +934,7 @@ void drawGUI(){
     }
     EndDrawing();
     if (screenshotNeeded){
-        TakeScreenshot("../../disco_server/MEDIA/config.png"); 
+        TakeScreenshot("../../disco_server/media/screen.png"); 
         screenshotNeeded = false;
     }
 }
@@ -1101,10 +1099,10 @@ void main() {
                 // exit(1);
         }
 	
-    fileDialogState = InitGuiFileDialog(3*SCREEN_HEIGHT/4, 3*SCREEN_HEIGHT/4, configDirectory, false);
+    fileDialogState = InitGuiFileDialog(3*SCREEN_HEIGHT/4, 3*SCREEN_HEIGHT/4, wavDirectory, false);
     // Choose an extenstion to filter by
     char* filterExt = ".wav";
-    strcpy(fileDialogState.filterExt,filterExt);
+    // strcpy(fileDialogState.filterExt,filterExt);
 
     while(WindowShouldClose() == false)
     {            
@@ -1114,7 +1112,7 @@ void main() {
         if (fileDialogState.SelectFilePressed)
         {
             // Load image file (if supported extension)
-            if (IsFileExtension(fileDialogState.fileNameText, filterExt))
+            if (IsFileExtension(fileDialogState.fileNameText, ".wav"))
             {
                 strcpy(fileNameToLoad, TextFormat("%s/%s", fileDialogState.dirPathText, fileDialogState.fileNameText));
                 printf("%s\n",fileNameToLoad);
