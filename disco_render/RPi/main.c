@@ -282,13 +282,6 @@ void closeDB(){
 
 void saveConfig(void){
     // This funciton will save the 'state' of the synthesizer. 
-    // Reads:
-    //  - Active effects and any assoc. slider values
-    //  - All other slider values
-    // Writes:
-    //  - All read data to a file given a random name
-    //      - Considering random selection from a noun dictionary and a verb dictionary
-    // - TO configDirectory
 
     // First, read consistent parameters sliders := {ADSR, OCTAVE}
     int configData[NUM_SLIDERS+3]; // Plus 3 since there is also oscType, effType, and lfoTarget
@@ -298,32 +291,88 @@ void saveConfig(void){
     for (u_int8_t i = 0; i < NUM_SLIDERS; i++)
     {
         configData[i] = (int)(sliders[i].value*127);
-        // printf( "Read slider FLOAT value %f\n",
-        //         (sliders[i].value) );
-        // printf( "Saved slider config INT value %d\n",
-        //         configData[i]);
     }
     configData[NUM_SLIDERS]   = oscTypePointer;
     configData[NUM_SLIDERS+1] = effectTypePointer;
     configData[NUM_SLIDERS+2] = lfoTargetPointer;
+       
+    // REPLACE DB.at(id=configPointer) with new settings
+    // By django's grace, it should replace at the ID location by defualt
+    openDB();
+    sqlite3_stmt *stmt;
     
-    // TODO: Fix segmentation fault caused by string chenanigans
-    // char* confPath = ""; // Strictly the path to cconfig directory
-    // char* confName = "config1.gat"; // The name of the actual configuration file 
-    // strcpy(confPath,configDirectory); // need a new confPath variable so that unique config names can be appended with strcat(confPath,<name>)
-    // strcat(confPath,confName);
-    
-    FILE* confPtr;
-    confPtr = fopen("/home/pi/GatorDisco/disco_server/MEDIA/config.gat","wb"); //WRITE Binary
-    // confPtr = fopen(confPath,"wb"); //Replace with this once string induced segmentation fault stops 
-    
-    if (! confPtr)
-        printf("Failed to save config file\n");
+    //List of VARS
+    /*
+    // 1. name
+    // 2. octave
+    // 3. oscParam1
+    // 4. oscParam2
+    // 5. lfoSpeed
+    // 6. lfoval
+    // 7. Attack
+    // 8. Decay
+    // 9. Sustain
+    // 10. Release
+    // 11. Effect1
+    // 12. Effect2
+    // 13. OscType
+    // 14. effectType
+    // 15. lfoTarget
+    // 16. image
+    */
+    int rc;
+    // rc = sqlite3_prepare_v2(dbDisco, "REPLACE into fileshare_configmodel(id, name, octave, oscParam1, oscParam2, lfoSpeed, lfoval, Attack, Decay, Sustain, Release, Effect1, Effect2, OscType, effectType, lfoTarget, image) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?, ?, ?, ?);", -1, &stmt, NULL);
+    rc = sqlite3_prepare_v2(dbDisco, "UPDATE fileshare_configmodel SET id=?, name=?, octave=?, oscParam1=?, oscParam2=?, lfoSpeed=?, lfoval=?, Attack=?, Decay=?, Sustain=?, Release=?, Effect1=?, Effect2=?, OscType=?, effectType=?, lfoTarget=?, image=? WHERE id=?;",-1,&stmt, NULL);
+    if (rc) { // anything but 0 is failure
+       printf("Error executing sql statement\n");
+       printf("Received rc %d\n",rc);
+       sqlite3_close(dbDisco);
+    }
     else
     {
-        fwrite(configData, sizeof(int), sizeof(configData), confPtr);
-        fclose(confPtr);
+        // Bind the values for the insert:
+        
+        // SET id
+        sqlite3_bind_int(stmt, 0, configPointer);
+        // name
+        sqlite3_bind_text(stmt, 1, configNames[configPointer], -1, NULL);
+        // OSC and params
+        sqlite3_bind_int(stmt, 2, sliders[0].value );
+        sqlite3_bind_int(stmt, 3, sliders[1].value );
+        sqlite3_bind_int(stmt, 4, sliders[2].value );
+        // LFO and params 
+        sqlite3_bind_int(stmt, 5, sliders[7].value );
+        sqlite3_bind_int(stmt, 6, sliders[8].value );
+
+        //ADSR
+        sqlite3_bind_int(stmt, 7, sliders[3].value );
+        sqlite3_bind_int(stmt, 8, sliders[4].value );
+        sqlite3_bind_int(stmt, 9, sliders[5].value );
+        sqlite3_bind_int(stmt, 10, sliders[6].value );
+
+        // Effects 1 and 2
+        sqlite3_bind_int(stmt, 11, sliders[9].value );
+        sqlite3_bind_int(stmt, 12, sliders[10].value );
+        
+        // Type pointers
+        sqlite3_bind_int(stmt, 13, oscTypePointer);
+        sqlite3_bind_int(stmt, 14, effectTypePointer);
+        sqlite3_bind_int(stmt, 15, lfoTargetPointer);
+
+        //Image
+        sqlite3_bind_zeroblob(stmt,16,0);
+
+        // WHERE
+        sqlite3_bind_int(stmt, 17, configPointer);
+
+        // Do the REPLACMENT:
+        sqlite3_step(stmt);
+
+        // Reset the prepared statement to the initial state.
+        sqlite3_finalize(stmt);
+        closeDB();  
     }
+  
     // Lastly take a screenshot with <config_name>.png and save to the same directory
     // TakeScreenshot("../../disco_server/MEDIA/config.png"); 
     // Taking a screenshot here may lead to incomplete capture (usually just the background)
@@ -415,6 +464,7 @@ void loadConfig(int dir){
         printf("New config pointer is %d\n", configPointer);
         name        = sqlite3_column_text(stmt,1);
         printf("Loaded config: %s\n", name);
+        // OSC params
         sliders[0].value = (float)sqlite3_column_int(stmt,2)/127;
         sliders[1].value = (float)sqlite3_column_int(stmt,3)/127;
         sliders[2].value = (float)sqlite3_column_int(stmt,4)/127;
@@ -860,25 +910,6 @@ void drawEQSliders(){
         processSpiInput(127 * ratio);
     }
 }
-
-// void drawFileMenu(){
-
-//     DrawText(fileNameToLoad, 208, GetScreenHeight() - 20, 10, GRAY);
-
-//     // raygui: controls drawing
-//     //----------------------------------------------------------------------------------
-//     if (fileDialogState.fileDialogActive) GuiLock();
-
-//     // if (GuiButton((Rectangle){ 20, 20, 140, 30 }, GuiIconText(RAYGUI_ICON_FILE_OPEN, "Open Image"))) fileDialogState.fileDialogActive = true;
-//     if (buttons[0]) 
-//         fileDialogState.fileDialogActive = true;
-
-//     GuiUnlock();
-
-//     // GUI: Dialog Window
-//     //--------------------------------------------------------------------------------
-//     GuiFileDialog(&fileDialogState);
-// }
 
 void drawGUI(){
     BeginDrawing();
