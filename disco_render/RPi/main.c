@@ -752,16 +752,11 @@ void clearKeyPress(){
         printf("clear key press %d\n", clearPressCounter);
         clearPressCounter++;
         for(int i = 0; i < 17; i++){
-            if(keys[i].pressed == true){
-                processSpiInput(masterInput.keyPointer);
-                processSpiInput(i + 12*octave);
-                if(octave != 0)
-                printf("octave command\n");
-                processSpiInput(0);
-            }
             keys[i].pressed = false;
         }
         masterInput.keyPressed = false;
+        processSpiInput(SPI_MODULE_ENV | SPI_GATE);
+        processSpiInput(0);
     }
 }
 void processInput(){
@@ -798,8 +793,7 @@ void processInput(){
                         if(!checkBlack){
                             if(masterInput.x > tempKey.xPos && masterInput.x < tempKey.xPos + WHITE_KEY_WIDTH){
                                 if(masterInput.keyIndex != i + 12*octave){
-                                    processSpiInput(masterInput.keyPointer);
-                                    processSpiInput(masterInput.keyIndex);
+                                    processSpiInput(SPI_MODULE_ENV | SPI_GATE);
                                     processSpiInput(0);
                                     masterInput.keyIndex = i +12*octave;
                                 }
@@ -809,8 +803,7 @@ void processInput(){
                         else{
                             if(masterInput.x > tempKey.xPos && masterInput.x < tempKey.xPos + WHITE_KEY_WIDTH*0.75){
                                 if(masterInput.keyIndex != i + 12*octave){
-                                    processSpiInput(masterInput.keyPointer);
-                                    processSpiInput(masterInput.keyIndex);
+                                    processSpiInput(SPI_MODULE_ENV | SPI_GATE);
                                     processSpiInput(0);
                                     masterInput.keyIndex = i +12*octave;
                                 }
@@ -823,7 +816,8 @@ void processInput(){
             //*masterInput.key = keyIndex;
             processSpiInput(masterInput.keyPointer);
             processSpiInput(masterInput.keyIndex);
-            processSpiInput(1);
+            processSpiInput(SPI_MODULE_ENV | SPI_GATE);
+            processSpiInput(0);
             keys[masterInput.keyIndex - 12*octave].pressed = true;
         }
         else{
@@ -942,6 +936,7 @@ void main() {
                 //send key and gate
                 processSpiInput(masterInput.keyPointer);
                 processspiinput(midipacket[1]);
+                processSpiInput(SPI_MODULE_ENV | SPI_GATE);
                 processSpiInput(midipacket[2]);
                 firstByte = midipacket[1];
                 secondByte = midipacket[2];
