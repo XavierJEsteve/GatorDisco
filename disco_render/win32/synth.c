@@ -5,6 +5,7 @@
 */
 #include "synth.h"
 #include <math.h>
+#include <stdio.h>
 #define PI 3.14159
 
 void updateKeyboard(Keyboard* keys){
@@ -55,15 +56,38 @@ void updateOscillator(Oscillator* osc){
     else if(osc-> oscType == 2){ // WAV FILE
         //update pitch shift factor
         updatePitch(osc->frequency/osc->wavFrequency);
+        //printf("%f %f\n", osc->frequency,osc->wavFrequency);
+        //updatePitch(1);
         //process pitch shift, write to output
         *osc->output = processPitchShift(osc->wavInput);
     }
-    else if(osc-> oscType == 3){ // OSCILLATOR 4
+    else if(osc-> oscType == 3){ // OSCILLATOR 4 (frequency modulation)
+        //calculate modulator frequency
+        float modFreq = osc->frequency * pow(8, osc->param1 + osc->lfo_input);
+        osc->phase2 += modFreq / SAMPLE_RATE;
+        if(osc->phase2 > 1) osc->phase2 -=1;
+        //calculate modulation
+        float freqModulation = sinf(2.0f * PI * osc->phase2) * osc->param2;
+        //calculate modulated frequency
+        float frequency = osc->frequency * pow(2, freqModulation);
         //update oscillator phase
-        osc->phase += osc->frequency / SAMPLE_RATE;
+        osc->phase += frequency / SAMPLE_RATE;
         if(osc->phase > 1) osc->phase -= 1;
         //write to output 
         *osc->output = sinf(2.0f * PI * osc->phase);
+    }
+    else if(osc-> oscType == 4){ // OSCILLATOR 5 (ring modulation)
+        //calculate ring modulation frequency
+        float modFreq = osc->frequency * pow(2, 2*osc->param1 + osc->lfo_input - 1);
+        //calculate difference of frequencies
+        float diffFreq = osc->frequency - modFreq;
+        if(diffFreq < 0) diffFreq *= -1;
+        float sumFreq = osc->frequency + modFreq;
+        osc->phase += diffFreq / SAMPLE_RATE;
+        if(osc->phase > 1) osc->phase -= 1;
+        osc->phase2 += sumFreq / SAMPLE_RATE;
+        if(osc->phase2 > 1) osc->phase2 -= 1;
+        *osc->output = sinf(2.0f * PI * osc->phase) * sinf(2.0f * PI * osc->phase2);
     }
 }
 void updateLFO(LFO* lfo){
@@ -98,36 +122,43 @@ void updateEnvelope(Envelope* env){
     *env->output = env->amplitude * env->input * (env->lfo_input + 1);
 }
 void updateFilter(Filter* filter){
+    float input;
+    for(int i = 0; i < 4; i++){
+        input += filter->input[i];
+    }
+    input /= 4;
     if(filter->updateFlag == false)
-    *filter->output = processBiquads(filter->EQ, filter->input);
+    *filter->output = processBiquads(filter->EQ, input);
     else
-    *filter->output = filter->input;
+    *filter->output = input;
 }
 void initSynth(Synth* synth){
     synth->filter.EQ = initializeBiquads();
     //keyboard init
     //fill frequency table
-    float tempFreq = 261.6/4;
-    for(int i = 0; i < 85; i++){
-        synth->keys.freq_table[i] = tempFreq;
-        tempFreq *= 1.059463;
+    for(int i = 0; i < 4; i++){
+        float tempFreq = 261.6/4;
+        for(int j = 0; j < 85; j++){
+            synth->keys[i].freq_table[j] = tempFreq;
+            tempFreq *= 1.059463;
+        }
+        //midi keys is false for test program
+        synth->keys[i].midiKeys = false;
+        //connect keyboard to oscillator and envelope
+        synth->keys[i].frequency = &synth->osc[i].frequency;
+        //connect oscillator to envelope
+        synth->osc[i].output = &synth->env[i].input;
+        //connect envelope to filter
+        synth->env[i].output = &synth->filter.input[i];
     }
-    //midi keys is false for test program
-    synth->keys.midiKeys = false;
-    //connect keyboard to oscillator and envelope
-    synth->keys.frequency = &synth->osc.frequency;
-    //connect oscillator to filter
-    synth->osc.output = &synth->filter.input;
-    //connect filter to envelope
-    synth->filter.output = &synth->env.input;
     //connect filter to effects input
-    synth->env.output = &synth->fx.input;
+    synth->filter.output = &synth->fx.input;
     //connect effects unit to synth output
     synth->fx.output = &synth->output;
     //configure lfo targets
-    synth->lfo.targets[0] = &synth->keys.lfo_input;
-    synth->lfo.targets[1] = &synth->osc.lfo_input;
-    synth->lfo.targets[2] = &synth->env.lfo_input;
+    synth->lfo.targets[0] = &synth->keys[0].lfo_input;
+    synth->lfo.targets[1] = &synth->osc[0].lfo_input;
+    synth->lfo.targets[2] = &synth->env[0].lfo_input;
     //init lfo target
     synth->lfo.target = 0;
     synth->lfo.output = synth->lfo.targets[0];
@@ -135,10 +166,18 @@ void initSynth(Synth* synth){
 }
 float updateSynth(Synth* synth){
     updateLFO(&synth->lfo);
-    updateKeyboard(&synth->keys);
-    updateOscillator(&synth->osc);
+    for(int i = 0; i < 4; i++){
+        //copy lfo connections
+        if(i != 0){
+            synth->osc[i].lfo_input = synth->osc[0].lfo_input;
+            synth->env[i].lfo_input = synth->env[0].lfo_input;
+            synth->keys[i].lfo_input = synth->keys[0].lfo_input;
+        }
+        updateKeyboard(&synth->keys[i]);
+        updateOscillator(&synth->osc[i]);
+        updateEnvelope(&synth->env[i]);
+    }
     updateFilter(&synth->filter);
-    updateEnvelope(&synth->env);
     updateEffects(&synth->fx);
     return synth->output;
 }

@@ -16,6 +16,7 @@
 #include "spiConstants.h"
 #include "include/db.h"
 #include "sqlite/sqlite3.h"
+#include "portaudio.h"
 
 // channel is the wiringPi name for the chip select (or chip enable) pin.
 // Set this to 0 or 1, depending on how it's connected.
@@ -31,10 +32,11 @@ static const int CHANNEL = 0;
 #define MAX_ATTACK_TIME 3
 #define MAX_DECAY_TIME 5
 #define NUM_SLIDERS 11
-#define NUM_BUTTONS 6
+#define NUM_BUTTONS 8
 #define MIDI_DEVICE "/dev/midi2"
 #define SYNTH_MODE 0
 #define EQ_MODE 1
+#define WAV_MODE 2
 #define NUM_EQ_BANDS 10
 
 typedef struct{
@@ -107,7 +109,7 @@ float fCenters[NUM_EQ_BANDS] = {32,64,125,250,500,1000,2000,4000,8000,16000};
 Slider sliders[NUM_SLIDERS];
 Button buttons[NUM_BUTTONS];
 Button EQButtons[NUM_EQ_BANDS];
-GUI_Section guiSections[6];
+GUI_Section guiSections[5];
 int currentBand = 0;
 unsigned char spi_buffer[100];
 
@@ -170,6 +172,10 @@ void drawWaveform(float* signal,int width,int height,int x, int y){
         prev = current;
     }
 }
+drawConfigDisplay(){
+    DrawRectangle(1050,50,SCREEN_WIDTH/8,SCREEN_HEIGHT/10,WHITE);
+    DrawText("CONFIG FILE",1070,80,20,RED);
+}
 void buildGuiSections(){
     //build oscillator section
     GUI_Section tempSection;
@@ -185,34 +191,30 @@ void buildGuiSections(){
     tempSection.height = SCREEN_HEIGHT*3/8;
     tempSection.width = SCREEN_WIDTH*5/16;
     guiSections[1] = tempSection;
-    tempSection.title = "WAVEFORM";
+    tempSection.title = "";
+    tempSection.noTitle = true;
     tempSection.xPos = SCREEN_WIDTH*3/4;
     tempSection.yPos = 0;
-    tempSection.height = SCREEN_HEIGHT*3/8;
+    tempSection.height = SCREEN_HEIGHT*3/4;
     tempSection.width = SCREEN_WIDTH/4;
     guiSections[2] = tempSection;
     tempSection.title = "LFO";
     tempSection.xPos = 0;
     tempSection.yPos = SCREEN_HEIGHT*3/8;
     tempSection.height = SCREEN_HEIGHT*3/8;
-    tempSection.width = SCREEN_WIDTH*11/32;
+    tempSection.width = SCREEN_WIDTH*3/8;
+    tempSection.noTitle = false;
     guiSections[3] = tempSection;
     tempSection.title = "EFFECTS";
-    tempSection.xPos = SCREEN_WIDTH*11/32;
+    tempSection.xPos = SCREEN_WIDTH*3/8;
     tempSection.yPos = SCREEN_HEIGHT*3/8;
     tempSection.height = SCREEN_HEIGHT*3/8;
-    tempSection.width = SCREEN_WIDTH*11/32;
+    tempSection.width = SCREEN_WIDTH*3/8;
+    tempSection.noTitle = false;
     guiSections[4] = tempSection;
-    tempSection.title = "";
-    tempSection.noTitle = true;
-    tempSection.xPos = SCREEN_WIDTH*11/16;
-    tempSection.yPos = SCREEN_HEIGHT*3/8;
-    tempSection.height = SCREEN_HEIGHT*3/8;
-    tempSection.width = SCREEN_WIDTH*5/16;
-    guiSections[5] = tempSection;
 }
 void drawGuiSections(){
-    for(int i = 0; i < 6; i++){
+    for(int i = 0; i < 5; i++){
         GUI_Section temp = guiSections[i];
         //top line
         DrawLine(temp.xPos, temp.yPos, temp.xPos + temp.width,temp.yPos,BLACK);
@@ -352,7 +354,7 @@ void changeOsc(void){
     oscTypePointer %= NUM_OSCILLATORS;
     processSpiInput(SPI_MODULE_OSC | SPI_OSCTYPE);
     processSpiInput(oscTypePointer);
-    buttons[1].text = oscNames[oscTypePointer];
+    buttons[6].text = oscNames[oscTypePointer];
     sliders[1].name = oscParam1Names[oscTypePointer];
     sliders[2].name = oscParam2Names[oscTypePointer];
     if(oscTypePointer == 2){
@@ -398,14 +400,23 @@ void changeEffect(void){
 }
 void buildButtons(){
     Button load_config;
-    load_config.xPos = (7*SCREEN_WIDTH/10);
-    load_config.yPos = SCREEN_HEIGHT/3;
-    load_config.width = SCREEN_WIDTH/5;
-    load_config.height = SCREEN_HEIGHT/12;
+    load_config.xPos = 1050;
+    load_config.yPos = 150;
+    load_config.width = SCREEN_WIDTH/16;
+    load_config.height = SCREEN_HEIGHT/10;
     load_config.color = BLACK;
-    load_config.text = "LOAD CONFIG";
+    load_config.text = "<";
     load_config.buttonAction = &loadConfig;
     buttons[0] = load_config;
+    Button load_config2;
+    load_config2.xPos = 1050 + SCREEN_WIDTH/16;
+    load_config2.yPos = 150;
+    load_config2.width = SCREEN_WIDTH/16;
+    load_config2.height = SCREEN_HEIGHT/10;
+    load_config2.color = BLACK;
+    load_config2.text = ">";
+    load_config2.buttonAction = &loadConfig;
+    buttons[1] = load_config2;
     Button oscSelect;
     oscSelect.xPos = 40;
     oscSelect.yPos = SCREEN_HEIGHT/5;
@@ -414,7 +425,7 @@ void buildButtons(){
     oscSelect.color = GREEN;
     oscSelect.text = "PULSE WAVE";
     oscSelect.buttonAction = &changeOsc;
-    buttons[1] = oscSelect;
+    buttons[6] = oscSelect;
     Button lfoSelect;
     lfoSelect.xPos = 40;
     lfoSelect.yPos = SCREEN_HEIGHT/2;
@@ -425,7 +436,7 @@ void buildButtons(){
     lfoSelect.buttonAction = &changeLfo;
     buttons[2] = lfoSelect;
     Button effectSelect;
-    effectSelect.xPos = 480;
+    effectSelect.xPos = 550;
     effectSelect.yPos = SCREEN_HEIGHT/2;
     effectSelect.width = SCREEN_WIDTH/10;
     effectSelect.height = SCREEN_HEIGHT/12;
@@ -434,24 +445,33 @@ void buildButtons(){
     effectSelect.buttonAction = &changeEffect;
     buttons[3] = effectSelect;
     Button eqMode;
-    eqMode.xPos = 930;
-    eqMode.yPos = 350;
-    eqMode.width = SCREEN_WIDTH/10;
-    eqMode.height = SCREEN_HEIGHT/12;
+    eqMode.xPos = 1050;
+    eqMode.yPos = 450;
+    eqMode.width = SCREEN_WIDTH/8;
+    eqMode.height = SCREEN_HEIGHT/10;
     eqMode.color = GREEN;
     eqMode.text = "EQ MODE";
     eqMode.buttonAction = &changeMode;
     buttons[4] = eqMode;
     // Save Config
     Button save_config;
-    save_config.xPos = (7*SCREEN_WIDTH/10); //(3*SCREEN_WIDTH/5)
-    save_config.yPos = (SCREEN_HEIGHT/3)+SCREEN_HEIGHT/12;
-    save_config.width = SCREEN_WIDTH/5;
-    save_config.height = SCREEN_HEIGHT/12;
+    save_config.xPos = 1050;
+    save_config.yPos = 250;
+    save_config.width = SCREEN_WIDTH/8;
+    save_config.height = SCREEN_HEIGHT/10;
     save_config.color = BLACK;
     save_config.text = "SAVE CONFIG";
     save_config.buttonAction = &saveConfig;
     buttons[5] = save_config;
+    Button wavSelect;
+    wavSelect.xPos = 1050;
+    wavSelect.yPos = 350;
+    wavSelect.width = SCREEN_WIDTH/8;
+    wavSelect.height = SCREEN_HEIGHT/10;
+    wavSelect.color = BLACK;
+    wavSelect.text = "WAV SELECT";
+    wavSelect.buttonAction = &saveConfig;
+    buttons[7] = wavSelect;
 
 }
 void buildBandGUIs(){
@@ -546,14 +566,14 @@ void buildSliders(){
     lfoval.name = "VALUE";
     sliders[8] = lfoval;
     Slider Effect1;
-    Effect1.xPos = 640;
+    Effect1.xPos = 710;
     Effect1.yPos = 380;
     Effect1.value = 0;
     Effect1.param = SPI_MODULE_FX | SPI_FX_PARAM1;
     Effect1.name = "";
     sliders[9] = Effect1;
     Slider Effect2;
-    Effect2.xPos = 760;
+    Effect2.xPos = 830;
     Effect2.yPos = 380;
     Effect2.value = 0;
     Effect2.param = SPI_MODULE_FX | SPI_FX_PARAM2;
@@ -623,9 +643,10 @@ void drawButtons(){
         tempButton.height
         }, tempButton.text);
         if(pressed){
-            if (!strcmp(tempButton.text, "LOAD CONFIG"))
+            if (!strcmp(tempButton.text, "WAV SELECT"))
             {   
                 fileDialogState.fileDialogActive = true;
+                GUI_MODE = WAV_MODE;
 
             }
             else
@@ -637,7 +658,7 @@ void drawButtons(){
 
         // GUI: Dialog Window
         //--------------------------------------------------------------------------------
-        GuiFileDialog(&fileDialogState);
+        //GuiFileDialog(&fileDialogState);
     }
 }
 
@@ -753,17 +774,23 @@ void drawGUI(){
     ClearBackground(GRAY);
 
     if(GUI_MODE == SYNTH_MODE){
-        drawWaveform(buffer,SCREEN_WIDTH*3/16,SCREEN_HEIGHT*7/32,SCREEN_WIDTH*25/32,80);
+        //drawWaveform(buffer,SCREEN_WIDTH*3/16,SCREEN_HEIGHT*7/32,SCREEN_WIDTH*25/32,80);
+        drawConfigDisplay();
         drawKeys(SCREEN_HEIGHT/4);
         drawSliders();
         drawButtons();
         drawGuiSections();
         // drawFileMenu();
     }
-    else{
+    else if(GUI_MODE == EQ_MODE){
         drawEQButtons();
         drawEQSliders();
         // drawFileMenu();
+    }
+    else{
+        if(!fileDialogState.fileDialogActive)
+        GUI_MODE = SYNTH_MODE;
+        GuiFileDialog(&fileDialogState);
     }
     EndDrawing();
     if (screenshotNeeded){
@@ -804,8 +831,8 @@ void processInput(){
             else if(sliders[0].value > 0.5) octave = 2;
             else if(sliders[0].value > 0.25) octave = 1;
             if(masterInput.keyPressed == false){
-                wavPointer = 0;
                 masterInput.keyPressed = true;
+                PlaySound(wavSound);
             }
             bool checkBlack = false;
             bool foundKey = false;
@@ -934,7 +961,7 @@ void main() {
 	
     fileDialogState = InitGuiFileDialog(3*SCREEN_HEIGHT/4, 3*SCREEN_HEIGHT/4, configDirectory, false);
     // Choose an extenstion to filter by
-    char* filterExt = ".bin";
+    char* filterExt = ".wav";
     strcpy(fileDialogState.filterExt,filterExt);
 
     while(WindowShouldClose() == false)
@@ -948,10 +975,11 @@ void main() {
             if (IsFileExtension(fileDialogState.fileNameText, filterExt))
             {
                 strcpy(fileNameToLoad, TextFormat("%s/%s", fileDialogState.dirPathText, fileDialogState.fileNameText));
-                printf("%s",fileNameToLoad);
+                printf("%s\n",fileNameToLoad);
                 UnloadTexture(texture);
                 texture = LoadTexture(fileNameToLoad);
             }
+            printf("here: %s\n",fileNameToLoad);
 
             fileDialogState.SelectFilePressed = false;
         }
@@ -970,10 +998,16 @@ void main() {
             if((firstByte != midipacket[1] || secondByte != midipacket[2]) && midipacket[1] < 109 && midipacket[1] > 23){
                 //send key and gate
                 processSpiInput(masterInput.keyPointer);
-                processSpiInput(midipacket[1]);
-                processSpiInput(midipacket[2]);
+                processSpiInput(midipacket[1]-24);
+                if(midipacket[2] != 0){
+                    processSpiInput(1);
+                    PlaySound(wavSound);
+                }
+                else 
+                processSpiInput(0);
                 firstByte = midipacket[1];
                 secondByte = midipacket[2];
+                printf("byte 1: %d, byte 2: %d\n", midipacket[1],midipacket[2]);
             }
             
         //}

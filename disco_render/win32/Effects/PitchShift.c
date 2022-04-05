@@ -29,8 +29,8 @@ void updatePitch(float step)
 {
     if(step > 8.0)
         PitchStep = 8.0;
-    else if(step < 0.1)
-        PitchStep = 0.1;
+    else if(step < 0.5)
+        PitchStep = 0.5;
     else
         PitchStep = step;
 
