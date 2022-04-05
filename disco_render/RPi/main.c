@@ -119,7 +119,7 @@ Sound wavSound;
 
 // File handling
 GuiFileDialogState fileDialogState;
-char* configDirectory = "/home/pi/GatorDisco/disco_server/MEDIA/";
+char* configDirectory = "/home/pi/GatorDisco/disco_render/RPi/wavs/";
 char fileNameToLoad[512] = { 0 };
 Texture texture = { 1 };
 
@@ -978,8 +978,8 @@ void main() {
 	
     fileDialogState = InitGuiFileDialog(3*SCREEN_HEIGHT/4, 3*SCREEN_HEIGHT/4, configDirectory, false);
     // Choose an extenstion to filter by
-    char* filterExt = ".wav";
-    strcpy(fileDialogState.filterExt,filterExt);
+    // char* filterExt = ".wav";
+    // strcpy(fileDialogState.filterExt,filterExt);
 
     while(WindowShouldClose() == false)
     {            
@@ -989,14 +989,18 @@ void main() {
         if (fileDialogState.SelectFilePressed)
         {
             // Load image file (if supported extension)
-            if (IsFileExtension(fileDialogState.fileNameText, filterExt))
+            if (IsFileExtension(fileDialogState.fileNameText, ".wav"))
             {
+                printf("Dir path text: %s\n", fileDialogState.dirPathText);
+                printf("File Name: %s\n", fileDialogState.fileNameText);
+
                 strcpy(fileNameToLoad, TextFormat("%s/%s", fileDialogState.dirPathText, fileDialogState.fileNameText));
                 printf("%s\n",fileNameToLoad);
                 UnloadTexture(texture);
                 texture = LoadTexture(fileNameToLoad);
+                
+                printf("here: %s\n",fileNameToLoad);
             }
-            printf("here: %s\n",fileNameToLoad);
 
             fileDialogState.SelectFilePressed = false;
         }
