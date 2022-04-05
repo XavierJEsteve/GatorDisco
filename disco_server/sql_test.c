@@ -25,7 +25,7 @@ int openDB(){
     
     rc = sqlite3_open("/home/pi/GatorDisco/disco_server/dbspot/gdiscoDb.sqlite3", &dbDisco);
     if (rc != SQLITE_OK){
-        printf("Failed to connect to db....code %d\nCode info: https://www.sqlite.org/rescode.html\n", rc);
+        printf("Failed to connect to db....code %d\nCode info: https://www.sqlite.org/c3ref/c_abort.html\n", rc);
     }
     else{
         printf("Successfully connected to config DB!\n");
@@ -91,8 +91,12 @@ void loadConfig(int dir){
     char *err;
     // if (checkDB() == SQLITE_OK)
     setNumConfigs(); // set numConfigs
+    char* baseQ = "SELECT * FROM fileshare_configmodel LIMIT 1 OFFSET ";
+    char query[sizeof(baseQ)];
+    sprintf(query, "%d", 2 );
+    strcat(query, ";");
 
-    sqlite3_prepare_v2(dbDisco, "select name, octave, oscParam1, oscParam2, lfoSpeed, lfoval, Attack, Decay, Sustain, Release, Effect1, Effect2, OscType, effectType, lfoTarget from fileshare_configmodel", -1, &stmt, 0);
+    sqlite3_prepare_v2(dbDisco, query, -1, &stmt, 0);
     char* name;
     int octave, oscParam1, oscParam2, 
     lfoSpeed,   lfoval, 
@@ -144,7 +148,8 @@ int main(){
     int nConfigs;
     // loadConfig(0);
     setNumConfigs();
-    printf("Found %d config files.\n",num_configs);
+    printf("Found %d config files.\n",numConfigs);
     listConfigs();
+    loadConfig(0);
     closeDB();
 }
