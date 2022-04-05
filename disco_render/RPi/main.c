@@ -866,8 +866,8 @@ void processInput(){
                         if(!checkBlack){
                             if(masterInput.x > tempKey.xPos && masterInput.x < tempKey.xPos + WHITE_KEY_WIDTH){
                                 if(masterInput.keyIndex != i + 12*octave){
-                                    processSpiInput(SPI_MODULE_ENV | SPI_GATE);
-                                    processSpiInput(0);
+                                    //processSpiInput(SPI_MODULE_ENV | SPI_GATE);
+                                    //processSpiInput(0);
                                     masterInput.keyIndex = i +12*octave;
                                 }
                                 foundKey = true;
@@ -876,8 +876,8 @@ void processInput(){
                         else{
                             if(masterInput.x > tempKey.xPos && masterInput.x < tempKey.xPos + WHITE_KEY_WIDTH*0.75){
                                 if(masterInput.keyIndex != i + 12*octave){
-                                    processSpiInput(SPI_MODULE_ENV | SPI_GATE);
-                                    processSpiInput(0);
+                                    //processSpiInput(SPI_MODULE_ENV | SPI_GATE);
+                                    //processSpiInput(0);
                                     masterInput.keyIndex = i +12*octave;
                                 }
                                 foundKey = true;
@@ -890,7 +890,7 @@ void processInput(){
             processSpiInput(masterInput.keyPointer);
             processSpiInput(masterInput.keyIndex);
             processSpiInput(SPI_MODULE_ENV | SPI_GATE);
-            processSpiInput(0);
+            processSpiInput(1);
             keys[masterInput.keyIndex - 12*octave].pressed = true;
         }
         else{
@@ -1016,13 +1016,15 @@ void main() {
                 processSpiInput(midipacket[1]-24);
                 if(midipacket[2] != 0){
                     PlaySound(wavSound);
+                    //masterInput.keyPressed = true;
                 }
                 processSpiInput(SPI_MODULE_ENV | SPI_GATE);
                 processSpiInput(midipacket[2]);
                 firstByte = midipacket[1];
                 secondByte = midipacket[2];
-                printf("byte 1: %d, byte 2: %d\n", midipacket[1],midipacket[2]);
+                //printf("byte 1: %d, byte 2: %d\n", midipacket[1],midipacket[2]);
             }
+            printf("byte 1: %d, byte 2: %d\n", midipacket[1],midipacket[2]);
             
         //}
     }
