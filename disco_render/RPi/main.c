@@ -119,6 +119,8 @@ Sound wavSound;
 
 // Static Database 
 sqlite3* dbDisco;
+int configPointer = 2;
+int numConfigs;
 
 // File handling
 GuiFileDialogState fileDialogState;
@@ -255,6 +257,26 @@ void buildKeys(){
     }
 }
 
+
+//*************************DB OPERATION***************************************
+int openDB(){
+    // sqlite3* dbDisco;
+    // check connection to DB
+    int rc = SQLITE_ERROR; //assume erroneous by default
+    
+    rc = sqlite3_open("/home/pi/GatorDisco/disco_server/dbspot/gdiscoDb.sqlite3", &dbDisco);
+    if (rc != SQLITE_OK){
+        printf("Failed to connect to db....code %d\nCode info: https://www.sqlite.org/c3ref/c_abort.html\n", rc);
+    }
+    else{
+        printf("Successfully connected to config DB!\n");
+    }
+    return rc;
+}
+void closeDB(){
+    sqlite3_close(dbDisco);
+}
+
 void saveConfig(void){
     // This funciton will save the 'state' of the synthesizer. 
     // Reads:
@@ -306,24 +328,54 @@ void saveConfig(void){
     screenshotNeeded = true;
 }
 
-void loadConfig(void){
+void loadConfig(int dir){
 
-    //Changing to a DB approach
+    openDB();
     sqlite3_stmt* stmt;
-    int rcTest, rcDjango;
+    int rc;
     char *err;
+    int baselen;
+    int OFFSET;
+    int nConfigs;
+    
+    //logic for setting index    
+    nConfigs = setNumConfigs(); // set numConfigs
+    
+    // The DB is empty
+    if (nConfigs == 0){
+        // Load values of 0
+        return;
+    }
 
-    // rcTest = sqlite3_open("./dbspot/test.sqlite3", &dbTest);
-    rcDjango = sqlite3_open("./dbspot/gdiscoDb.sqlite3", &dbDisco);
-    printf("Received return code %d upon opening Gdiscodb.\n", rcDjango );
-    // printf("Received return code %d upon opening testdb.\n", rcTest );
+    // Moving to the NEXT config
+    else if (dir == 1){
+        // Make sure there is a next row
+        if (configPointer < nConfigs){
+            OFFSET = configPointer; //
+        }
 
-    // rcDjango = sqlite3_exec(dbDisco, "SELECT * from fileshare_configmodel",NULL,NULL,&err);
-    // if (rcDjango != SQLITE_OK){
-    //     printf("Error: %s",err);
-    // }
+        else{ // We are at the last row, or there is only 1 row anyways
+            OFFSET = 0; // to get the first row 
+        } 
+    }
+    else if (dir == 0) {
+        // Make sure there is a prev row
+        if (configPointer > 1){
+            OFFSET = configPointer-2;
+        }
+        else{ // We are at the first row, or there is only 1 row anyways
+            OFFSET = nConfigs-1;
+        } 
+    }
 
-    sqlite3_prepare_v2(dbDisco, "select name, octave, oscParam1, oscParam2, lfoSpeed, lfoval, Attack, Decay, Sustain, Release, Effect1, Effect2, OscType, effectType, lfoTarget from fileshare_configmodel", -1, &stmt, 0);
+    char baseQ[100];
+    
+    strcpy(baseQ, "SELECT * FROM fileshare_configmodel LIMIT 1 OFFSET ");
+    baselen = strlen(baseQ);
+    baseQ[baselen] = OFFSET+'0'; //Requested index goes HERE
+    baseQ[baselen+1] = ';';
+    
+    sqlite3_prepare_v2(dbDisco, baseQ, -1, &stmt, 0);
     char* name;
     int octave, oscParam1, oscParam2, 
     lfoSpeed,   lfoval, 
@@ -332,22 +384,34 @@ void loadConfig(void){
     OscType,    effectType, lfoTarget;
 
     while (sqlite3_step(stmt) != SQLITE_DONE){
-        name        = sqlite3_column_text(stmt,0);
-        octave      = sqlite3_column_int(stmt,1);
-        oscParam1   = sqlite3_column_int(stmt,2);
-        oscParam2   = sqlite3_column_int(stmt,3);
-        lfoSpeed    = sqlite3_column_int(stmt,4);
-        lfoval      = sqlite3_column_int(stmt,5);
-        Attack      = sqlite3_column_int(stmt,6);
-        Decay       = sqlite3_column_int(stmt,7);
-        Sustain     = sqlite3_column_int(stmt,8);
-        Release     = sqlite3_column_int(stmt,9);
-        Effect1     = sqlite3_column_int(stmt,10);
-        Effect2     = sqlite3_column_int(stmt,11);
-        OscType     = sqlite3_column_int(stmt,12);
-        effectType  = sqlite3_column_int(stmt,13);
-        lfoTarget   = sqlite3_column_int(stmt,14);
+
+        configPointer = sqlite3_column_int(stmt,0) - 1; // Use index as the pointer
+
+        name        = sqlite3_column_text(stmt,1);
+        printf("Loaded config: %s\n", name);
+        slider[0].value = sqlite3_column_int(stmt,2);
+        slider[1].value = sqlite3_column_int(stmt,3);
+        slider[2].value = sqlite3_column_int(stmt,4);
+        // LFO params
+        slider[7].value = sqlite3_column_int(stmt,5);
+        slider[8].value = sqlite3_column_int(stmt,6);
+        //ADSR
+        slider[3].value = sqlite3_column_int(stmt,7); //atk
+        slider[4].value = sqlite3_column_int(stmt,8); //decay
+        slider[5].value = sqlite3_column_int(stmt,9); //sustain
+        slider[6].value = sqlite3_column_int(stmt,10); //release
+        
+        //Effects 1 and 2
+        slider[9].value     = sqlite3_column_int(stmt,11);
+        slider[10].value    = sqlite3_column_int(stmt,12);
+        
+        // Type pointers
+        oscTypePointer     = sqlite3_column_int(stmt,13);
+        effectTypePointer  = sqlite3_column_int(stmt,14);
+        lfoTargetPointer   = sqlite3_column_int(stmt,15);
+        
     }
+    closeDB();
 }
 void changeOsc(void){
     oscTypePointer++;
@@ -649,13 +713,15 @@ void drawButtons(){
                 GUI_MODE = WAV_MODE;
 
             }
+            else if (!strcmp(tempButton.text, ">"))
+            {
+                tempButton.buttonAction(1);
+            }
             else
             {
                 tempButton.buttonAction(0);
             }
-
         }
-
         // GUI: Dialog Window
         //--------------------------------------------------------------------------------
         //GuiFileDialog(&fileDialogState);
