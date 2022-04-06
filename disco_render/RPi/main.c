@@ -296,8 +296,8 @@ void saveConfig(void){
     int paramCount;
 
     //List of VARS
-    // 0. ID
-    // int name
+    int ID;
+    char* name;
     int octave = (int)(sliders[0].value*127);
     int oscParam1 = (int)(sliders[1].value*127);
     int oscParam2 = (int)(sliders[2].value*127);
@@ -316,14 +316,13 @@ void saveConfig(void){
     int effectType = effectTypePointer;
     int lfoTarget = lfoTargetPointer;
     
-    // rc = sqlite3_prepare_v2(dbDisco, "REPLACE into fileshare_configmodel(id, name, octave, oscParam1, oscParam2, lfoSpeed, lfoval, Attack, Decay, Sustain, Release, Effect1, Effect2, OscType, effectType, lfoTarget, image) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?, ?, ?, ?);", -1, &stmt, NULL);
-    // rc = sqlite3_prepare_v2(dbDisco, "UPDATE fileshare_configmodel SET id=?, name='?', octave=?, oscParam1=?, oscParam2=?, lfoSpeed=?, lfoval=?, Attack=?, Decay=?, Sustain=?, Release=?, Effect1=?, Effect2=?, OscType=?, effectType=?, lfoTarget=?, image=? WHERE id=?;",-1,&stmt, NULL);
-    char* sql = "UPDATE fileshare_configmodel SET octave= ? , oscParam1= ? , oscParam2= ? , lfoSpeed= ? , lfoval= ? , Attack= ? , Decay= ? , Sustain= ? , Release= ? , Effect1= ? , Effect2= ? , OscType= ? , effectType= ? , lfoTarget= ? , image= ? WHERE id= 2 ;";
-    rc = sqlite3_prepare_v2(dbDisco, sql,-1,&stmt, NULL);
+    char* sql = "UPDATE fileshare_configmodel SET octave= ? , oscParam1= ? , oscParam2= ? , lfoSpeed= ? , lfoval= ? , Attack= ? , Decay= ? , Sustain= ? , Release= ? , Effect1= ? , Effect2= ? , OscType= ? , effectType= ? , lfoTarget= ? WHERE id= ? ;";
+    rc = sqlite3_prepare_v2(dbDisco, sql, -1, &stmt, NULL);
     
     if (rc) { // anything but 0 is failure
        printf("Error preparing sql statement\n");
        printf("Received rc %d\n",rc);
+       sqlite3_finalize(stmt);
        sqlite3_close(dbDisco);
     }
     else
@@ -332,55 +331,102 @@ void saveConfig(void){
         printf("The number of parameters in the statement: %d\n", paramCount);
 
         //*************BINDS***********//    
-        sqlite3_bind_int(stmt, 1, octave );
+        rc = sqlite3_bind_int(stmt, 1, octave );
         printf("Octave : %d\n", octave);
+        if (rc != SQLITE_OK) {
 
-        sqlite3_bind_int(stmt, 2, oscParam1 );
+            fprintf(stderr, "Failed to bind octave: %s\n", sqlite3_errmsg(dbDisco));
+        }
+        rc = sqlite3_bind_int(stmt, 2, oscParam1 );
         printf("oscParam1 : %d\n", oscParam1);
-        sqlite3_bind_int(stmt, 3, oscParam2 );
+        if (rc != SQLITE_OK) {
+            fprintf(stderr, "Failed to bind oscParam1: %s\n", sqlite3_errmsg(dbDisco));
+        }
+        rc = sqlite3_bind_int(stmt, 3, oscParam2 );
         printf("oscParam2 : %d\n", oscParam2);
+        if (rc != SQLITE_OK) {
+            fprintf(stderr, "Failed to bind oscParam2: %s\n", sqlite3_errmsg(dbDisco));
+        }
+
         // LFO and params 
-        sqlite3_bind_int(stmt, 4, lfoSpeed );
+        rc = sqlite3_bind_int(stmt, 4, lfoSpeed );
         printf("lfoSpeed : %d\n", lfoSpeed);
-        sqlite3_bind_int(stmt, 5, lfoval );
+        if (rc != SQLITE_OK) {
+            fprintf(stderr, "Failed to bind oscParam2: %s\n", sqlite3_errmsg(dbDisco));
+        }
+        rc = sqlite3_bind_int(stmt, 5, lfoval );
         printf("lfoval : %d\n", lfoval);
+        if (rc != SQLITE_OK) {
+            fprintf(stderr, "Failed to bind oscParam2: %s\n", sqlite3_errmsg(dbDisco));
+        }
 
         //ADSR
-        sqlite3_bind_int(stmt, 6, Attack );
+        rc = sqlite3_bind_int(stmt, 6, Attack );
         printf("Attack : %d\n", Attack);
-        sqlite3_bind_int(stmt, 7, Decay );
+        if (rc != SQLITE_OK) {
+            fprintf(stderr, "Failed to bind Attack: %s\n", sqlite3_errmsg(dbDisco));
+        }
+        rc = sqlite3_bind_int(stmt, 7, Decay );
         printf("Decay : %d\n", Decay);
-        sqlite3_bind_int(stmt, 8, Sustain );
+        if (rc != SQLITE_OK) {
+            fprintf(stderr, "Failed to bind Decay: %s\n", sqlite3_errmsg(dbDisco));
+        }
+        rc = sqlite3_bind_int(stmt, 8, Sustain );
         printf("Sustain : %d\n", Sustain);
-        sqlite3_bind_int(stmt, 9, Release );
+        if (rc != SQLITE_OK) {
+            fprintf(stderr, "Failed to bind Sustain: %s\n", sqlite3_errmsg(dbDisco));
+        }
+        rc = sqlite3_bind_int(stmt, 9, Release );
         printf("Release : %d\n", Release);
+        if (rc != SQLITE_OK) {
+            fprintf(stderr, "Failed to bind Release: %s\n", sqlite3_errmsg(dbDisco));
+        }
 
         // Effects 1 and 2
-        sqlite3_bind_int(stmt, 10, Effect1 );
+        rc = sqlite3_bind_int(stmt, 10, Effect1 );
         printf("Effect1 : %d\n", Effect1);
-        sqlite3_bind_int(stmt, 11, Effect2 );
+        if (rc != SQLITE_OK) {
+            fprintf(stderr, "Failed to bind Effect1: %s\n", sqlite3_errmsg(dbDisco));
+        }
+        rc = sqlite3_bind_int(stmt, 11, Effect2 );
         printf("Effect2 : %d\n", Effect2);
+        if (rc != SQLITE_OK) {
+            fprintf(stderr, "Failed to bind Effect2: %s\n", sqlite3_errmsg(dbDisco));
+        }
         
         // Type pointers
-        sqlite3_bind_int(stmt, 12, OscType);
+        rc = sqlite3_bind_int(stmt, 12, OscType);
         printf("OscType : %d\n", OscType);
-        sqlite3_bind_int(stmt, 13, effectType);
+        if (rc != SQLITE_OK) {
+            fprintf(stderr, "Failed to bind OscType: %s\n", sqlite3_errmsg(dbDisco));
+        }
+        rc = sqlite3_bind_int(stmt, 13, effectType);
         printf("effectType : %d\n", effectType);
-        sqlite3_bind_int(stmt, 14, lfoTarget);
+        if (rc != SQLITE_OK) {
+            fprintf(stderr, "Failed to bind effectType: %s\n", sqlite3_errmsg(dbDisco));
+        }
+        rc = sqlite3_bind_int(stmt, 14, lfoTarget);
         printf("lfoTarget : %d\n", lfoTarget);
+        if (rc != SQLITE_OK) {
+            fprintf(stderr, "Failed to bind lfoTarget: %s\n", sqlite3_errmsg(dbDisco));
+        }
         //******************************/
 
-        //Image
-        sqlite3_bind_zeroblob(stmt,15,0);
-
         // WHERE
-        // sqlite3_bind_int(stmt, 16, configPointer);
-        // printf("configPointer : %d\n", configPointer);
+        rc = sqlite3_bind_int(stmt, 15, configPointer);
+        printf("configPointer : %d\n", configPointer);
+        if (rc != SQLITE_OK) {
+            fprintf(stderr, "Failed to bind configPointer: %s\n", sqlite3_errmsg(dbDisco));
+        }
 
+
+        char *sentSQL = sqlite3_expanded_sql(stmt);
+        printf("Sent SQL: %s\n",sentSQL);
         // Do the REPLACMENT:
+        sleep(10);
         rc = sqlite3_step(stmt);
         if (rc != SQLITE_DONE) {
-            fprintf(stderr, "Cannot step from statement: %s\n", sqlite3_errmsg(dbDisco));
+            fprintf(stderr, "Cannot step from statement: %d ; %s\n", rc, sqlite3_errmsg(dbDisco));
             sqlite3_close(dbDisco);
         }
         rc = sqlite3_finalize(stmt);
@@ -519,7 +565,8 @@ void loadConfig(int dir){
     printf("New effP Pointer: %d\n", lfoP);
     printf("New lfoP Pointer: %d\n", lfoP);
 
-
+    sqlite3_reset(stmt);
+    sqlite3_finalize(stmt);
     closeDB();
 }
 
