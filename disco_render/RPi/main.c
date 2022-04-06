@@ -131,7 +131,7 @@ char* configNames[NUM_CONFIGS+1]= {"DEBUG","Conf1","Conf2","Conf3","Conf4","Conf
 
 // File handling
 GuiFileDialogState fileDialogState;
-char* wavDirectory = "/home/pi/GatorDisco/disco_render/RPi/wavs/";
+char* wavDirectory = "/home/pi/GatorDisco/disco_server/fileshare/media/wavs/";
 char fileNameToLoad[512] = { 0 };
 Texture texture = { 1 };
 

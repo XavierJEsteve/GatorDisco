@@ -53,17 +53,15 @@ body {
 .container {
   display: grid; 
   grid-template-columns: 1fr 1fr;
-  grid-template-rows: 1fr 1fr;
+  grid-template-rows: 1fr;
   gap: 10px 10px; 
   grid-template-areas: 
-    "confFiles"  "audioUpload" 
-    "cardStock" "audioFiles"; 
+    "audioUpload"    "audioFiles";
 }
 .audioUpload { grid-area: audioUpload; }
-.cardStock { grid-area: cardStock; }
 .audioFiles { grid-area: audioFiles; }
+.synthForm { grid-area: synthForm; }
 .confFiles { grid-area: confFiles; }
-
 
 .td-bright {
   color: white;

@@ -1,21 +1,8 @@
 {% extends 'base.html' %}
 
 {% block content_index %}
-<div class="container">
-    <div class="AudioUpload">
-        <h2 style="color:yellow"> Audio File Upload</h2>
-        <form method="POST" enctype="multipart/form-data">
-            {% csrf_token %}
-            <div class="form-control">
-                <div class="form-group">
-                    {{ audioform.file }}
-                </div>
-            </div>
-            <button type="submit">Upload Audio</button>
-        </form>
-    </div>
-   
-    <div class="synthForm">
+<div class="container">   
+    <!-- <div class="synthForm">
         <h2 style="color:yellow">Synth Settings Upload</h2>
         <form method="POST" enctype="multipart/form-data">
             {% csrf_token %}
@@ -30,38 +17,8 @@
             <button type="submit">Upload Synth Settings</button>
         </form>
     </div> 
-    
-    <div class="confFiles">
-        <div class="table-responsive">
-        <table class= "table table-sm">
-            <thead class="thead-dark">
-                <tr>
-                    <th>
-                        <h2 style="color:yellow">Config Name</h2>
-                    </th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for conf in config_rows %}
-                    <tr>
-                        <td class="td-bright">{{ conf.name }}</td>
-                        <td>
-                            <!-- Needs a ref to file location -->
-                            <button class='btn btn-primary' name="download_button"> Download</button> 
-                        </td>
-                        <td>
-                            <!-- Needs to sumit a POST to index for deletion (action) of file (id)  -->
-                            <a href = "{% url 'delete-config' conf.id %}" class='btn btn-danger'> Delete </a>
-                            <!-- <button type="submit" class='btn btn-danger' name="delete_button"> Delete</button> -->
-                        </td>
-                    </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        <div class="table-responsive">
-    </div>
-
-    <div class="AudioUpload">
+     -->
+    <div class="audioUpload">
         <h2 style="color:yellow"> Audio File Upload</h2>
         <form method="POST" enctype="multipart/form-data">
             {% csrf_token %}
@@ -74,49 +31,6 @@
         </form>
     </div>
     
-    <div class="cardStock">
-        <div class="card" style="width: 18rem;">
-            <img class="card-img-top" src="media/config1.png" alt="synth image">
-            <div class="card-body">
-            <h5 class="card-title">Synth One</h5>
-            <p class="card-text">Example content 1.</p>
-            <a href="#" class="btn btn-primary">Go somewhere</a>
-            </div>
-        </div>
-        <div class="card" style="width: 18rem;">
-            <img class="card-img-top" src="media/config2.png" alt="synth image">
-            <div class="card-body">
-            <h5 class="card-title">Synth Two</h5>
-            <p class="card-text">Example content 2.</p>
-            <a href="#" class="btn btn-primary">Go somewhere</a>
-            </div>
-        </div>
-        <div class="card" style="width: 18rem;">
-            <img class="card-img-top" src="media/config3.png" alt="synth image">
-            <div class="card-body">
-            <h5 class="card-title">Synth Three</h5>
-            <p class="card-text">Example content3.</p>
-            <a href="#" class="btn btn-primary">Go somewhere</a>
-            </div>
-        </div>
-        <div class="card" style="width: 18rem;">
-            <img class="card-img-top" src="media/config2.png" alt="synth image">
-            <div class="card-body">
-            <h5 class="card-title">Synth Two</h5>
-            <p class="card-text">Example content 2.</p>
-            <a href="#" class="btn btn-primary">Go somewhere</a>
-            </div>
-        </div>
-        <div class="card" style="width: 18rem;">
-            <img class="card-img-top" src="media/config3.png" alt="synth image">
-            <div class="card-body">
-            <h5 class="card-title">Synth Three</h5>
-            <p class="card-text">Example content3.</p>
-            <a href="#" class="btn btn-primary">Go somewhere</a>
-            </div>
-        </div>
-    </div>
-
     <div class="audioFiles">
         <div class="table-responsive">
         <table class= "table table-sm">
@@ -128,7 +42,7 @@
                 </tr>
             </thead>
             <tbody>
-                {% for audio in audio_files %}
+                {% for audio in audio_rows %}
                     <tr>
                         <td class="td-bright">{{ audio.name }}</td>
                     </tr>
@@ -137,6 +51,18 @@
         </table>
         </div>
     </div>
-
+</div>
+<div class="confFiles">
+    <div class="card-deck" style="display:flex;">
+        {% for conf in config_rows %}
+        <div class="card" style="width : 18rem; display:flex; margin-right: 15px; margin-left: 15px;">
+         <img class="card-img-top" src="media/screens/config1.png" />
+          <div class="card-body">
+            <h5 class="card-title">{{ conf.name }}</h5>
+            <p class="card-text">Card Text</p>
+          </div>
+        </div>
+        {% endfor %}
+    </div>
 </div>
 {% endblock %}

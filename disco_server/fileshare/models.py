@@ -3,7 +3,7 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 
 class AudioModel(models.Model):
     name = models.CharField(max_length=16)
-    file = models.FileField(upload_to='wavs')
+    file = models.FileField(upload_to='wavs/')
 
     def __str__(self):
         return self.name

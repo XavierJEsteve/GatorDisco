@@ -23,9 +23,36 @@ from django.urls import path
 def index(request,action=-1,id=-1):
  
         config_rows = ConfigModel.objects.all()   
+        audio_rows = AudioModel.objects.all()
+
+        if request.method == 'POST':
+                # AUDIO FILE UPLOAD
+                audioform = AudioForm(request.POST, request.FILES)
+                if audioform.is_valid():
+                        audioform.save()
+                try:
+                        # Save audio file to media folder
+                        uploaded_file = request.FILES['file'] # Dictionary key is based on HTML form <input name=*****> \
+                        # fs = FileSystemStorage()
+                        # fs.save(uploaded_file.name, uploaded_file)
+                        print(uploaded_file.name, uploaded_file)
+                        # Save audio file to db
+                        AudioModel(name=uploaded_file.name,file=uploaded_file).save()
+
+                        return redirect('index')
+                        
+                except MultiValueDictKeyError:
+                        print("Couldn't load an audio file\n")
+
+                # elif: synthform.is_valid():
+                #         pass
+        else:
+                audioform = AudioForm()
 
         context = {
-                'config_rows'   : config_rows
+                'audio_rows'    : audio_rows,
+                'config_rows'   : config_rows,
+                'audioform'     : audioform
         }
         return render(request, 'index.html', context)
 
@@ -51,7 +78,7 @@ def upload_audio(request):
                 audioform = AudioForm()
 
         return render(request, 'upload_audio.html',{
-                'audioform': audiofor0090m
+                'audioform': audioform
         })
 
 def upload_config(request):
