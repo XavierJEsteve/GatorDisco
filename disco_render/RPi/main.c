@@ -424,6 +424,10 @@ void loadConfig(int dir){
     int baselen;
     int OFFSET=0;
     int nConfigs;
+    int id = configPointer;
+
+    char* name;
+    int oscP, lfoP, effP = 0; 
     
     //logic for setting index    
     nConfigs = setNumConfigs(); // set numConfigs
@@ -434,46 +438,52 @@ void loadConfig(int dir){
         printf("No configurations found\n");
         return;
     }
+
     // Moving to the NEXT config
     else if (dir == 1){
         // Make sure there is a next row
         if (configPointer < nConfigs){ // Move up in the middle of the table
-            OFFSET = configPointer; // Offset will point the query to the NEXT ENTRY 
+            id = configPointer + 1; // Offset will point the query to the NEXT ENTRY 
         }
 
         else{ // We are at the last row, or there is only 1 row anyways. Loop back to start
-            OFFSET = 0; // to get the first row 
+           id = 1; // to get the first row 
         } 
     }
     else if (dir == 0) {
         // Make sure there is a prev row
         if (configPointer > 1){ // Move down in the middle of the table
-            OFFSET = configPointer-2;
+            id = configPointer-1;
         }
         else{ // move "down" (n-1) at the bottom of the table
-            OFFSET = nConfigs-1;
+            id = nConfigs;
         } 
     }
     printf("Found %d configs\n",nConfigs);
     printf("Currently at config %d\n",configPointer);
     printf("Moving in dir %d\n", dir);
+    printf("Target ID is %d\n",id);
 
-    char baseQ[100];
-    
-    strcpy(baseQ, "SELECT * FROM fileshare_configmodel LIMIT 1 OFFSET ");
-    baselen = strlen(baseQ);
-    baseQ[baselen] = OFFSET+'0'; //Requested index goes HERE
-    baseQ[baselen+1] = ';';
-    sqlite3_prepare_v2(dbDisco, baseQ, -1, &stmt, 0);
-    char* name;
-    int oscP, lfoP, effP; 
+    char* sql = "SELECT * FROM fileshare_configmodel WHERE id= ? ";
+    // baselen = strlen(baseQ);
+    // baseQ[baselen] = id +'0'; //Requested index goes HERE
+    // baseQ[baselen+1] = ';';
+    rc = sqlite3_prepare_v2(dbDisco, sql, -1, &stmt, 0);
+    if (rc != SQLITE_OK) {
+        
+        fprintf(stderr, "Cannot prepare statement: %s\n", sqlite3_errmsg(dbDisco));
+        exit(-1);
+    }
 
+    sqlite3_bind_int(stmt, 1, id); // The while loop will hopefully handle the first step
     while (sqlite3_step(stmt) != SQLITE_DONE){
 
         configPointer = sqlite3_column_int(stmt,0); // Use index as the pointer
         printf("New config pointer is %d\n", configPointer);
-        name        = sqlite3_column_text(stmt,1);
-        printf("Loaded config: %s\n", name);
+        
+        name = sqlite3_column_text(stmt,1);
+        printf("Loading config: %s\n", name);
+        
         // OSC params
         sliders[0].value = (float)sqlite3_column_int(stmt,2)/127;
         sliders[1].value = (float)sqlite3_column_int(stmt,3)/127;
@@ -499,11 +509,20 @@ void loadConfig(int dir){
         lfoP   = sqlite3_column_int(stmt,15);
         changeLfo(lfoP);
     }
+    // Chek loaded values
+    for (int i = 0; i< NUM_SLIDERS; i++){
+        printf("Slider %d has value %f.\n",i,sliders[i].value);
+    }
+    printf("New OSC Pointer: %d\n", oscP);
+    printf("New effP Pointer: %d\n", lfoP);
+    printf("New lfoP Pointer: %d\n", lfoP);
+
+
     closeDB();
 }
 
 void changeOsc(int p){
-    if (p == 0){
+    if (p == -1){
         oscTypePointer++;
     }
     else{
@@ -534,7 +553,7 @@ void changeMode(int input){
     }
 }
 void changeLfo(int p){
-    if (p == 0){
+    if (p == -1){
         lfoTargetPointer++;
     }
     else{
@@ -555,7 +574,7 @@ void updateCenterFreq(float frequency){
 
 // change implemented. Allow manual input of effectTypePointer in order to enable loading configs
 void changeEffect(int p){
-    if (p == 0) {
+    if (p == -1) {
         effectTypePointer++;
     }
     else{
@@ -823,9 +842,13 @@ void drawButtons(){
             {
                 tempButton.buttonAction(1);
             }
-            else
+            else if (!strcmp(tempButton.text, "<"))
             {
                 tempButton.buttonAction(0);
+            }
+            else
+            {
+                tempButton.buttonAction(-1);
             }
         }
         // GUI: Dialog Window
@@ -1067,7 +1090,6 @@ void processInput(){
     }
 }
 
-
 void main() {
     InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Synth");
     SetTargetFPS(60);
@@ -1144,7 +1166,7 @@ void main() {
 
                 strcpy(fileNameToLoad, TextFormat("%s/%s", fileDialogState.dirPathText, fileDialogState.fileNameText));
                 printf("%s\n",fileNameToLoad);
-                loadWavSound(fileNameToLoad, 36);
+                // loadWavSound(fileNameToLoad, 36);
             }
 
             fileDialogState.SelectFilePressed = false;

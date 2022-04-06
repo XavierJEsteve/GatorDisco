@@ -53,14 +53,16 @@ body {
 .container {
   display: grid; 
   grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
   gap: 10px 10px; 
   grid-template-areas: 
-    "audioFiles"  "synthFiles"; 
+    "confFiles"  "audioUpload" 
+    "cardStock" "audioFiles"; 
 }
-/* .audioUpload { grid-area: audioUpload; } */
-/* .synthForm { grid-area: synthForm; } */
+.audioUpload { grid-area: audioUpload; }
+.cardStock { grid-area: cardStock; }
 .audioFiles { grid-area: audioFiles; }
-.synthFiles { grid-area: synthFiles; }
+.confFiles { grid-area: confFiles; }
 
 
 .td-bright {

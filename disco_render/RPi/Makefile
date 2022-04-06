@@ -238,7 +238,7 @@ endif
 
 # Define include paths for required headers
 # NOTE: Some external/extras libraries could be required (stb, physac, easings...)
-INCLUDE_PATHS = -I include/ -I$(RAYLIB_PATH)/src -I$(RAYLIB_PATH)/src/external -I$(RAYLIB_PATH)/src/extras
+INCLUDE_PATHS = -I include/ -I sqlite/ -I$(RAYLIB_PATH)/src -I$(RAYLIB_PATH)/src/external -I$(RAYLIB_PATH)/src/extras
 
 # Define additional directories containing required header files
 ifeq ($(PLATFORM),PLATFORM_RPI)
@@ -563,4 +563,3 @@ ifeq ($(PLATFORM),PLATFORM_WEB)
 	del *.o *.html *.js
 endif
 	@echo Cleaning done
-

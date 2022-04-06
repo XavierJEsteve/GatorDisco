@@ -5,7 +5,7 @@ from django.http import HttpResponse
 from django.core.files.storage import FileSystemStorage
 from django.utils.datastructures import MultiValueDictKeyError
 from .forms import AudioForm, SynthForm
-from .models import AudioModel, SynthModel
+from .models import AudioModel, SynthModel, ConfigModel
 
 # Primarily for dbOperations
 from django.conf import settings
@@ -23,12 +23,12 @@ from django.urls import path
 def index(request,action=-1,id=-1):
         audio_files = AudioModel.objects.all()
         synth_files = SynthModel.objects.all()
+        config_rows = ConfigModel.objects.all()
         
-        configs, photos = config_list()
-
         context = {
                 'audio_files'   : audio_files,
                 'synth_files'   : synth_files,
+                'config_rows'   : config_rows
         }
         return render(request, 'index.html', context)
 
