@@ -1,6 +1,7 @@
 {
     "C_Cpp.errorSquiggles": "Disabled",
     "files.associations": {
-        "type_traits": "c"
+        "type_traits": "c",
+        "portaudio.h": "c"
     }
 }

@@ -16,7 +16,9 @@
 #include "spiConstants.h"
 #include "include/db.h"
 #include "sqlite/sqlite3.h"
-#include "portaudio.h"
+// PORT AUDIO
+// #include "alsa/error.h"
+// #include "portaudio.h"
 
 // channel is the wiringPi name for the chip select (or chip enable) pin.
 // Set this to 0 or 1, depending on how it's connected.
@@ -316,7 +318,7 @@ void saveConfig(void){
     int effectType = effectTypePointer;
     int lfoTarget = lfoTargetPointer;
     
-    char* sql = "UPDATE fileshare_configmodel SET octave= ? , oscParam1= ? , oscParam2= ? , lfoSpeed= ? , lfoval= ? , Attack= ? , Decay= ? , Sustain= ? , Release= ? , Effect1= ? , Effect2= ? , OscType= ? , effectType= ? , lfoTarget= ? WHERE id= ? ;";
+    char* sql = "UPDATE fileshare_configmodel SET octave= ?, oscParam1= ?, oscParam2= ?, lfoSpeed= ?, lfoval= ?, Attack= ?, Decay= ?, Sustain= ?, Release= ?, Effect1= ?, Effect2= ?, OscType= ?, effectType= ?, lfoTarget= ? WHERE id= ?;";
     rc = sqlite3_prepare_v2(dbDisco, sql, -1, &stmt, NULL);
     
     if (rc) { // anything but 0 is failure
@@ -419,16 +421,17 @@ void saveConfig(void){
             fprintf(stderr, "Failed to bind configPointer: %s\n", sqlite3_errmsg(dbDisco));
         }
 
-
         char *sentSQL = sqlite3_expanded_sql(stmt);
         printf("Sent SQL: %s\n",sentSQL);
+        
         // Do the REPLACMENT:
-        sleep(10);
         rc = sqlite3_step(stmt);
+
         if (rc != SQLITE_DONE) {
             fprintf(stderr, "Cannot step from statement: %d ; %s\n", rc, sqlite3_errmsg(dbDisco));
             sqlite3_close(dbDisco);
         }
+        sqlite3_reset(stmt);
         rc = sqlite3_finalize(stmt);
         sqlite3_close(dbDisco);
     }
@@ -461,13 +464,16 @@ int setNumConfigs(){ //returns the number of configurations
     }
     count = sqlite3_column_int(stmt, 0);
     numConfigs = count;
+    
+    sqlite3_reset(stmt);
+    sqlite3_finalize(stmt);
     closeDB();
     return count;
 }
 
 void loadConfig(int dir){
 
-    openDB();
+    // openDB();
     sqlite3_stmt* stmt;
     int rc;
     char *err;
@@ -481,7 +487,8 @@ void loadConfig(int dir){
     
     //logic for setting index    
     nConfigs = setNumConfigs(); // set numConfigs
-    
+    openDB();
+
     // The DB is empty
     if (nConfigs == 0){
         // Load values of 0
@@ -523,6 +530,8 @@ void loadConfig(int dir){
         exit(-1);
     }
 
+    rc = sqlite3_bind_int(stmt, 1, id); // The while loop will hopefully handle the first step
+    // rc = sqlite3_step(stmt);
     sqlite3_bind_int(stmt, 1, id); // The while loop will hopefully handle the first step
     while (sqlite3_step(stmt) != SQLITE_DONE){
 
@@ -550,11 +559,11 @@ void loadConfig(int dir){
         sliders[10].value    = (float)sqlite3_column_int(stmt,12)/127;
         
         // Type pointers
-        oscP    = sqlite3_column_int(stmt,13);
+        oscP    = sqlite3_column_int(stmt,15);
         changeOsc(oscP);
-        effP  = sqlite3_column_int(stmt,14);
+        effP  = sqlite3_column_int(stmt,13);
         changeEffect(effP);
-        lfoP   = sqlite3_column_int(stmt,15);
+        lfoP   = sqlite3_column_int(stmt,14);
         changeLfo(lfoP);
     }
     // Chek loaded values
@@ -562,7 +571,7 @@ void loadConfig(int dir){
         printf("Slider %d has value %f.\n",i,sliders[i].value);
     }
     printf("New OSC Pointer: %d\n", oscP);
-    printf("New effP Pointer: %d\n", lfoP);
+    printf("New effP Pointer: %d\n", effP);
     printf("New lfoP Pointer: %d\n", lfoP);
 
     sqlite3_reset(stmt);
@@ -1158,12 +1167,47 @@ void processInput(){
     }
 }
 
+// typedef struct
+// {
+//     float left_phase;
+//     float right_phase;
+// }   
+// paTestData;
+
+// static int patestCallback( const void *inputBuffer, void *outputBuffer,
+//                            unsigned long framesPerBuffer,
+//                            const PaStreamCallbackTimeInfo* timeInfo,
+//                            PaStreamCallbackFlags statusFlags,
+//                            void *userData )
+// {
+//     /* Cast data passed through stream to our structure. */
+//     paTestData *data = (paTestData*)userData; 
+//     float *out = (float*)outputBuffer;
+//     unsigned int i;
+//     (void) inputBuffer; /* Prevent unused variable warning. */
+    
+//     for( i=0; i<framesPerBuffer; i++ )
+//     {
+//          *out = data->left_phase;  /* left */
+//          out++;
+//          *out = data->right_phase;  /* right */
+//          out++;
+//         /* Generate simple sawtooth phaser that ranges between -1.0 and 1.0. */
+//         data->left_phase += 0.01f;
+//         /* When signal reaches top, drop back down. */
+//         if( data->left_phase >= 1.0f ) data->left_phase -= 2.0f;
+//         /* higher pitch so we can distinguish left and right. */
+//         data->right_phase += 0.03f;
+//         if( data->right_phase >= 1.0f ) data->right_phase -= 2.0f;
+//     }
+//     return 0;
+// }
+
 void main() {
     InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Synth");
     SetTargetFPS(60);
     InitAudioDevice();
     initMasterInput();
-    //initSynth(&synth);
     loadWavSound("wavs/piano.wav",36);
     buildKeys();
     buildSliders();
@@ -1171,44 +1215,26 @@ void main() {
     buildButtons();
     buildEQButtons();
     buildGuiSections();
-    /*
-    SetAudioStreamBufferSizeDefault(STREAM_BUFFER_SIZE);
-    AudioStream synthStream = LoadAudioStream(SAMPLE_RATE,
-        32 ,
-        1
-    );
-    SetAudioStreamVolume(synthStream, 0.25f);
-    PlayAudioStream(synthStream);
-    */
+    
     //spi config
     int fd, result;
-
-    //cout << "Initializing" << endl ;
-
-    // Configure the interface.
     // CHANNEL insicates chip select,
     // 50000 indicates bus speed.
     fd = wiringPiSPISetup(CHANNEL, 500000);
-
-    //cout << "Init result: " << fd << endl;
-
     // clear display
-	
-    spi_buffer[0] = 0x76;
+	spi_buffer[0] = 0x76;
     wiringPiSPIDataRW(CHANNEL, spi_buffer, 1);
-        unsigned char firstByte;
-        unsigned char previousByte;
-        unsigned char secondByte = 0;
-        unsigned char midipacket[8];
-	
-        int seqfd = open(MIDI_DEVICE1, O_RDONLY);
-        if (seqfd == -1) {
-            seqfd = open(MIDI_DEVICE2, O_RDONLY);
-            if(seqfd == -1){
-                printf("Error: cannot open %s\n", MIDI_DEVICE1);
-                // exit(1);
-            }
+
+    unsigned char midipacket[8];
+	//open midi device
+    int seqfd = open(MIDI_DEVICE1, O_RDONLY);
+    if (seqfd == -1) {
+        seqfd = open(MIDI_DEVICE2, O_RDONLY);
+        if(seqfd == -1){
+            printf("Error: cannot open %s\n", MIDI_DEVICE1);
+            // exit(1);
         }
+    }
 
 	
     fileDialogState = InitGuiFileDialog(3*SCREEN_HEIGHT/4, 3*SCREEN_HEIGHT/4, wavDirectory, false);
@@ -1218,7 +1244,50 @@ void main() {
 
     // char* filterExt = ".wav";
     // strcpy(fileDialogState.filterExt,filterExt);
-    int bytesLeft = 0;
+    
+    //   /******************************/
+    //  /***   port audio config   ****/
+    // /******************************/
+    
+    // //initialize function
+    // PaError err = Pa_Initialize();
+    // if( err != paNoError ){
+    //     printf(  "PortAudio error: %s\n", Pa_GetErrorText( err ) );
+    //     Pa_Terminate();
+    //     exit(1);
+    // }
+    // static paTestData data;
+    // PaStream *stream;
+    // /* Open an audio I/O stream. */
+    // err = Pa_OpenDefaultStream( &stream,
+    //                             0,          /* no input channels */
+    //                             2,          /* stereo output */
+    //                             paFloat32,  /* 32 bit floating point output */
+    //                             SAMPLE_RATE,
+    //                             256,        /* frames per buffer, i.e. the number
+    //                                                of sample frames that PortAudio will
+    //                                                request from the callback. Many apps
+    //                                                may want to use
+    //                                                paFramesPerBufferUnspecified, which
+    //                                                tells PortAudio to pick the best,
+    //                                                possibly changing, buffer size.*/
+    //                             patestCallback, /* this is your callback function */
+    //                             &data ); /*This is a pointer that will be passed to
+    //                                                your callback*/
+    // if( err != paNoError ){
+    //     printf(  "PortAudio error: %s\n", Pa_GetErrorText( err ) );
+    //     Pa_Terminate();
+    //     exit(1);
+    // }
+
+    // err = Pa_StartStream( stream );
+    // if( err != paNoError ){
+    //     printf(  "PortAudio error: %s\n", Pa_GetErrorText( err ) );
+    //     Pa_Terminate();
+    //     exit(1);
+    // }
+    /****   main loop   ****/
+
     while(WindowShouldClose() == false)
     {            
         if (fileDialogState.fileDialogActive) GuiLock();
@@ -1250,22 +1319,7 @@ void main() {
             //updateSignal(buffer);
             drawGUI();
 		    read(seqfd, &midipacket, sizeof(midipacket));
-            /*
-            if((firstByte != midipacket[1] || secondByte != midipacket[2]) && midipacket[1] < 109 && midipacket[1] > 23){
-                //send key and gate
-                processSpiInput(masterInput.keyPointer);
-                processSpiInput(midipacket[1]-24);
-                if(midipacket[2] != 0){
-                    PlaySound(wavSound);
-                    //masterInput.keyPressed = true;
-                }
-                processSpiInput(SPI_MODULE_ENV | SPI_GATE);
-                processSpiInput(midipacket[2]);
-                firstByte = midipacket[1];
-                secondByte = midipacket[2];
-                //printf("byte 1: %d, byte 2: %d\n", midipacket[1],midipacket[2]);
-            }
-            */
+            
             for(int i = 0; i < 6; i++){
                 if(midipacket[i] == 144){
                     printf("byte 0: %d, byte 1: %d, byte 2: %d\n", midipacket[i], midipacket[i+1], midipacket[i+2]);
@@ -1279,6 +1333,8 @@ void main() {
         //}
     }
     UnloadTexture(texture);     // Unload texture
+    // Pa_StopStream(stream);
+    // Pa_Terminate();
     CloseAudioDevice();
     CloseWindow();
 }
