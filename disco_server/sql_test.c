@@ -40,6 +40,7 @@ int setNumConfigs(){ //returns the number of configurations
     char *err;
     int nByte = -1; //don't care
     int count;
+    openDB(dbDisco);
     
     rc = sqlite3_prepare_v2(dbDisco, "SELECT COUNT(*) FROM fileshare_configmodel;", nByte, &stmt, NULL);
     if (rc != SQLITE_OK) {
@@ -53,6 +54,7 @@ int setNumConfigs(){ //returns the number of configurations
     }
     count = sqlite3_column_int(stmt, 0);
     numConfigs = count;
+    closeDB(dbDisco);
     return count;
 }
 
@@ -155,8 +157,6 @@ void loadConfig(int dir){
 }
 
 void viewTables(){
-    sqlite3* dbTest;
-    sqlite3* dbDisco;
     sqlite3_stmt* stmt;
     int rcTest, rcDjango;
     char *err;
@@ -174,13 +174,209 @@ void viewTables(){
 
 }
 
-int main(){
+void insertEntry_Image(){
+
+    // First, read the image file
+    FILE *fp = fopen("./media/config1.png","rb");
+    if (fp == NULL){
+        printf("Cannot open image file\n");
+    }
+
+    fseek(fp,0,SEEK_END);
+
+    if(ferror(fp)){
+        fprintf(stderr, "fseek() failed\n");
+        int r = fclose(fp);
+
+        if (r == EOF) {
+            fprintf(stderr, "Cannot close file handler\n");          
+        }    
+    }
+
+    int flen = ftell(fp);
+
+    if (flen == -1) {
+        
+        perror("error occurred");
+        int r = fclose(fp);
+
+        if (r == EOF) {
+            fprintf(stderr, "Cannot close file handler\n");
+        }     
+    }
+
+    fseek(fp, 0, SEEK_SET);
+
+    if (ferror(fp)) {
+        
+        fprintf(stderr, "fseek() failed\n");
+        int r = fclose(fp);
+
+        if (r == EOF) {
+            fprintf(stderr, "Cannot close file handler\n");
+        }
+    }
+    char data[flen+1];
+    int size = fread(data, 1, flen, fp);
+
+    if (ferror(fp)) {
+        
+        fprintf(stderr, "fread() failed\n");
+        int r = fclose(fp);
+
+        if (r == EOF) {
+            fprintf(stderr, "Cannot close file handler\n");
+        }
+    }
+    
+    int r = fclose(fp);
+
+    if (r == EOF) {
+        fprintf(stderr, "Cannot close file handler\n");
+    } 
+
+    sqlite3_stmt* pStmt;
+    int rc;
+    char *errMsg = 0;
+    int configPointer=4;
     openDB();
+
+    char *sql = "INSERT INTO fileshare_configmodel (name, octave, oscParam1, oscParam2, lfoSpeed, lfoval, Attack, Decay, Sustain, Release, Effect1, Effect2, oscType, effectType, lfoTarget, image) VALUES('test4',0,1,2,3,4,5,6,7,8,9,10,11,12,13,?);";
+
+    rc = sqlite3_prepare_v2(dbDisco, sql, -1, &pStmt, 0);
+    if (rc != SQLITE_OK) {
+        
+        fprintf(stderr, "Cannot prepare statement: %s\n", sqlite3_errmsg(dbDisco));
+    }
+
+
+    //fill all but name and image with 0s
+    // for (int i = 1; i < 14; i++){
+    //     sqlite3_bind_int(pStmt, i, 0);
+    //     rc = sqlite3_step(pStmt);
+    //     if (rc){
+    //         printf("Step %d failed: %s\n",i, sqlite3_errmsg(dbDisco));
+    //     }
+    // }
+    //Image
+    sqlite3_bind_blob(pStmt, 1, data, size, SQLITE_STATIC);
+    rc = sqlite3_step(pStmt);
+
+    if (rc != SQLITE_DONE) {
+        
+        printf("execution failed: %s", sqlite3_errmsg(dbDisco));
+    }
+        
+    sqlite3_finalize(pStmt);    
+
+    sqlite3_close(dbDisco);
+}
+
+void replaceEntry_Image(){
+    // First, read the image file
+    FILE *fp = fopen("./media/config1.png","rb");
+    if (fp == NULL){
+        printf("Cannot open image file\n");
+    }
+
+    fseek(fp,0,SEEK_END);
+
+    if(ferror(fp)){
+        fprintf(stderr, "fseek() failed\n");
+        int r = fclose(fp);
+
+        if (r == EOF) {
+            fprintf(stderr, "Cannot close file handler\n");          
+        }    
+    }
+
+    int flen = ftell(fp);
+
+    if (flen == -1) {
+        
+        perror("error occurred");
+        int r = fclose(fp);
+
+        if (r == EOF) {
+            fprintf(stderr, "Cannot close file handler\n");
+        }     
+    }
+
+    fseek(fp, 0, SEEK_SET);
+
+    if (ferror(fp)) {
+        
+        fprintf(stderr, "fseek() failed\n");
+        int r = fclose(fp);
+
+        if (r == EOF) {
+            fprintf(stderr, "Cannot close file handler\n");
+        }
+    }
+    char data[flen+1];
+    int size = fread(data, 1, flen, fp);
+
+    if (ferror(fp)) {
+        
+        fprintf(stderr, "fread() failed\n");
+        int r = fclose(fp);
+
+        if (r == EOF) {
+            fprintf(stderr, "Cannot close file handler\n");
+        }
+    }
+    
+    int r = fclose(fp);
+
+    if (r == EOF) {
+        fprintf(stderr, "Cannot close file handler\n");
+    } 
+
+    sqlite3_stmt* pStmt;
+    int rc;
+    char *errMsg = 0;
+    int configPointer=4;
+    openDB();
+
+    // char *sql = "REPLACE INTO fileshare_configmodel (name, image) VALUES('test2', ?);";
+    char *sql = "UPDATE fileshare_configmodel SET image = ?, octave=100 WHERE id=2;";
+
+    rc = sqlite3_prepare_v2(dbDisco, sql, -1, &pStmt, 0);
+    if (rc != SQLITE_OK) {
+        
+        fprintf(stderr, "Cannot prepare statement: %s\n", sqlite3_errmsg(dbDisco));
+    }
+
+
+    //fill all but name and image with 0s
+    // for (int i = 1; i < 14; i++){
+    //     sqlite3_bind_int(pStmt, i, 0);
+    //     rc = sqlite3_step(pStmt);
+    //     if (rc){
+    //         printf("Step %d failed: %s\n",i, sqlite3_errmsg(dbDisco));
+    //     }
+    // }
+    //Image
+    sqlite3_bind_blob(pStmt, 1, data, size, SQLITE_STATIC);
+    rc = sqlite3_step(pStmt);
+
+    if (rc != SQLITE_DONE) {
+        
+        printf("execution failed: %s", sqlite3_errmsg(dbDisco));
+    }
+        
+    sqlite3_finalize(pStmt);    
+
+    sqlite3_close(dbDisco);
+}
+
+int main(){
     int nConfigs;
     // loadConfig(0);
-    setNumConfigs();
-    printf("Found %d config files.\n",numConfigs);
-    listConfigs();
-    loadConfig(1);
-    closeDB();
+    // setNumConfigs();
+    // printf("Found %d config files.\n",numConfigs);
+    // listConfigs();
+    // loadConfig(1);
+    // insertEntry_Image();
+    replaceEntry_Image();
 }
