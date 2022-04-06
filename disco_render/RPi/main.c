@@ -992,6 +992,13 @@ void clearKeyPress(){
         printf("clear key press %d\n", clearPressCounter);
         clearPressCounter++;
         for(int i = 0; i < 17; i++){
+            if(keys[i].pressed == true){
+                processSpiInput(masterInput.keyPointer);
+                processSpiInput(i + 12*octave);
+                if(octave != 0)
+                printf("octave command\n");
+                processSpiInput(0);
+            }
             keys[i].pressed = false;
         }
         masterInput.keyPressed = false;
@@ -1035,6 +1042,9 @@ void processInput(){
                                 if(masterInput.keyIndex != i + 12*octave){
                                     //processSpiInput(SPI_MODULE_ENV | SPI_GATE);
                                     //processSpiInput(0);
+                                    // processSpiInput(masterInput.keyPointer);
+                                    // processSpiInput(masterInput.keyIndex);
+                                    // processSpiInput(0);
                                     masterInput.keyIndex = i +12*octave;
                                 }
                                 foundKey = true;
@@ -1045,6 +1055,9 @@ void processInput(){
                                 if(masterInput.keyIndex != i + 12*octave){
                                     //processSpiInput(SPI_MODULE_ENV | SPI_GATE);
                                     //processSpiInput(0);
+                                    // processSpiInput(masterInput.keyPointer);
+                                    // processSpiInput(masterInput.keyIndex);
+                                    // processSpiInput(0);
                                     masterInput.keyIndex = i +12*octave;
                                 }
                                 foundKey = true;
