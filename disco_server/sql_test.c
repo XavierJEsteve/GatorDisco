@@ -335,27 +335,17 @@ void replaceEntry_Image(){
     sqlite3_stmt* pStmt;
     int rc;
     char *errMsg = 0;
-    int configPointer=4;
+    int configPointer=9;
     openDB();
 
     // char *sql = "REPLACE INTO fileshare_configmodel (name, image) VALUES('test2', ?);";
-    char *sql = "UPDATE fileshare_configmodel SET image = ?, octave=100 WHERE id=?;";
+    char *sql = "UPDATE fileshare_configmodel SET image = ? WHERE id= 10 ;";
 
     rc = sqlite3_prepare_v2(dbDisco, sql, -1, &pStmt, 0);
     if (rc != SQLITE_OK) {
         
         fprintf(stderr, "Cannot prepare statement: %s\n", sqlite3_errmsg(dbDisco));
     }
-
-
-    //fill all but name and image with 0s
-    // for (int i = 1; i < 14; i++){
-    //     sqlite3_bind_int(pStmt, i, 0);
-    //     rc = sqlite3_step(pStmt);
-    //     if (rc){
-    //         printf("Step %d failed: %s\n",i, sqlite3_errmsg(dbDisco));
-    //     }
-    // }
     //Image
     sqlite3_bind_blob(pStmt, 1, data, size, SQLITE_STATIC);
     rc = sqlite3_step(pStmt);
@@ -367,10 +357,9 @@ void replaceEntry_Image(){
     if (rc != SQLITE_DONE) {
         
         printf("execution failed: %s", sqlite3_errmsg(dbDisco));
+        sqlite3_close(dbDisco);
     }
-        
     sqlite3_finalize(pStmt);    
-
     sqlite3_close(dbDisco);
 }
 

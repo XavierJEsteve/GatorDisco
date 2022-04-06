@@ -125,7 +125,7 @@ Sound wavSound;
 sqlite3* dbDisco;
 int configPointer = 1; // 1 <= configPOinter <= numConfigs
 int numConfigs;
-char* configNames[NUM_CONFIGS+1]= {"DEBUG","Conf 1","Conf 2","Conf 3","Conf 4","Conf 5","Conf 6","Conf 7","Conf 8","Conf 9","Conf 10"}; 
+char* configNames[NUM_CONFIGS+1]= {"DEBUG","Conf1","Conf2","Conf3","Conf4","Conf5","Conf6","Conf7","Conf8","Conf9","Conf10"}; 
 
 // File handling
 GuiFileDialogState fileDialogState;
@@ -133,6 +133,7 @@ char* wavDirectory = "/home/pi/GatorDisco/disco_render/RPi/wavs/";
 char fileNameToLoad[512] = { 0 };
 Texture texture = { 1 };
 
+int screenshotTarget = 0;
 bool screenshotNeeded = false;
 
 
@@ -291,7 +292,9 @@ void saveConfig(void){
     
     openDB();
     sqlite3_stmt *stmt;
-    
+    int rc;
+    int paramCount;
+
     //List of VARS
     // 0. ID
     // int name
@@ -313,23 +316,22 @@ void saveConfig(void){
     int effectType = effectTypePointer;
     int lfoTarget = lfoTargetPointer;
     
-    int rc;
     // rc = sqlite3_prepare_v2(dbDisco, "REPLACE into fileshare_configmodel(id, name, octave, oscParam1, oscParam2, lfoSpeed, lfoval, Attack, Decay, Sustain, Release, Effect1, Effect2, OscType, effectType, lfoTarget, image) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?, ?, ?, ?);", -1, &stmt, NULL);
     // rc = sqlite3_prepare_v2(dbDisco, "UPDATE fileshare_configmodel SET id=?, name='?', octave=?, oscParam1=?, oscParam2=?, lfoSpeed=?, lfoval=?, Attack=?, Decay=?, Sustain=?, Release=?, Effect1=?, Effect2=?, OscType=?, effectType=?, lfoTarget=?, image=? WHERE id=?;",-1,&stmt, NULL);
-    rc = sqlite3_prepare_v2(dbDisco, "UPDATE fileshare_configmodel SET octave=?, oscParam1=?, oscParam2=?, lfoSpeed=?, lfoval=?, Attack=?, Decay=?, Sustain=?, Release=?, Effect1=?, Effect2=?, OscType=?, effectType=?, lfoTarget=?, image=? WHERE id=?;",-1,&stmt, NULL);
+    char* sql = "UPDATE fileshare_configmodel SET octave= ? , oscParam1= ? , oscParam2= ? , lfoSpeed= ? , lfoval= ? , Attack= ? , Decay= ? , Sustain= ? , Release= ? , Effect1= ? , Effect2= ? , OscType= ? , effectType= ? , lfoTarget= ? , image= ? WHERE id= 2 ;";
+    rc = sqlite3_prepare_v2(dbDisco, sql,-1,&stmt, NULL);
     
     if (rc) { // anything but 0 is failure
-       printf("Error executing sql statement\n");
+       printf("Error preparing sql statement\n");
        printf("Received rc %d\n",rc);
        sqlite3_close(dbDisco);
     }
     else
     {
-        int paramCount;
         paramCount = sqlite3_bind_parameter_count(stmt);
         printf("The number of parameters in the statement: %d\n", paramCount);
-                
-        // Bind the values for the insert:
+
+        //*************BINDS***********//    
         sqlite3_bind_int(stmt, 1, octave );
         printf("Octave : %d\n", octave);
 
@@ -366,28 +368,30 @@ void saveConfig(void){
         printf("effectType : %d\n", effectType);
         sqlite3_bind_int(stmt, 14, lfoTarget);
         printf("lfoTarget : %d\n", lfoTarget);
+        //******************************/
 
         //Image
         sqlite3_bind_zeroblob(stmt,15,0);
 
         // WHERE
-        sqlite3_bind_int(stmt, 16, configPointer);
-        printf("configPointer : %d\n", configPointer);
+        // sqlite3_bind_int(stmt, 16, configPointer);
+        // printf("configPointer : %d\n", configPointer);
 
         // Do the REPLACMENT:
-        sqlite3_step(stmt);
-        int last_id = sqlite3_last_insert_rowid(dbDisco);
-        printf("The last Id of the inserted row is %d\n", last_id);
-        // Reset the prepared statement to the initial state.
-        sqlite3_finalize(stmt);
-        closeDB();  
+        rc = sqlite3_step(stmt);
+        if (rc != SQLITE_DONE) {
+            fprintf(stderr, "Cannot step from statement: %s\n", sqlite3_errmsg(dbDisco));
+            sqlite3_close(dbDisco);
+        }
+        rc = sqlite3_finalize(stmt);
+        sqlite3_close(dbDisco);
     }
   
     // Lastly take a screenshot with <config_name>.png and save to the same directory
     // TakeScreenshot("../../disco_server/MEDIA/config.png"); 
     // Taking a screenshot here may lead to incomplete capture (usually just the background)
     // TESTING: setting a boolean to true and checking it at after endDrawing()
-    screenshotNeeded = true;
+    // screenshotNeeded = true;
 }
 
 int setNumConfigs(){ //returns the number of configurations
@@ -978,7 +982,13 @@ void drawGUI(){
     }
     EndDrawing();
     if (screenshotNeeded){
-        TakeScreenshot("../../disco_server/media/screen.png"); 
+
+        char screenPath[100];
+        strcpy(screenPath,"../../disco_server/media/");
+        
+        strcat(screenPath,configNames[configPointer]);
+    
+        TakeScreenshot(screenPath); 
         screenshotNeeded = false;
     }
 }
