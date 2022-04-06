@@ -465,9 +465,7 @@ void loadConfig(int dir){
     printf("Target ID is %d\n",id);
 
     char* sql = "SELECT * FROM fileshare_configmodel WHERE id= ? ";
-    // baselen = strlen(baseQ);
-    // baseQ[baselen] = id +'0'; //Requested index goes HERE
-    // baseQ[baselen+1] = ';';
+
     rc = sqlite3_prepare_v2(dbDisco, sql, -1, &stmt, 0);
     if (rc != SQLITE_OK) {
         
