@@ -21,13 +21,10 @@ from django.urls import path
         * CRUD from the main screen
                 '''
 def index(request,action=-1,id=-1):
-        audio_files = AudioModel.objects.all()
-        synth_files = SynthModel.objects.all()     
+ 
         config_rows = ConfigModel.objects.all()   
 
         context = {
-                'audio_files'   : audio_files,
-                'synth_files'   : synth_files,
                 'config_rows'   : config_rows
         }
         return render(request, 'index.html', context)

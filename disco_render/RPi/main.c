@@ -14,6 +14,12 @@
 #include <fcntl.h>
 #include "include/synth.h"
 #include "spiConstants.h"
+#include "include/db.h"
+#include "sqlite/sqlite3.h"
+// PORT AUDIO
+// #include "alsa/error.h"
+// #include "portaudio.h"
+
 // channel is the wiringPi name for the chip select (or chip enable) pin.
 // Set this to 0 or 1, depending on how it's connected.
 static const int CHANNEL = 0;
@@ -28,11 +34,16 @@ static const int CHANNEL = 0;
 #define MAX_ATTACK_TIME 3
 #define MAX_DECAY_TIME 5
 #define NUM_SLIDERS 11
-#define NUM_BUTTONS 6
-#define MIDI_DEVICE "/dev/midi2"
+#define NUM_BUTTONS 8
+#define MIDI_DEVICE1 "/dev/midi1"
+#define MIDI_DEVICE2 "/dev/midi2"
 #define SYNTH_MODE 0
 #define EQ_MODE 1
+#define WAV_MODE 2
 #define NUM_EQ_BANDS 10
+#define NUM_CONFIGS 10
+
+#define NUM_OSCILLATORS 5
 
 typedef struct{
     int byte;
@@ -104,7 +115,7 @@ float fCenters[NUM_EQ_BANDS] = {32,64,125,250,500,1000,2000,4000,8000,16000};
 Slider sliders[NUM_SLIDERS];
 Button buttons[NUM_BUTTONS];
 Button EQButtons[NUM_EQ_BANDS];
-GUI_Section guiSections[6];
+GUI_Section guiSections[5];
 int currentBand = 0;
 unsigned char spi_buffer[100];
 
@@ -112,17 +123,24 @@ Synth synth;
 SpiHandler spiHandler;
 Sound wavSound;
 
+// Static Database 
+sqlite3* dbDisco;
+int configPointer = 1; // 1 <= configPOinter <= numConfigs
+int numConfigs;
+char* configNames[NUM_CONFIGS+1]= {"DEBUG","Conf1","Conf2","Conf3","Conf4","Conf5","Conf6","Conf7","Conf8","Conf9","Conf10"}; 
+
 // File handling
 GuiFileDialogState fileDialogState;
-char* configDirectory = "/home/pi/GatorDisco/disco_server/MEDIA/";
+char* wavDirectory = "/home/pi/GatorDisco/disco_render/RPi/wavs/";
 char fileNameToLoad[512] = { 0 };
 Texture texture = { 1 };
 
+int screenshotTarget = 0;
 bool screenshotNeeded = false;
 
 
 void processSpiInput(int byte){
-    printf("sent byte: %d\n", byte);
+    //printf("sent byte: %d\n", byte);
     spi_buffer[0] = byte;
     wiringPiSPIDataRW(CHANNEL, spi_buffer, 1);
 }
@@ -164,6 +182,10 @@ void drawWaveform(float* signal,int width,int height,int x, int y){
         prev = current;
     }
 }
+drawConfigDisplay(){
+    DrawRectangle(1050,50,SCREEN_WIDTH/8,SCREEN_HEIGHT/10,WHITE);
+    DrawText(configNames[configPointer],1070,80,20,RED);
+}
 void buildGuiSections(){
     //build oscillator section
     GUI_Section tempSection;
@@ -179,34 +201,30 @@ void buildGuiSections(){
     tempSection.height = SCREEN_HEIGHT*3/8;
     tempSection.width = SCREEN_WIDTH*5/16;
     guiSections[1] = tempSection;
-    tempSection.title = "WAVEFORM";
+    tempSection.title = "";
+    tempSection.noTitle = true;
     tempSection.xPos = SCREEN_WIDTH*3/4;
     tempSection.yPos = 0;
-    tempSection.height = SCREEN_HEIGHT*3/8;
+    tempSection.height = SCREEN_HEIGHT*3/4;
     tempSection.width = SCREEN_WIDTH/4;
     guiSections[2] = tempSection;
     tempSection.title = "LFO";
     tempSection.xPos = 0;
     tempSection.yPos = SCREEN_HEIGHT*3/8;
     tempSection.height = SCREEN_HEIGHT*3/8;
-    tempSection.width = SCREEN_WIDTH*11/32;
+    tempSection.width = SCREEN_WIDTH*3/8;
+    tempSection.noTitle = false;
     guiSections[3] = tempSection;
     tempSection.title = "EFFECTS";
-    tempSection.xPos = SCREEN_WIDTH*11/32;
+    tempSection.xPos = SCREEN_WIDTH*3/8;
     tempSection.yPos = SCREEN_HEIGHT*3/8;
     tempSection.height = SCREEN_HEIGHT*3/8;
-    tempSection.width = SCREEN_WIDTH*11/32;
+    tempSection.width = SCREEN_WIDTH*3/8;
+    tempSection.noTitle = false;
     guiSections[4] = tempSection;
-    tempSection.title = "";
-    tempSection.noTitle = true;
-    tempSection.xPos = SCREEN_WIDTH*11/16;
-    tempSection.yPos = SCREEN_HEIGHT*3/8;
-    tempSection.height = SCREEN_HEIGHT*3/8;
-    tempSection.width = SCREEN_WIDTH*5/16;
-    guiSections[5] = tempSection;
 }
 void drawGuiSections(){
-    for(int i = 0; i < 6; i++){
+    for(int i = 0; i < 5; i++){
         GUI_Section temp = guiSections[i];
         //top line
         DrawLine(temp.xPos, temp.yPos, temp.xPos + temp.width,temp.yPos,BLACK);
@@ -247,87 +265,335 @@ void buildKeys(){
     }
 }
 
+
+//*************************DB OPERATION***************************************
+int openDB(){
+    // sqlite3* dbDisco;
+    // check connection to DB
+    int rc = SQLITE_ERROR; //assume erroneous by default
+    
+    rc = sqlite3_open("/home/pi/GatorDisco/disco_server/dbspot/gdiscoDb.sqlite3", &dbDisco);
+    if (rc != SQLITE_OK){
+        printf("Failed to connect to db....code %d\nCode info: https://www.sqlite.org/c3ref/c_abort.html\n", rc);
+    }
+    else{
+        printf("Successfully connected to config DB!\n");
+    }
+    return rc;
+}
+
+void closeDB(){
+    sqlite3_close(dbDisco);
+}
+
 void saveConfig(void){
     // This funciton will save the 'state' of the synthesizer. 
-    // Reads:
-    //  - Active effects and any assoc. slider values
-    //  - All other slider values
-    // Writes:
-    //  - All read data to a file given a random name
-    //      - Considering random selection from a noun dictionary and a verb dictionary
-    // - TO configDirectory
 
-    // First, read consistent parameters sliders := {ADSR, OCTAVE}
-    int configData[NUM_SLIDERS+3]; // Plus 3 since there is also oscType, effType, and lfoTarget
-    // int osc_pointer, fx_pointer, lfo_pointer;
+    // REPLACE DB.at(id=configPointer) with new settings
+    // By django's grace, it should replace at the ID location by defualt
+    
+    openDB();
+    sqlite3_stmt *stmt;
+    int rc;
+    int paramCount;
 
-    //This can all probably be optimized to not include copying, but it's tiny data anyways and I want debugging to be easy
-    for (u_int8_t i = 0; i < NUM_SLIDERS; i++)
-    {
-        configData[i] = (int)(sliders[i].value*127);
-        // printf( "Read slider FLOAT value %f\n",
-        //         (sliders[i].value) );
-        // printf( "Saved slider config INT value %d\n",
-        //         configData[i]);
+    //List of VARS
+    int ID;
+    char* name;
+    int octave = (int)(sliders[0].value*127);
+    int oscParam1 = (int)(sliders[1].value*127);
+    int oscParam2 = (int)(sliders[2].value*127);
+
+    int Attack = (int)(sliders[3].value*127);
+    int Decay = (int)(sliders[4].value*127);
+    int Sustain = (int)(sliders[5].value*127);
+    int Release = (int)(sliders[6].value*127);
+
+    int lfoSpeed = (int)(sliders[7].value*127);
+    int lfoval = (int)(sliders[8].value*127);
+
+    int Effect1 = (int)(sliders[9].value*127);
+    int Effect2 = (int)(sliders[10].value*127);
+    int OscType = oscTypePointer;
+    int effectType = effectTypePointer;
+    int lfoTarget = lfoTargetPointer;
+    
+    char* sql = "UPDATE fileshare_configmodel SET octave= ?, oscParam1= ?, oscParam2= ?, lfoSpeed= ?, lfoval= ?, Attack= ?, Decay= ?, Sustain= ?, Release= ?, Effect1= ?, Effect2= ?, OscType= ?, effectType= ?, lfoTarget= ? WHERE id= ?;";
+    rc = sqlite3_prepare_v2(dbDisco, sql, -1, &stmt, NULL);
+    
+    if (rc) { // anything but 0 is failure
+       printf("Error preparing sql statement\n");
+       printf("Received rc %d\n",rc);
+       sqlite3_finalize(stmt);
+       sqlite3_close(dbDisco);
     }
-    configData[NUM_SLIDERS]   = oscTypePointer;
-    configData[NUM_SLIDERS+1] = effectTypePointer;
-    configData[NUM_SLIDERS+2] = lfoTargetPointer;
-    
-    // TODO: Fix segmentation fault caused by string chenanigans
-    // char* confPath = ""; // Strictly the path to cconfig directory
-    // char* confName = "config1.gat"; // The name of the actual configuration file 
-    // strcpy(confPath,configDirectory); // need a new confPath variable so that unique config names can be appended with strcat(confPath,<name>)
-    // strcat(confPath,confName);
-    
-    FILE* confPtr;
-    confPtr = fopen("/home/pi/GatorDisco/disco_server/MEDIA/config.gat","wb"); //WRITE Binary
-    // confPtr = fopen(confPath,"wb"); //Replace with this once string induced segmentation fault stops 
-    
-    if (! confPtr)
-        printf("Failed to save config file\n");
     else
     {
-        fwrite(configData, sizeof(int), sizeof(configData), confPtr);
-        fclose(confPtr);
+        paramCount = sqlite3_bind_parameter_count(stmt);
+        printf("The number of parameters in the statement: %d\n", paramCount);
+
+        //*************BINDS***********//    
+        rc = sqlite3_bind_int(stmt, 1, octave );
+        printf("Octave : %d\n", octave);
+        if (rc != SQLITE_OK) {
+
+            fprintf(stderr, "Failed to bind octave: %s\n", sqlite3_errmsg(dbDisco));
+        }
+        rc = sqlite3_bind_int(stmt, 2, oscParam1 );
+        printf("oscParam1 : %d\n", oscParam1);
+        if (rc != SQLITE_OK) {
+            fprintf(stderr, "Failed to bind oscParam1: %s\n", sqlite3_errmsg(dbDisco));
+        }
+        rc = sqlite3_bind_int(stmt, 3, oscParam2 );
+        printf("oscParam2 : %d\n", oscParam2);
+        if (rc != SQLITE_OK) {
+            fprintf(stderr, "Failed to bind oscParam2: %s\n", sqlite3_errmsg(dbDisco));
+        }
+
+        // LFO and params 
+        rc = sqlite3_bind_int(stmt, 4, lfoSpeed );
+        printf("lfoSpeed : %d\n", lfoSpeed);
+        if (rc != SQLITE_OK) {
+            fprintf(stderr, "Failed to bind oscParam2: %s\n", sqlite3_errmsg(dbDisco));
+        }
+        rc = sqlite3_bind_int(stmt, 5, lfoval );
+        printf("lfoval : %d\n", lfoval);
+        if (rc != SQLITE_OK) {
+            fprintf(stderr, "Failed to bind oscParam2: %s\n", sqlite3_errmsg(dbDisco));
+        }
+
+        //ADSR
+        rc = sqlite3_bind_int(stmt, 6, Attack );
+        printf("Attack : %d\n", Attack);
+        if (rc != SQLITE_OK) {
+            fprintf(stderr, "Failed to bind Attack: %s\n", sqlite3_errmsg(dbDisco));
+        }
+        rc = sqlite3_bind_int(stmt, 7, Decay );
+        printf("Decay : %d\n", Decay);
+        if (rc != SQLITE_OK) {
+            fprintf(stderr, "Failed to bind Decay: %s\n", sqlite3_errmsg(dbDisco));
+        }
+        rc = sqlite3_bind_int(stmt, 8, Sustain );
+        printf("Sustain : %d\n", Sustain);
+        if (rc != SQLITE_OK) {
+            fprintf(stderr, "Failed to bind Sustain: %s\n", sqlite3_errmsg(dbDisco));
+        }
+        rc = sqlite3_bind_int(stmt, 9, Release );
+        printf("Release : %d\n", Release);
+        if (rc != SQLITE_OK) {
+            fprintf(stderr, "Failed to bind Release: %s\n", sqlite3_errmsg(dbDisco));
+        }
+
+        // Effects 1 and 2
+        rc = sqlite3_bind_int(stmt, 10, Effect1 );
+        printf("Effect1 : %d\n", Effect1);
+        if (rc != SQLITE_OK) {
+            fprintf(stderr, "Failed to bind Effect1: %s\n", sqlite3_errmsg(dbDisco));
+        }
+        rc = sqlite3_bind_int(stmt, 11, Effect2 );
+        printf("Effect2 : %d\n", Effect2);
+        if (rc != SQLITE_OK) {
+            fprintf(stderr, "Failed to bind Effect2: %s\n", sqlite3_errmsg(dbDisco));
+        }
+        
+        // Type pointers
+        rc = sqlite3_bind_int(stmt, 12, OscType);
+        printf("OscType : %d\n", OscType);
+        if (rc != SQLITE_OK) {
+            fprintf(stderr, "Failed to bind OscType: %s\n", sqlite3_errmsg(dbDisco));
+        }
+        rc = sqlite3_bind_int(stmt, 13, effectType);
+        printf("effectType : %d\n", effectType);
+        if (rc != SQLITE_OK) {
+            fprintf(stderr, "Failed to bind effectType: %s\n", sqlite3_errmsg(dbDisco));
+        }
+        rc = sqlite3_bind_int(stmt, 14, lfoTarget);
+        printf("lfoTarget : %d\n", lfoTarget);
+        if (rc != SQLITE_OK) {
+            fprintf(stderr, "Failed to bind lfoTarget: %s\n", sqlite3_errmsg(dbDisco));
+        }
+        //******************************/
+
+        // WHERE
+        rc = sqlite3_bind_int(stmt, 15, configPointer);
+        printf("configPointer : %d\n", configPointer);
+        if (rc != SQLITE_OK) {
+            fprintf(stderr, "Failed to bind configPointer: %s\n", sqlite3_errmsg(dbDisco));
+        }
+
+        char *sentSQL = sqlite3_expanded_sql(stmt);
+        printf("Sent SQL: %s\n",sentSQL);
+        
+        // Do the REPLACMENT:
+        rc = sqlite3_step(stmt);
+
+        if (rc != SQLITE_DONE) {
+            fprintf(stderr, "Cannot step from statement: %d ; %s\n", rc, sqlite3_errmsg(dbDisco));
+            sqlite3_close(dbDisco);
+        }
+        sqlite3_reset(stmt);
+        rc = sqlite3_finalize(stmt);
+        sqlite3_close(dbDisco);
     }
+  
     // Lastly take a screenshot with <config_name>.png and save to the same directory
     // TakeScreenshot("../../disco_server/MEDIA/config.png"); 
     // Taking a screenshot here may lead to incomplete capture (usually just the background)
     // TESTING: setting a boolean to true and checking it at after endDrawing()
-    screenshotNeeded = true;
+    // screenshotNeeded = true;
 }
 
-void loadConfig(void){
-    //Verify config data saved by python code can be read
-    unsigned char config_buffer[11];
-    FILE *ptr;
-    ptr = fopen("../synth_settings.bin","rb");
-    if (! ptr)
-    {
-        printf("Failed to open synth-settings file\n");
-
+int setNumConfigs(){ //returns the number of configurations
+    // sqlite3* dbDisco;
+    openDB();
+    sqlite3_stmt* stmt;
+    int rc;
+    char *err;
+    int nByte = -1; //don't care
+    int count;
+    
+    rc = sqlite3_prepare_v2(dbDisco, "SELECT COUNT(*) FROM fileshare_configmodel;", nByte, &stmt, NULL);
+    if (rc != SQLITE_OK) {
+        printf("Failed to connect to db....code %d\nCode info: https://www.sqlite.org/rescode.html\n", rc);
+        return 0;
     }
-    else
-    {
-        printf("Successfully opened synth-settings file\n");
-        fread(config_buffer,sizeof(config_buffer),10,ptr); //read 8 bytes from config_data.data
-        for (int i = 0; i < 10; i++){
-            printf("%d\n", config_buffer[i]);
-        }
-        fclose(ptr);
-    }            
+    rc = sqlite3_step(stmt);
+    if (rc != SQLITE_ROW) {
+        printf("no configs found");
+        return 0;
+    }
+    count = sqlite3_column_int(stmt, 0);
+    numConfigs = count;
+    
+    sqlite3_reset(stmt);
+    sqlite3_finalize(stmt);
+    closeDB();
+    return count;
 }
-void changeOsc(void){
-    oscTypePointer++;
+
+void loadConfig(int dir){
+
+    // openDB();
+    sqlite3_stmt* stmt;
+    int rc;
+    char *err;
+    int baselen;
+    int OFFSET=0;
+    int nConfigs;
+    int id = configPointer;
+
+    char* name;
+    int oscP, lfoP, effP = 0; 
+    
+    //logic for setting index    
+    nConfigs = setNumConfigs(); // set numConfigs
+    openDB();
+
+    // The DB is empty
+    if (nConfigs == 0){
+        // Load values of 0
+        printf("No configurations found\n");
+        return;
+    }
+
+    // Moving to the NEXT config
+    else if (dir == 1){
+        // Make sure there is a next row
+        if (configPointer < nConfigs){ // Move up in the middle of the table
+            id = configPointer + 1; // Offset will point the query to the NEXT ENTRY 
+        }
+
+        else{ // We are at the last row, or there is only 1 row anyways. Loop back to start
+           id = 1; // to get the first row 
+        } 
+    }
+    else if (dir == 0) {
+        // Make sure there is a prev row
+        if (configPointer > 1){ // Move down in the middle of the table
+            id = configPointer-1;
+        }
+        else{ // move "down" (n-1) at the bottom of the table
+            id = nConfigs;
+        } 
+    }
+    printf("Found %d configs\n",nConfigs);
+    printf("Currently at config %d\n",configPointer);
+    printf("Moving in dir %d\n", dir);
+    printf("Target ID is %d\n",id);
+
+    char* sql = "SELECT * FROM fileshare_configmodel WHERE id= ? ";
+
+    rc = sqlite3_prepare_v2(dbDisco, sql, -1, &stmt, 0);
+    if (rc != SQLITE_OK) {
+        
+        fprintf(stderr, "Cannot prepare statement: %s\n", sqlite3_errmsg(dbDisco));
+        exit(-1);
+    }
+
+    rc = sqlite3_bind_int(stmt, 1, id); // The while loop will hopefully handle the first step
+    // rc = sqlite3_step(stmt);
+    sqlite3_bind_int(stmt, 1, id); // The while loop will hopefully handle the first step
+    while (sqlite3_step(stmt) != SQLITE_DONE){
+
+        configPointer = sqlite3_column_int(stmt,0); // Use index as the pointer
+        printf("New config pointer is %d\n", configPointer);
+        
+        name = sqlite3_column_text(stmt,1);
+        printf("Loading config: %s\n", name);
+        
+        // OSC params
+        sliders[0].value = (float)sqlite3_column_int(stmt,2)/127;
+        sliders[1].value = (float)sqlite3_column_int(stmt,3)/127;
+        sliders[2].value = (float)sqlite3_column_int(stmt,4)/127;
+        // LFO params
+        sliders[7].value = (float)sqlite3_column_int(stmt,5)/127;
+        sliders[8].value = (float)sqlite3_column_int(stmt,6)/127;
+        //ADSR
+        sliders[3].value = (float)sqlite3_column_int(stmt,7)/127; //atk
+        sliders[4].value = (float)sqlite3_column_int(stmt,8)/127; //decay
+        sliders[5].value = (float)sqlite3_column_int(stmt,9)/127; //sustain
+        sliders[6].value = (float)sqlite3_column_int(stmt,10)/127; //release
+        
+        //Effects 1 and 2
+        sliders[9].value     = (float)sqlite3_column_int(stmt,11)/127;
+        sliders[10].value    = (float)sqlite3_column_int(stmt,12)/127;
+        
+        // Type pointers
+        oscP    = sqlite3_column_int(stmt,15);
+        changeOsc(oscP);
+        effP  = sqlite3_column_int(stmt,13);
+        changeEffect(effP);
+        lfoP   = sqlite3_column_int(stmt,14);
+        changeLfo(lfoP);
+    }
+    // Chek loaded values
+    for (int i = 0; i< NUM_SLIDERS; i++){
+        printf("Slider %d has value %f.\n",i,sliders[i].value);
+    }
+    printf("New OSC Pointer: %d\n", oscP);
+    printf("New effP Pointer: %d\n", effP);
+    printf("New lfoP Pointer: %d\n", lfoP);
+
+    sqlite3_reset(stmt);
+    sqlite3_finalize(stmt);
+    closeDB();
+}
+
+void changeOsc(int p){
+    if (p == -1){
+        oscTypePointer++;
+    }
+    else{
+        oscTypePointer = p;
+    }
     oscTypePointer %= NUM_OSCILLATORS;
     processSpiInput(SPI_MODULE_OSC | SPI_OSCTYPE);
     processSpiInput(oscTypePointer);
-    buttons[1].text = oscNames[oscTypePointer];
+    buttons[6].text = oscNames[oscTypePointer];
     sliders[1].name = oscParam1Names[oscTypePointer];
     sliders[2].name = oscParam2Names[oscTypePointer];
     if(oscTypePointer == 2){
-        loadWavSound("piano.wav",36);
+        loadWavSound("wavs/piano.wav",36);
     }
 }
 void changeMode(int input){
@@ -340,12 +606,17 @@ void changeMode(int input){
     else{
         GUI_MODE = SYNTH_MODE;
         buttons[4].text = "EQ MODE";
-        buttons[4].xPos = 930;
-        buttons[4].yPos = 350;
+        buttons[4].xPos = 1050;
+        buttons[4].yPos = 450;
     }
 }
-void changeLfo(void){
-    lfoTargetPointer++;
+void changeLfo(int p){
+    if (p == -1){
+        lfoTargetPointer++;
+    }
+    else{
+        lfoTargetPointer = p;
+    }
     lfoTargetPointer %= NUM_LFO_TARGETS;
     processSpiInput(SPI_MODULE_LFO | SPI_LFO_TARGET);
     processSpiInput(lfoTargetPointer);
@@ -358,8 +629,15 @@ void updateCenterFreq(float frequency){
     bands[currentBand].fCenter = frequency;
     sprintf(fCenterNames[currentBand], "%d Hz", (int)frequency);
 }
-void changeEffect(void){
-    effectTypePointer++;
+
+// change implemented. Allow manual input of effectTypePointer in order to enable loading configs
+void changeEffect(int p){
+    if (p == -1) {
+        effectTypePointer++;
+    }
+    else{
+        effectTypePointer = p;
+    }    
     effectTypePointer %= NUM_EFFECTS;
     processSpiInput(SPI_MODULE_FX | SPI_FX_SEL);
     processSpiInput(effectTypePointer);
@@ -369,14 +647,23 @@ void changeEffect(void){
 }
 void buildButtons(){
     Button load_config;
-    load_config.xPos = (7*SCREEN_WIDTH/10);
-    load_config.yPos = SCREEN_HEIGHT/3;
-    load_config.width = SCREEN_WIDTH/5;
-    load_config.height = SCREEN_HEIGHT/12;
+    load_config.xPos = 1050;
+    load_config.yPos = 150;
+    load_config.width = SCREEN_WIDTH/16;
+    load_config.height = SCREEN_HEIGHT/10;
     load_config.color = BLACK;
-    load_config.text = "LOAD CONFIG";
+    load_config.text = "<";
     load_config.buttonAction = &loadConfig;
     buttons[0] = load_config;
+    Button load_config2;
+    load_config2.xPos = 1050 + SCREEN_WIDTH/16;
+    load_config2.yPos = 150;
+    load_config2.width = SCREEN_WIDTH/16;
+    load_config2.height = SCREEN_HEIGHT/10;
+    load_config2.color = BLACK;
+    load_config2.text = ">";
+    load_config2.buttonAction = &loadConfig;
+    buttons[1] = load_config2;
     Button oscSelect;
     oscSelect.xPos = 40;
     oscSelect.yPos = SCREEN_HEIGHT/5;
@@ -385,7 +672,7 @@ void buildButtons(){
     oscSelect.color = GREEN;
     oscSelect.text = "PULSE WAVE";
     oscSelect.buttonAction = &changeOsc;
-    buttons[1] = oscSelect;
+    buttons[6] = oscSelect;
     Button lfoSelect;
     lfoSelect.xPos = 40;
     lfoSelect.yPos = SCREEN_HEIGHT/2;
@@ -396,7 +683,7 @@ void buildButtons(){
     lfoSelect.buttonAction = &changeLfo;
     buttons[2] = lfoSelect;
     Button effectSelect;
-    effectSelect.xPos = 480;
+    effectSelect.xPos = 550;
     effectSelect.yPos = SCREEN_HEIGHT/2;
     effectSelect.width = SCREEN_WIDTH/10;
     effectSelect.height = SCREEN_HEIGHT/12;
@@ -405,24 +692,33 @@ void buildButtons(){
     effectSelect.buttonAction = &changeEffect;
     buttons[3] = effectSelect;
     Button eqMode;
-    eqMode.xPos = 930;
-    eqMode.yPos = 350;
-    eqMode.width = SCREEN_WIDTH/10;
-    eqMode.height = SCREEN_HEIGHT/12;
+    eqMode.xPos = 1050;
+    eqMode.yPos = 450;
+    eqMode.width = SCREEN_WIDTH/8;
+    eqMode.height = SCREEN_HEIGHT/10;
     eqMode.color = GREEN;
     eqMode.text = "EQ MODE";
     eqMode.buttonAction = &changeMode;
     buttons[4] = eqMode;
     // Save Config
     Button save_config;
-    save_config.xPos = (7*SCREEN_WIDTH/10); //(3*SCREEN_WIDTH/5)
-    save_config.yPos = (SCREEN_HEIGHT/3)+SCREEN_HEIGHT/12;
-    save_config.width = SCREEN_WIDTH/5;
-    save_config.height = SCREEN_HEIGHT/12;
+    save_config.xPos = 1050;
+    save_config.yPos = 250;
+    save_config.width = SCREEN_WIDTH/8;
+    save_config.height = SCREEN_HEIGHT/10;
     save_config.color = BLACK;
     save_config.text = "SAVE CONFIG";
     save_config.buttonAction = &saveConfig;
     buttons[5] = save_config;
+    Button wavSelect;
+    wavSelect.xPos = 1050;
+    wavSelect.yPos = 350;
+    wavSelect.width = SCREEN_WIDTH/8;
+    wavSelect.height = SCREEN_HEIGHT/10;
+    wavSelect.color = BLACK;
+    wavSelect.text = "WAV SELECT";
+    wavSelect.buttonAction = &saveConfig;
+    buttons[7] = wavSelect;
 
 }
 void buildBandGUIs(){
@@ -517,14 +813,14 @@ void buildSliders(){
     lfoval.name = "VALUE";
     sliders[8] = lfoval;
     Slider Effect1;
-    Effect1.xPos = 640;
+    Effect1.xPos = 710;
     Effect1.yPos = 380;
     Effect1.value = 0;
     Effect1.param = SPI_MODULE_FX | SPI_FX_PARAM1;
     Effect1.name = "";
     sliders[9] = Effect1;
     Slider Effect2;
-    Effect2.xPos = 760;
+    Effect2.xPos = 830;
     Effect2.yPos = 380;
     Effect2.value = 0;
     Effect2.param = SPI_MODULE_FX | SPI_FX_PARAM2;
@@ -594,21 +890,28 @@ void drawButtons(){
         tempButton.height
         }, tempButton.text);
         if(pressed){
-            if (!strcmp(tempButton.text, "LOAD CONFIG"))
+            if (!strcmp(tempButton.text, "WAV SELECT"))
             {   
                 fileDialogState.fileDialogActive = true;
+                GUI_MODE = WAV_MODE;
 
             }
-            else
+            else if (!strcmp(tempButton.text, ">"))
+            {
+                tempButton.buttonAction(1);
+            }
+            else if (!strcmp(tempButton.text, "<"))
             {
                 tempButton.buttonAction(0);
             }
-
+            else
+            {
+                tempButton.buttonAction(-1);
+            }
         }
-
         // GUI: Dialog Window
         //--------------------------------------------------------------------------------
-        GuiFileDialog(&fileDialogState);
+        //GuiFileDialog(&fileDialogState);
     }
 }
 
@@ -700,45 +1003,48 @@ void drawEQSliders(){
     }
 }
 
-// void drawFileMenu(){
-
-//     DrawText(fileNameToLoad, 208, GetScreenHeight() - 20, 10, GRAY);
-
-//     // raygui: controls drawing
-//     //----------------------------------------------------------------------------------
-//     if (fileDialogState.fileDialogActive) GuiLock();
-
-//     // if (GuiButton((Rectangle){ 20, 20, 140, 30 }, GuiIconText(RAYGUI_ICON_FILE_OPEN, "Open Image"))) fileDialogState.fileDialogActive = true;
-//     if (buttons[0]) 
-//         fileDialogState.fileDialogActive = true;
-
-//     GuiUnlock();
-
-//     // GUI: Dialog Window
-//     //--------------------------------------------------------------------------------
-//     GuiFileDialog(&fileDialogState);
-// }
-
 void drawGUI(){
+
     BeginDrawing();
-    ClearBackground(GRAY);
+    if(oscTypePointer == 0) ClearBackground(LIME);
+    else if (oscTypePointer == 1) ClearBackground(ORANGE);
+    else if (oscTypePointer == 2){
+        int red = (int)random() % 256;
+        int green = (int)random() % 256;
+        int blue = (int)random() % 256;
+        ClearBackground((Color){red,green,blue,255});
+    }
+    else if (oscTypePointer == 3) ClearBackground(SKYBLUE);
+    else if (oscTypePointer == 4) ClearBackground(MAGENTA);
 
     if(GUI_MODE == SYNTH_MODE){
-        drawWaveform(buffer,SCREEN_WIDTH*3/16,SCREEN_HEIGHT*7/32,SCREEN_WIDTH*25/32,80);
+        //drawWaveform(buffer,SCREEN_WIDTH*3/16,SCREEN_HEIGHT*7/32,SCREEN_WIDTH*25/32,80);
+        drawConfigDisplay();
         drawKeys(SCREEN_HEIGHT/4);
         drawSliders();
         drawButtons();
         drawGuiSections();
         // drawFileMenu();
     }
-    else{
+    else if(GUI_MODE == EQ_MODE){
         drawEQButtons();
         drawEQSliders();
         // drawFileMenu();
     }
+    else{
+        if(!fileDialogState.fileDialogActive)
+        GUI_MODE = SYNTH_MODE;
+        GuiFileDialog(&fileDialogState);
+    }
     EndDrawing();
     if (screenshotNeeded){
-        TakeScreenshot("../../disco_server/MEDIA/config.png"); 
+
+        char screenPath[100];
+        strcpy(screenPath,"../../disco_server/media/");
+        
+        strcat(screenPath,configNames[configPointer]);
+    
+        TakeScreenshot(screenPath); 
         screenshotNeeded = false;
     }
 }
@@ -762,6 +1068,8 @@ void clearKeyPress(){
             keys[i].pressed = false;
         }
         masterInput.keyPressed = false;
+        processSpiInput(SPI_MODULE_ENV | SPI_GATE);
+        processSpiInput(0);
     }
 }
 void processInput(){
@@ -775,8 +1083,8 @@ void processInput(){
             else if(sliders[0].value > 0.5) octave = 2;
             else if(sliders[0].value > 0.25) octave = 1;
             if(masterInput.keyPressed == false){
-                wavPointer = 0;
                 masterInput.keyPressed = true;
+                PlaySound(wavSound);
             }
             bool checkBlack = false;
             bool foundKey = false;
@@ -798,9 +1106,11 @@ void processInput(){
                         if(!checkBlack){
                             if(masterInput.x > tempKey.xPos && masterInput.x < tempKey.xPos + WHITE_KEY_WIDTH){
                                 if(masterInput.keyIndex != i + 12*octave){
-                                    processSpiInput(masterInput.keyPointer);
-                                    processSpiInput(masterInput.keyIndex);
-                                    processSpiInput(0);
+                                    //processSpiInput(SPI_MODULE_ENV | SPI_GATE);
+                                    //processSpiInput(0);
+                                    // processSpiInput(masterInput.keyPointer);
+                                    // processSpiInput(masterInput.keyIndex);
+                                    // processSpiInput(0);
                                     masterInput.keyIndex = i +12*octave;
                                 }
                                 foundKey = true;
@@ -809,9 +1119,11 @@ void processInput(){
                         else{
                             if(masterInput.x > tempKey.xPos && masterInput.x < tempKey.xPos + WHITE_KEY_WIDTH*0.75){
                                 if(masterInput.keyIndex != i + 12*octave){
-                                    processSpiInput(masterInput.keyPointer);
-                                    processSpiInput(masterInput.keyIndex);
-                                    processSpiInput(0);
+                                    //processSpiInput(SPI_MODULE_ENV | SPI_GATE);
+                                    //processSpiInput(0);
+                                    // processSpiInput(masterInput.keyPointer);
+                                    // processSpiInput(masterInput.keyIndex);
+                                    // processSpiInput(0);
                                     masterInput.keyIndex = i +12*octave;
                                 }
                                 foundKey = true;
@@ -823,6 +1135,7 @@ void processInput(){
             //*masterInput.key = keyIndex;
             processSpiInput(masterInput.keyPointer);
             processSpiInput(masterInput.keyIndex);
+            processSpiInput(SPI_MODULE_ENV | SPI_GATE);
             processSpiInput(1);
             keys[masterInput.keyIndex - 12*octave].pressed = true;
         }
@@ -854,59 +1167,126 @@ void processInput(){
     }
 }
 
+// typedef struct
+// {
+//     float left_phase;
+//     float right_phase;
+// }   
+// paTestData;
+
+// static int patestCallback( const void *inputBuffer, void *outputBuffer,
+//                            unsigned long framesPerBuffer,
+//                            const PaStreamCallbackTimeInfo* timeInfo,
+//                            PaStreamCallbackFlags statusFlags,
+//                            void *userData )
+// {
+//     /* Cast data passed through stream to our structure. */
+//     paTestData *data = (paTestData*)userData; 
+//     float *out = (float*)outputBuffer;
+//     unsigned int i;
+//     (void) inputBuffer; /* Prevent unused variable warning. */
+    
+//     for( i=0; i<framesPerBuffer; i++ )
+//     {
+//          *out = data->left_phase;  /* left */
+//          out++;
+//          *out = data->right_phase;  /* right */
+//          out++;
+//         /* Generate simple sawtooth phaser that ranges between -1.0 and 1.0. */
+//         data->left_phase += 0.01f;
+//         /* When signal reaches top, drop back down. */
+//         if( data->left_phase >= 1.0f ) data->left_phase -= 2.0f;
+//         /* higher pitch so we can distinguish left and right. */
+//         data->right_phase += 0.03f;
+//         if( data->right_phase >= 1.0f ) data->right_phase -= 2.0f;
+//     }
+//     return 0;
+// }
 
 void main() {
     InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Synth");
     SetTargetFPS(60);
     InitAudioDevice();
     initMasterInput();
-    //initSynth(&synth);
-    loadWavSound("piano.wav",36);
+    loadWavSound("wavs/piano.wav",36);
     buildKeys();
     buildSliders();
     buildBandGUIs();
     buildButtons();
     buildEQButtons();
     buildGuiSections();
-    /*
-    SetAudioStreamBufferSizeDefault(STREAM_BUFFER_SIZE);
-    AudioStream synthStream = LoadAudioStream(SAMPLE_RATE,
-        32 ,
-        1
-    );
-    SetAudioStreamVolume(synthStream, 0.25f);
-    PlayAudioStream(synthStream);
-    */
+    
     //spi config
     int fd, result;
-
-    //cout << "Initializing" << endl ;
-
-    // Configure the interface.
     // CHANNEL insicates chip select,
     // 50000 indicates bus speed.
     fd = wiringPiSPISetup(CHANNEL, 500000);
-
-    //cout << "Init result: " << fd << endl;
-
     // clear display
-	
-    spi_buffer[0] = 0x76;
+	spi_buffer[0] = 0x76;
     wiringPiSPIDataRW(CHANNEL, spi_buffer, 1);
-        unsigned char firstByte = 0;
-        unsigned char secondByte = 0;
-        unsigned char midipacket[4];
-	
-        int seqfd = open(MIDI_DEVICE, O_RDONLY);
-        if (seqfd == -1) {
-                printf("Error: cannot open %s\n", MIDI_DEVICE);
-                // exit(1);
+
+    unsigned char midipacket[8];
+	//open midi device
+    int seqfd = open(MIDI_DEVICE1, O_RDONLY);
+    if (seqfd == -1) {
+        seqfd = open(MIDI_DEVICE2, O_RDONLY);
+        if(seqfd == -1){
+            printf("Error: cannot open %s\n", MIDI_DEVICE1);
+            // exit(1);
         }
+    }
+
 	
-    fileDialogState = InitGuiFileDialog(3*SCREEN_HEIGHT/4, 3*SCREEN_HEIGHT/4, configDirectory, false);
+    fileDialogState = InitGuiFileDialog(3*SCREEN_HEIGHT/4, 3*SCREEN_HEIGHT/4, wavDirectory, false);
     // Choose an extenstion to filter by
-    char* filterExt = ".bin";
-    strcpy(fileDialogState.filterExt,filterExt);
+    char* filterExt = ".wav";
+    // strcpy(fileDialogState.filterExt,filterExt);
+
+    // char* filterExt = ".wav";
+    // strcpy(fileDialogState.filterExt,filterExt);
+    
+    //   /******************************/
+    //  /***   port audio config   ****/
+    // /******************************/
+    
+    // //initialize function
+    // PaError err = Pa_Initialize();
+    // if( err != paNoError ){
+    //     printf(  "PortAudio error: %s\n", Pa_GetErrorText( err ) );
+    //     Pa_Terminate();
+    //     exit(1);
+    // }
+    // static paTestData data;
+    // PaStream *stream;
+    // /* Open an audio I/O stream. */
+    // err = Pa_OpenDefaultStream( &stream,
+    //                             0,          /* no input channels */
+    //                             2,          /* stereo output */
+    //                             paFloat32,  /* 32 bit floating point output */
+    //                             SAMPLE_RATE,
+    //                             256,        /* frames per buffer, i.e. the number
+    //                                                of sample frames that PortAudio will
+    //                                                request from the callback. Many apps
+    //                                                may want to use
+    //                                                paFramesPerBufferUnspecified, which
+    //                                                tells PortAudio to pick the best,
+    //                                                possibly changing, buffer size.*/
+    //                             patestCallback, /* this is your callback function */
+    //                             &data ); /*This is a pointer that will be passed to
+    //                                                your callback*/
+    // if( err != paNoError ){
+    //     printf(  "PortAudio error: %s\n", Pa_GetErrorText( err ) );
+    //     Pa_Terminate();
+    //     exit(1);
+    // }
+
+    // err = Pa_StartStream( stream );
+    // if( err != paNoError ){
+    //     printf(  "PortAudio error: %s\n", Pa_GetErrorText( err ) );
+    //     Pa_Terminate();
+    //     exit(1);
+    // }
+    /****   main loop   ****/
 
     while(WindowShouldClose() == false)
     {            
@@ -916,12 +1296,14 @@ void main() {
         if (fileDialogState.SelectFilePressed)
         {
             // Load image file (if supported extension)
-            if (IsFileExtension(fileDialogState.fileNameText, filterExt))
+            if (IsFileExtension(fileDialogState.fileNameText, ".wav"))
             {
+                printf("Dir path text: %s\n", fileDialogState.dirPathText);
+                printf("File Name: %s\n", fileDialogState.fileNameText);
+
                 strcpy(fileNameToLoad, TextFormat("%s/%s", fileDialogState.dirPathText, fileDialogState.fileNameText));
-                printf("%s",fileNameToLoad);
-                UnloadTexture(texture);
-                texture = LoadTexture(fileNameToLoad);
+                printf("%s\n",fileNameToLoad);
+                // loadWavSound(fileNameToLoad, 36);
             }
 
             fileDialogState.SelectFilePressed = false;
@@ -938,18 +1320,21 @@ void main() {
             drawGUI();
 		    read(seqfd, &midipacket, sizeof(midipacket));
             
-            if((firstByte != midipacket[1] || secondByte != midipacket[2]) && midipacket[1] < 109 && midipacket[1] > 23){
-                //send key and gate
-                processSpiInput(masterInput.keyPointer);
-                processspiinput(midipacket[1]);
-                processSpiInput(midipacket[2]);
-                firstByte = midipacket[1];
-                secondByte = midipacket[2];
+            for(int i = 0; i < 6; i++){
+                if(midipacket[i] == 144){
+                    printf("byte 0: %d, byte 1: %d, byte 2: %d\n", midipacket[i], midipacket[i+1], midipacket[i+2]);
+                    processSpiInput(masterInput.keyPointer);
+                    processSpiInput(midipacket[i+1]-24);
+                    processSpiInput(SPI_MODULE_ENV | SPI_GATE);
+                    processSpiInput(midipacket[i+2]);
+                    if(midipacket[i+2] != 0) PlaySound(wavSound);
+                }
             }
-            
         //}
     }
     UnloadTexture(texture);     // Unload texture
+    // Pa_StopStream(stream);
+    // Pa_Terminate();
     CloseAudioDevice();
     CloseWindow();
 }

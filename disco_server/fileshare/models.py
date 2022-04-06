@@ -17,7 +17,8 @@ class SynthModel(models.Model):
         return self.name
 
 class ConfigModel(models.Model):
-    name        = models.CharField(unique=True, max_length=16)
+    # id exists by default
+    name        = models.CharField(max_length=16)
     octave      = models.IntegerField(default=0)
     oscParam1   = models.IntegerField(default=0)
     oscParam2   = models.IntegerField(default=0)
@@ -32,7 +33,6 @@ class ConfigModel(models.Model):
     oscType     = models.IntegerField(default=0)
     effectType  = models.IntegerField(default=0)
     lfoTarget   = models.IntegerField(default=0)
-    image       = models.BinaryField(blank=True,editable=True)
 
     def __str__(self):
         return self.name
