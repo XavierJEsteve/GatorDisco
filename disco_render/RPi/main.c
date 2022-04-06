@@ -33,11 +33,13 @@ static const int CHANNEL = 0;
 #define MAX_DECAY_TIME 5
 #define NUM_SLIDERS 11
 #define NUM_BUTTONS 8
-#define MIDI_DEVICE "/dev/midi2"
+#define MIDI_DEVICE1 "/dev/midi1"
+#define MIDI_DEVICE2 "/dev/midi2"
 #define SYNTH_MODE 0
 #define EQ_MODE 1
 #define WAV_MODE 2
 #define NUM_EQ_BANDS 10
+#define NUM_OSCILLATORS 5
 
 typedef struct{
     int byte;
@@ -127,7 +129,7 @@ bool screenshotNeeded = false;
 
 
 void processSpiInput(int byte){
-    printf("sent byte: %d\n", byte);
+    //printf("sent byte: %d\n", byte);
     spi_buffer[0] = byte;
     wiringPiSPIDataRW(CHANNEL, spi_buffer, 1);
 }
@@ -375,7 +377,7 @@ void changeOsc(void){
     sliders[1].name = oscParam1Names[oscTypePointer];
     sliders[2].name = oscParam2Names[oscTypePointer];
     if(oscTypePointer == 2){
-        loadWavSound("piano.wav",36);
+        loadWavSound("wavs/piano.wav",36);
     }
 }
 void changeMode(int input){
@@ -388,8 +390,8 @@ void changeMode(int input){
     else{
         GUI_MODE = SYNTH_MODE;
         buttons[4].text = "EQ MODE";
-        buttons[4].xPos = 930;
-        buttons[4].yPos = 350;
+        buttons[4].xPos = 1050;
+        buttons[4].yPos = 450;
     }
 }
 void changeLfo(void){
@@ -787,8 +789,18 @@ void drawEQSliders(){
 // }
 
 void drawGUI(){
+
     BeginDrawing();
-    ClearBackground(GRAY);
+    if(oscTypePointer == 0) ClearBackground(LIME);
+    else if (oscTypePointer == 1) ClearBackground(ORANGE);
+    else if (oscTypePointer == 2){
+        int red = (int)random() % 256;
+        int green = (int)random() % 256;
+        int blue = (int)random() % 256;
+        ClearBackground((Color){red,green,blue,255});
+    }
+    else if (oscTypePointer == 3) ClearBackground(SKYBLUE);
+    else if (oscTypePointer == 4) ClearBackground(MAGENTA);
 
     if(GUI_MODE == SYNTH_MODE){
         //drawWaveform(buffer,SCREEN_WIDTH*3/16,SCREEN_HEIGHT*7/32,SCREEN_WIDTH*25/32,80);
@@ -928,7 +940,7 @@ void main() {
     InitAudioDevice();
     initMasterInput();
     //initSynth(&synth);
-    loadWavSound("piano.wav",36);
+    loadWavSound("wavs/piano.wav",36);
     buildKeys();
     buildSliders();
     buildBandGUIs();
@@ -960,21 +972,26 @@ void main() {
 	
     spi_buffer[0] = 0x76;
     wiringPiSPIDataRW(CHANNEL, spi_buffer, 1);
-        unsigned char firstByte = 0;
+        unsigned char firstByte;
+        unsigned char previousByte;
         unsigned char secondByte = 0;
-        unsigned char midipacket[4];
+        unsigned char midipacket[8];
 	
-        int seqfd = open(MIDI_DEVICE, O_RDONLY);
+        int seqfd = open(MIDI_DEVICE1, O_RDONLY);
         if (seqfd == -1) {
-                printf("Error: cannot open %s\n", MIDI_DEVICE);
+            seqfd = open(MIDI_DEVICE2, O_RDONLY);
+            if(seqfd == -1){
+                printf("Error: cannot open %s\n", MIDI_DEVICE1);
                 // exit(1);
+            }
         }
+
 	
     fileDialogState = InitGuiFileDialog(3*SCREEN_HEIGHT/4, 3*SCREEN_HEIGHT/4, configDirectory, false);
     // Choose an extenstion to filter by
     // char* filterExt = ".wav";
     // strcpy(fileDialogState.filterExt,filterExt);
-
+    int bytesLeft = 0;
     while(WindowShouldClose() == false)
     {            
         if (fileDialogState.fileDialogActive) GuiLock();
@@ -990,10 +1007,7 @@ void main() {
 
                 strcpy(fileNameToLoad, TextFormat("%s/%s", fileDialogState.dirPathText, fileDialogState.fileNameText));
                 printf("%s\n",fileNameToLoad);
-                UnloadTexture(texture);
-                texture = LoadTexture(fileNameToLoad);
-                
-                printf("here: %s\n",fileNameToLoad);
+                loadWavSound(fileNameToLoad, 36);
             }
 
             fileDialogState.SelectFilePressed = false;
@@ -1009,7 +1023,7 @@ void main() {
             //updateSignal(buffer);
             drawGUI();
 		    read(seqfd, &midipacket, sizeof(midipacket));
-            
+            /*
             if((firstByte != midipacket[1] || secondByte != midipacket[2]) && midipacket[1] < 109 && midipacket[1] > 23){
                 //send key and gate
                 processSpiInput(masterInput.keyPointer);
@@ -1024,8 +1038,17 @@ void main() {
                 secondByte = midipacket[2];
                 //printf("byte 1: %d, byte 2: %d\n", midipacket[1],midipacket[2]);
             }
-            printf("byte 1: %d, byte 2: %d\n", midipacket[1],midipacket[2]);
-            
+            */
+            for(int i = 0; i < 6; i++){
+                if(midipacket[i] == 144){
+                    printf("byte 0: %d, byte 1: %d, byte 2: %d\n", midipacket[i], midipacket[i+1], midipacket[i+2]);
+                    processSpiInput(masterInput.keyPointer);
+                    processSpiInput(midipacket[i+1]-24);
+                    processSpiInput(SPI_MODULE_ENV | SPI_GATE);
+                    processSpiInput(midipacket[i+2]);
+                    if(midipacket[i+2] != 0) PlaySound(wavSound);
+                }
+            }
         //}
     }
     UnloadTexture(texture);     // Unload texture
