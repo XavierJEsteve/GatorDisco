@@ -3,15 +3,7 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 
 class AudioModel(models.Model):
     name = models.CharField(max_length=16)
-    file = models.FileField(upload_to='wavs')
-
-    def __str__(self):
-        return self.name
-
-class SynthModel(models.Model):
-    name = models.CharField(unique=True,max_length=16)
-    synFile = models.FileField()
-    photo = models.ImageField()
+    file = models.FileField(upload_to='wavs/')
 
     def __str__(self):
         return self.name
@@ -33,6 +25,16 @@ class ConfigModel(models.Model):
     oscType     = models.IntegerField(default=0)
     effectType  = models.IntegerField(default=0)
     lfoTarget   = models.IntegerField(default=0)
+
+    def __str__(self):
+        return self.name
+
+class ImageModel(models.Model):
+    image = models.BinaryField(blank=True)
+    config = models.OneToOneField( ConfigModel,
+        on_delete=models.CASCADE,
+        primary_key=True,
+    )
 
     def __str__(self):
         return self.name

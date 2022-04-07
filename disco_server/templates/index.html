@@ -2,54 +2,22 @@
 
 {% block content_index %}
 <div class="container">
-   
-    <!-- <div class="synthForm">
-        <h2 style="color:yellow">Synth Settings Upload</h2>
+
+    
+    <div class="configUpload">
+        <h2 style="color:yellow"> Config File Upload</h2>
         <form method="POST" enctype="multipart/form-data">
             {% csrf_token %}
-                {% for field in synthform %}
-                    <div class="form-control">
-                        <div class="form-group">
-                            {{ field }}
-                            <label>{{ field.name }}</label>                        
-                        </div>
-                    </div>
-                {% endfor %}
-            <button type="submit">Upload Synth Settings</button>
+            <div class="form-control">
+                <div class="form-group">
+                    {{ configform.file }}
+                </div>
+            </div>
+            <button type="submit">Upload Config</button>
         </form>
-    </div>  -->
-    
-    <div class="confFiles">
-        <div class="table-responsive">
-        <table class= "table table-sm">
-            <thead class="thead-dark">
-                <tr>
-                    <th>
-                        <h2 style="color:yellow">Config Name</h2>
-                    </th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for conf in config_rows %}
-                    <tr>
-                        <td class="td-bright">{{ conf.name }}</td>
-                        <td>
-                            <!-- Needs a ref to file location -->
-                            <button class='btn btn-primary' name="download_button"> Download</button> 
-                        </td>
-                        <td>
-                            <!-- Needs to sumit a POST to index for deletion (action) of file (id)  -->
-                            <a href = "{% url 'delete-config' conf.id %}" class='btn btn-danger'> Delete </a>
-                            <!-- <button type="submit" class='btn btn-danger' name="delete_button"> Delete</button> -->
-                        </td>
-                    </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        <div class="table-responsive">
     </div>
-
-    <div class="AudioUpload">
+    
+        <div class="AudioUpload">
         <h2 style="color:yellow"> Audio File Upload</h2>
         <form method="POST" enctype="multipart/form-data">
             {% csrf_token %}
@@ -60,36 +28,6 @@
             </div>
             <button type="submit">Upload Audio</button>
         </form>
-    
-    </div>
-    
-    <!-- GOAL: Make 3 rows of 3 configs each -->
-
-    <div class="cardStock">
-        <div class="card" style="width: 18rem;">
-            <img class="card-img-top" src="media/config1.png" alt="synth image">
-            <div class="card-body">
-            <h5 class="card-title">Synth One</h5>
-            <p class="card-text">Example content 1.</p>
-            <a href="#" class="btn btn-primary">Go somewhere</a>
-            </div>
-        </div>
-        <div class="card" style="width: 18rem;">
-            <img class="card-img-top" src="media/config2.png" alt="synth image">
-            <div class="card-body">
-            <h5 class="card-title">Synth Two</h5>
-            <p class="card-text">Example content 2.</p>
-            <a href="#" class="btn btn-primary">Go somewhere</a>
-            </div>
-        </div>
-        <div class="card" style="width: 18rem;">
-            <img class="card-img-top" src="media/config3.png" alt="synth image">
-            <div class="card-body">
-            <h5 class="card-title">Synth Three</h5>
-            <p class="card-text">Example content3.</p>
-            <a href="#" class="btn btn-primary">Go somewhere</a>
-            </div>
-        </div>
     </div>
 
     <div class="audioFiles">
@@ -98,19 +36,57 @@
             <thead class="thead-dark">
                 <tr>
                     <th>
-                        <h2 style="color:yellow"> Audio Name</h2>
+                        <h2 style="color:magenta"> Audio Name</h2>
                     </th>
                 </tr>
             </thead>
             <tbody>
-                {% for audio in audio_files %}
+                {% for audio in audio_rows %}
                     <tr>
                         <td class="td-bright">{{ audio.name }}</td>
+                        <td>
+                            <!-- Needs a ref to file location -->
+                            <button class='btn btn-primary' name="download_button"> Download</button> 
+                        </td>
+                        <td>
+                            <!-- Nees to sumit a POST to index for deletion (action) of file (id)  -->
+                            <button type="submit" class='btn btn-danger' name="delete_button"> Delete</button>
+                        </td>
                     </tr>
                 {% endfor %}
             </tbody>
         </table>
-        </div>
+    </div>
+    </div>
+
+    <div class="configFiles">
+        <div class="table-responsive">
+        <table class= "table table-sm">
+            <thead class="thead-dark">
+                <tr>
+                    <th>
+                        <h2 style="color:magenta">Synth Name</h2>
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for config in config_rows %}
+                    <tr>
+                        <td class="td-bright">
+                            {{ config.name }}
+                        </td>
+                        <td>
+                            <!-- Needs a ref to file location -->
+                            <button class='btn btn-primary' name="download_button"> Download</button> 
+                        </td>
+                        <td>
+                            <!-- Nees to sumit a POST to index for deletion (action) of file (id)  -->
+                            <button type="submit" class='btn btn-danger' name="delete_button"> Delete</button>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
 
 </div>

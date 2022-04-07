@@ -129,11 +129,11 @@ SpiHandler spiHandler;
 sqlite3* dbDisco;
 int configPointer = 1; // 1 <= configPOinter <= numConfigs
 int numConfigs;
-char* configNames[NUM_CONFIGS+1]= {"DEBUG","Conf1","Conf2","Conf3","Conf4","Conf5","Conf6","Conf7","Conf8","Conf9","Conf10"}; 
+// char* configNames[NUM_CONFIGS+1]= {"DEBUG","Conf1","Conf2","Conf3","Conf4","Conf5","Conf6","Conf7","Conf8","Conf9","Conf10"}; 
 
 // File handling
 GuiFileDialogState fileDialogState;
-char* wavDirectory = "/home/pi/GatorDisco/disco_render/RPi/wavs/";
+char* wavDirectory = "/home/pi/GatorDisco/disco_server/fileshare/media/wavs/";
 char fileNameToLoad[512] = { 0 };
 Texture texture = { 1 };
 
@@ -209,7 +209,7 @@ void drawWaveform(float* signal,int width,int height,int x, int y){
 }
 drawConfigDisplay(){
     DrawRectangle(1050,50,SCREEN_WIDTH/8,SCREEN_HEIGHT/10,WHITE);
-    DrawText(configNames[configPointer],1070,80,20,RED);
+    DrawText("Config Nav",1070,80,20,RED);
 }
 void buildGuiSections(){
     //build oscillator section
@@ -344,6 +344,8 @@ void saveConfig(void){
     int lfoTarget = lfoTargetPointer;
     
     char* sql = "UPDATE fileshare_configmodel SET octave= ?, oscParam1= ?, oscParam2= ?, lfoSpeed= ?, lfoval= ?, Attack= ?, Decay= ?, Sustain= ?, Release= ?, Effect1= ?, Effect2= ?, OscType= ?, effectType= ?, lfoTarget= ? WHERE id= ?;";
+    // char* sql = "INSERT into fileshare_configmodel  (octave, oscParam1, oscParam2, lfoSpeed, lfoval, Attack, Decay, Sustain, Release, Effect1, Effect2, OscType, effectType, lfoTarget= ?) VALUES octave= ?, oscParam1= ?, oscParam2= ?, lfoSpeed= ?, lfoval= ?, Attack= ?, Decay= ?, Sustain= ?, Release= ?, Effect1= ?, Effect2= ?, OscType= ?, effectType= ?, lfoTarget= ?;";
+    
     rc = sqlite3_prepare_v2(dbDisco, sql, -1, &stmt, NULL);
     
     if (rc) { // anything but 0 is failure
@@ -1065,7 +1067,7 @@ void drawGUI(){
         char screenPath[100];
         strcpy(screenPath,"../../disco_server/media/");
         
-        strcat(screenPath,configNames[configPointer]);
+        strcat(screenPath,"scrreen.png");
     
         TakeScreenshot(screenPath); 
         screenshotNeeded = false;

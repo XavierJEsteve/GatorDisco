@@ -177,7 +177,7 @@ void viewTables(){
 void insertEntry_Image(){
 
     // First, read the image file
-    FILE *fp = fopen("./media/screen1.png","rb");
+    FILE *fp = fopen("./media/config1.png","rb");
     if (fp == NULL){
         printf("Cannot open image file\n");
     }
@@ -274,7 +274,7 @@ void insertEntry_Image(){
 
 void replaceEntry_Image(){
     // First, read the image file
-    FILE *fp = fopen("./media/screen1.png","rb");
+    FILE *fp = fopen("./media/screens/synth.png","rb");
     if (fp == NULL){
         printf("Cannot open image file\n");
     }
@@ -335,31 +335,36 @@ void replaceEntry_Image(){
     sqlite3_stmt* pStmt;
     int rc;
     char *errMsg = 0;
-    int configPointer=9;
+    int configPointer=1;
     openDB();
 
     // char *sql = "REPLACE INTO fileshare_configmodel (name, image) VALUES('test2', ?);";
-    char *sql = "UPDATE fileshare_configmodel SET image = ? WHERE id= 10 ;";
-
+    // char *sql = "UPDATE fileshare_imagemodel SET image =  WHERE id=1;";
+    char* sql = "INSERT into fileshare_imagemodel(image) VALUES(?);";
     rc = sqlite3_prepare_v2(dbDisco, sql, -1, &pStmt, 0);
     if (rc != SQLITE_OK) {
         
         fprintf(stderr, "Cannot prepare statement: %s\n", sqlite3_errmsg(dbDisco));
     }
+
     //Image
     sqlite3_bind_blob(pStmt, 1, data, size, SQLITE_STATIC);
     rc = sqlite3_step(pStmt);
-
-    sqlite3_bind_int(pStmt, 2, configPointer);
-    rc = sqlite3_step(pStmt);
-
-
-    if (rc != SQLITE_DONE) {
+    if (rc != SQLITE_OK) {
         
         printf("execution failed: %s", sqlite3_errmsg(dbDisco));
-        sqlite3_close(dbDisco);
     }
+
+    sqlite3_bind_blob(pStmt, 2, data, size, SQLITE_STATIC);
+    rc = sqlite3_step(pStmt);
+
+    if (rc != SQLITE_OK) {
+        
+        printf("execution failed: %s", sqlite3_errmsg(dbDisco));
+    }
+        
     sqlite3_finalize(pStmt);    
+    sqlite3_reset(pStmt);
     sqlite3_close(dbDisco);
 }
 
