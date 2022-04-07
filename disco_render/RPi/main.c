@@ -319,6 +319,8 @@ void saveConfig(void){
     int lfoTarget = lfoTargetPointer;
     
     char* sql = "UPDATE fileshare_configmodel SET octave= ?, oscParam1= ?, oscParam2= ?, lfoSpeed= ?, lfoval= ?, Attack= ?, Decay= ?, Sustain= ?, Release= ?, Effect1= ?, Effect2= ?, OscType= ?, effectType= ?, lfoTarget= ? WHERE id= ?;";
+    // char* sql = "INSERT into fileshare_configmodel  (octave, oscParam1, oscParam2, lfoSpeed, lfoval, Attack, Decay, Sustain, Release, Effect1, Effect2, OscType, effectType, lfoTarget= ?) VALUES octave= ?, oscParam1= ?, oscParam2= ?, lfoSpeed= ?, lfoval= ?, Attack= ?, Decay= ?, Sustain= ?, Release= ?, Effect1= ?, Effect2= ?, OscType= ?, effectType= ?, lfoTarget= ?;";
+    
     rc = sqlite3_prepare_v2(dbDisco, sql, -1, &stmt, NULL);
     
     if (rc) { // anything but 0 is failure
@@ -1042,7 +1044,7 @@ void drawGUI(){
         char screenPath[100];
         strcpy(screenPath,"../../disco_server/media/");
         
-        strcat(screenPath,configNames[configPointer]);
+        strcat(screenPath,"scrreen.png");
     
         TakeScreenshot(screenPath); 
         screenshotNeeded = false;
