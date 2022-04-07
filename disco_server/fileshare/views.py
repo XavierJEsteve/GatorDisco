@@ -12,10 +12,10 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib.staticfiles.urls import staticfiles_urlpatterns
 from django.urls import path
+from django.db.models import Max
 
 from django.core import serializers
-# from .serialize import ConfigSerializer
-
+from rest_framework import serializers as sz
 
 # Create your views here.
 ''' TODO  
@@ -23,44 +23,41 @@ from django.core import serializers
         * Change text color for each DB entry listed in the table
         * CRUD from the main screen
                 '''
+# class ConfigSerializer(sz.Serializer):
+#         name        = models.CharField(max_length=16)
+#         octave      = models.IntegerField(default=0)
+#         oscParam1   = models.IntegerField(default=0)
+#         oscParam2   = models.IntegerField(default=0)
+#         lfoSpeed    = models.IntegerField(default=0)
+#         lfoval      = models.IntegerField(default=0)
+#         Attack      = models.IntegerField(default=0)
+#         Decay       = models.IntegerField(default=0)
+#         Sustain     = models.IntegerField(default=0)
+#         Release     = models.IntegerField(default=0)
+#         Effect1     = models.IntegerField(default=0)
+#         Effect2     = models.IntegerField(default=0)
+#         oscType     = models.IntegerField(default=0)
+#         effectType  = models.IntegerField(default=0)
+#         lfoTarget   = models.IntegerField(default=0)
+
+#         def create(self, validated_data):
+#                 return config
+
+#         def update(self,instance,validated_data)
+#                 return instance
+
 def index(request,action=-1,id=-1):
  
         config_rows = ConfigModel.objects.all()   
         audio_rows = AudioModel.objects.all()
-
-        if request.method == 'POST':
-                # AUDIO FILE UPLOAD
-                audioform = AudioForm(request.POST, request.FILES)
-
-
-                if audioform.is_valid():
-                        audioform.save()
-                try:
-                        # Save audio file to media folder
-                        uploaded_file = request.FILES['file'] # Dictionary key is based on HTML form <input name=*****> \
-                        # fs = FileSystemStorage()
-                        # fs.save(uploaded_file.name, uploaded_file)
-                        print(uploaded_file.name, uploaded_file)
-                        # Save audio file to db
-                        A = AudioModel(name=uploaded_file.name,file=uploaded_file)
-                        A.save()
-
-                        return redirect('index')
-                        
-                except MultiValueDictKeyError:
-                        print("Couldn't load an audio file\n")
-
-                # elif: synthform.is_valid():
-                #         pass
-        else:
-                audioform = AudioForm()
-                configform = ConfigForm()
-
+        audioform = AudioForm()
+        configform = ConfigForm()
+        
         context = {
                 'audioform'     : audioform,
                 'audio_rows'    : audio_rows,
                 'config_rows'   : config_rows,
-                'configform'    : configform
+                # 'configform'    : configform
         }
         return render(request, 'index.html', context)
 
@@ -77,7 +74,8 @@ def upload_audio(request):
                         fs = FileSystemStorage()
                         fs.save(uploaded_file.name, uploaded_file)
                         print(uploaded_file.name, uploaded_file)
-                        # Save audio file to db
+                        A = AudioModel(name=uploaded_file.name,file=uploaded_file)
+                        A.save()                       
                         return redirect('index')
                         
                 except MultiValueDictKeyError:
@@ -85,40 +83,43 @@ def upload_audio(request):
         else:
                 audioform = AudioForm()
 
-        return render(request, 'upload_audio.html',{
-                'audioform': audioform
-        })
+        return redirect('index')
 
 def upload_config(request):
+
         if request.method == 'POST':
-                configform = ConfigForm(request.POST, request.FILES)
-                if configform.is_valid():
-                        configform.save()
+               
                 try:
-                        # Save audio file to media folder
-                        uploaded_file = request.FILES['file'] # Dictionary key is based on HTML form <input name=*****> \
-                        fs = FileSystemStorage()
-                        fs.save(uploaded_file.name, uploaded_file)
+                        print(request.FILES.keys())
+                        uploaded_file = request.FILES['myfile']
+                        data = uploaded_file.read()
+                        # fs = FileSystemStorage()
+                        # fs.save(uploaded_file.name, uploaded_file)
                         print(uploaded_file.name, uploaded_file)
-                        # Save config file to db
+                        # print(data)
+                        for obj in serializers.deserialize("json",data):
+                                configs = ConfigModel.objects.all()
+                                max = configs.aggregate(Max('id'))
+
+                                obj.object.pk = max['id__max'] + 1
+                                obj.object.save()
+
                         return redirect('index')
                         
                 except MultiValueDictKeyError:
                         print("Bad json file")
         else:
-                audioform = AudioForm()
+                configform = ConfigForm()
 
-        return render(request, 'upload_audio.html',{
-                'audioform': audioform
-        })
+        return redirect('index')
 
 def delete_audio(request, audio_id=None):
         audio = AudioModel.objects.get(pk=audio_id)
-        audio.delete()
+        audio.file.delete(save=False)
         return redirect('index')
 
 def delete_config(request, config_id=None):
-        config = SynthModel.objects.get(pk=synth_id)
+        config = ConfigModel.objects.get(pk=config_id)
         config.delete()
         return redirect('index')
 
@@ -133,27 +134,13 @@ def download_config(request, config_id=None):
         response['Content-Disposition'] = ('attatchment; filename=gatorSynth.json')
         return response
 
-def upload_config(request):
-        ''' Area for uploading audio files'''
-
-        if request.method == 'POST':
-                synthform = SynthForm(request.POST, request.FILES)
-                if synthform.is_valid():
-                        synthform.save()
-                try:
-                        # Save audio file to media folder
-                        uploaded_file = request.FILES['file'] # Dictionary key is based on HTML form <input name=*****> \
-                        fs = FileSystemStorage()
-                        fs.save(uploaded_file.name, uploaded_file)
-                        print(uploaded_file.name, uploaded_file)
-                        # Save config file to db
-                        return redirect('index')
-                        
-                except MultiValueDictKeyError:
-                        print("Bad config file")
-        else:
-                synthform = SynthForm()
-
-        return render(request, 'upload_audio.html',{
-                'audioform': audiofor0090m
-        })
+def download_audio(request, audio_id=None):
+        audio = AudioModel.objects.get(pk=audio_id)
+        audio_file = audio.file
+        file_path = os.path.join(settings.MEDIA_ROOT, audio.file.path)
+        print(file_path)
+        if os.path.exists(file_path):
+                with open(file_path, 'rb') as fh:
+                        response = HttpResponse(fh.read(), content_type="audio/x-wav")
+                        response['Content-Disposition'] = 'inline; filename=' + os.path.basename(file_path)
+                        return response

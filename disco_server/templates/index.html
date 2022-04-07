@@ -36,14 +36,12 @@
 
     <div class="configUpload">
         <h2 style="color:magenta"> Config File Upload</h2>
-        <form method="POST" enctype="multipart/form-data">
+        <form action='/upload_config/' method="POST" enctype="multipart/form-data">
             {% csrf_token %}
             <div class="form-control">
-                <div class="form-group">
-                    {{ configform.file }}
-                </div>
+                <input type="file" name="myfile">
+                <button class = "button btn-success" type="submit"> Upload Config</input>
             </div>
-            <button type="submit">Upload Config</button>
         </form>
     </div>
 </div>
@@ -66,7 +64,7 @@
                         <td class="td-bright">{{ audio.name }}</td>
                         <td>
                             <!-- Needs a ref to file location -->
-                            <button class='btn btn-primary' name="download_button"> Download</button> 
+                            <a href = "{% url 'download-audio' audio.id %}" class='btn btn-primary' name="download_button" download> Download</a> 
                         </td>
                         <td>
                             <!-- Nees to sumit a POST to index for deletion (action) of file (id)  -->
@@ -80,14 +78,14 @@
 
     <div class="AudioUpload">
         <h2 style="color:magenta"> Audio File Upload</h2>
-        <form method="POST" enctype="multipart/form-data">
+        <form action='/upload_audio/' method="POST" enctype="multipart/form-data">
             {% csrf_token %}
             <div class="form-control">
                 <div class="form-group">
                     {{ audioform.file }}
+                    <button class="button btn-success" type="submit">Upload Audio</button>
                 </div>
             </div>
-            <button type="submit">Upload Audio</button>
         </form>
     </div>
 </div>
