@@ -50,7 +50,7 @@
                         </td>
                         <td>
                             <!-- Nees to sumit a POST to index for deletion (action) of file (id)  -->
-                            <button type="submit" class='btn btn-danger' name="delete_button"> Delete</button>
+                            <a href = "{% url 'delete-audio' audio.id %}" class='btn btn-danger'> Delete </a>
                         </td>
                     </tr>
                 {% endfor %}
@@ -81,7 +81,7 @@
                         </td>
                         <td>
                             <!-- Nees to sumit a POST to index for deletion (action) of file (id)  -->
-                            <button type="submit" class='btn btn-danger' name="delete_button"> Delete</button>
+                            <a href = "{% url 'delete-config' synth.id %}" class='btn btn-danger'> Delete </a>
                         </td>
                     </tr>
                 {% endfor %}

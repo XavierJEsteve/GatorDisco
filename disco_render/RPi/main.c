@@ -97,8 +97,12 @@ typedef struct{
     float lowerLimit;
 } BandGUI;
 char* oscNames[NUM_OSCILLATORS] = {"PULSE WAVE", "SAWTOOTH", "WAV FILE", "FREQ MOD", "RING MOD"};
-char* oscParam1Names[NUM_OSCILLATORS] = {"PULSE WIDTH", "DETUNE", "PARAM 1", "MOD FREQ", "MOD FREQ"};
-char* oscParam2Names[NUM_OSCILLATORS] = {"", "", "PARAM2", "MOD AMP", ""};
+// char* oscParam1Names[NUM_OSCILLATORS] = {"PULSE WIDTH", "DETUNE", "PARAM 1", "MOD FREQ", "MOD FREQ"};
+char* oscParam1Names[NUM_OSCILLATORS] = {"PULSE WIDTH", "DETUNE", "", "MOD FREQ", "MOD FREQ"};
+
+// char* oscParam2Names[NUM_OSCILLATORS] = {"", "", "PARAM2", "MOD AMP", ""};
+char* oscParam2Names[NUM_OSCILLATORS] = {"", "", "", "MOD AMP", ""};
+
 int oscTypePointer = 0;
 char* effectNames[NUM_EFFECTS] = {"OFF", "ECHO", "BIT CRUSH", "FS REDUCTION", "EFFECT 4", "EFFECT 5"};
 char* effectParam1Names[NUM_EFFECTS] = {"", "TIME", "BIT DEPTH", "FS RATIO", "PARAM1", "PARAM1"};
@@ -1067,7 +1071,7 @@ void drawGUI(){
         char screenPath[100];
         strcpy(screenPath,"../../disco_server/media/");
         
-        strcat(screenPath,"scrreen.png");
+        strcat(screenPath,"screen.png");
     
         TakeScreenshot(screenPath); 
         screenshotNeeded = false;

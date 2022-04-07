@@ -116,5 +116,10 @@ def delete_config(request, synth_id=None):
         config.delete()
         return redirect('index')
 
+def delete_audio(request, audio_id=None):
+        config = AudioModel.objects.get(pk=audio_id)
+        config.delete()
+        return redirect('index')
+
 def download_config(request, synth_id=None):
         return None
