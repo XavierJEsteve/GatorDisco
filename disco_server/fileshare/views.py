@@ -13,6 +13,9 @@ from django.conf.urls.static import static
 from django.contrib.staticfiles.urls import staticfiles_urlpatterns
 from django.urls import path
 
+from django.core import serializers
+# from .serialize import ConfigSerializer
+
 
 # Create your views here.
 ''' TODO  
@@ -87,6 +90,50 @@ def upload_audio(request):
         })
 
 def upload_config(request):
+        if request.method == 'POST':
+                configform = ConfigForm(request.POST, request.FILES)
+                if configform.is_valid():
+                        configform.save()
+                try:
+                        # Save audio file to media folder
+                        uploaded_file = request.FILES['file'] # Dictionary key is based on HTML form <input name=*****> \
+                        fs = FileSystemStorage()
+                        fs.save(uploaded_file.name, uploaded_file)
+                        print(uploaded_file.name, uploaded_file)
+                        # Save config file to db
+                        return redirect('index')
+                        
+                except MultiValueDictKeyError:
+                        print("Bad json file")
+        else:
+                audioform = AudioForm()
+
+        return render(request, 'upload_audio.html',{
+                'audioform': audioform
+        })
+
+def delete_audio(request, audio_id=None):
+        audio = AudioModel.objects.get(pk=audio_id)
+        audio.delete()
+        return redirect('index')
+
+def delete_config(request, config_id=None):
+        config = SynthModel.objects.get(pk=synth_id)
+        config.delete()
+        return redirect('index')
+
+def download_config(request, config_id=None):
+        config = ConfigModel.objects.filter(pk=config_id)
+        JSONSerializer = serializers.get_serializer("json")
+        json_serializer = JSONSerializer()
+        json_serializer.serialize(config)
+        data = json_serializer.getvalue()
+
+        response = HttpResponse(data,content_type='application/json')
+        response['Content-Disposition'] = ('attatchment; filename=gatorSynth.json')
+        return response
+
+def upload_config(request):
         ''' Area for uploading audio files'''
 
         if request.method == 'POST':
@@ -110,16 +157,3 @@ def upload_config(request):
         return render(request, 'upload_audio.html',{
                 'audioform': audiofor0090m
         })
-
-def delete_config(request, synth_id=None):
-        config = SynthModel.objects.get(pk=synth_id)
-        config.delete()
-        return redirect('index')
-
-def delete_audio(request, audio_id=None):
-        config = AudioModel.objects.get(pk=audio_id)
-        config.delete()
-        return redirect('index')
-
-def download_config(request, synth_id=None):
-        return None

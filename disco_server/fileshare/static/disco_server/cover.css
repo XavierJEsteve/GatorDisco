@@ -36,7 +36,7 @@ body {
  h1 {
   padding: .25rem 0;
   font-weight: 700;
-  color: cyan;
+  color: yellow;
   background-color: transparent;
   border-bottom: .25rem solid transparent;
   text-align: center;
@@ -50,24 +50,44 @@ body {
   border-bottom: .25rem solid transparent;
 } */
 
-.container {
+.container-left {
+  display: grid; 
+  grid-template-columns: 1fr 1fr; 
+  grid-template-rows: 1fr 1fr; 
+  gap: 10px 10px; 
+}
+
+
+.container-left {
   display: grid; 
   grid-template-columns: 1fr 1fr; 
   grid-template-rows: 1fr 1fr; 
   gap: 10px 10px; 
   grid-template-areas: 
-    "configFiles configUpload"
-    "audioUpload audioFiles"; 
+  " configFiles "
+  " configUpload"; 
+}
+.synthForm { grid-area: synthForm; }
+.synthFiles { grid-area: synthFiles; }
+
+.container-right {
+  display: grid; 
+  grid-template-columns: 1fr 1fr; 
+  grid-template-rows: 1fr 1fr; 
+  gap: 10px 10px; 
+  grid-template-areas: 
+  "  audioFiles"
+  " audioUpload "; 
 }
 .audioUpload { grid-area: audioUpload; }
-.synthForm { grid-area: synthForm; }
 .audioFiles { grid-area: audioFiles; }
-.synthFiles { grid-area: synthFiles; }
 
 
 .td-bright {
-  color: white;
+  color: cyan;
   font-weight: bold;
+  background-color:yellow;
+  font-size:20px;
 }
  .nav-masthead .nav-link {
   padding: .25rem 0;

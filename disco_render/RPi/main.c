@@ -590,11 +590,11 @@ void loadConfig(int dir){
         sliders[10].value    = (float)sqlite3_column_int(stmt,12)/127;
         
         // Type pointers
-        oscP    = sqlite3_column_int(stmt,15);
+        oscP    = sqlite3_column_int(stmt,13);
         changeOsc(oscP);
-        effP  = sqlite3_column_int(stmt,13);
+        effP  = sqlite3_column_int(stmt,14);
         changeEffect(effP);
-        lfoP   = sqlite3_column_int(stmt,14);
+        lfoP   = sqlite3_column_int(stmt,15);
         changeLfo(lfoP);
     }
     // Chek loaded values
@@ -1217,7 +1217,7 @@ static int patestCallback( const void *inputBuffer, void *outputBuffer,
             }
         }
     }
-    printf("callback function\n");
+    // printf("callback function\n");
     return 0;
 }
 
