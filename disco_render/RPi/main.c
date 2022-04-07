@@ -19,6 +19,7 @@
 // PORT AUDIO
 // #include "alsa/error.h"
 #include "portaudio.h"
+#define NUM_EFFECTS 4
 
 // channel is the wiringPi name for the chip select (or chip enable) pin.
 // Set this to 0 or 1, depending on how it's connected.
@@ -42,6 +43,7 @@ static const int CHANNEL = 0;
 #define WAV_MODE 2
 #define NUM_EQ_BANDS 10
 #define NUM_CONFIGS 10
+#define SAMPLE_RATE 48000
 
 #define NUM_OSCILLATORS 5
 
@@ -121,7 +123,7 @@ unsigned char spi_buffer[100];
 
 Synth synth;
 SpiHandler spiHandler;
-Sound wavSound;
+
 
 // Static Database 
 sqlite3* dbDisco;
@@ -140,15 +142,38 @@ bool screenshotNeeded = false;
 
 
 void processSpiInput(int byte){
-    //printf("sent byte: %d\n", byte);
+    printf("sent byte: %d\n", byte);
     spi_buffer[0] = byte;
     wiringPiSPIDataRW(CHANNEL, spi_buffer, 1);
 }
+
+typedef struct
+{
+    int samples;
+    int samplePointer;
+    float* buffer;
+    bool playing;
+    bool loaded;
+}   
+paTestData;
+static paTestData data;
 void loadWavSound(char* fileName, int key){
-    wavSound = LoadSound(fileName);
-    SetSoundVolume(wavSound,1);
+    data.playing = false;
+    Music m = LoadMusicStream(fileName);
+    data.samples = GetMusicTimeLength(m)*SAMPLE_RATE;
+    UnloadMusicStream(m);
+    UnloadWaveSamples(data.buffer);
+    Wave wave = LoadWave(fileName);
+    data.buffer = LoadWaveSamples(wave);
+    data.loaded = true;
     processSpiInput(SPI_MODULE_OSC | SPI_OSC_WAVFREQ);
     processSpiInput(key);
+}
+PlayWavSound(){
+    if(data.loaded){
+        data.playing = true;
+        data.samplePointer = 0;
+    }
 }
 Input masterInput;
 void initMasterInput(){
@@ -568,6 +593,9 @@ void loadConfig(int dir){
     }
     // Chek loaded values
     for (int i = 0; i< NUM_SLIDERS; i++){
+
+        processSpiInput(sliders[i].param);
+        processSpiInput(sliders[i].value * 127);
         printf("Slider %d has value %f.\n",i,sliders[i].value);
     }
     printf("New OSC Pointer: %d\n", oscP);
@@ -1008,12 +1036,7 @@ void drawGUI(){
     BeginDrawing();
     if(oscTypePointer == 0) ClearBackground(LIME);
     else if (oscTypePointer == 1) ClearBackground(ORANGE);
-    else if (oscTypePointer == 2){
-        int red = (int)random() % 256;
-        int green = (int)random() % 256;
-        int blue = (int)random() % 256;
-        ClearBackground((Color){red,green,blue,255});
-    }
+    else if (oscTypePointer == 2) ClearBackground(GRAY);
     else if (oscTypePointer == 3) ClearBackground(SKYBLUE);
     else if (oscTypePointer == 4) ClearBackground(MAGENTA);
 
@@ -1077,7 +1100,7 @@ void processInput(){
             else if(sliders[0].value > 0.25) octave = 1;
             if(masterInput.keyPressed == false){
                 masterInput.keyPressed = true;
-                PlaySound(wavSound);
+                PlayWavSound();
             }
             bool checkBlack = false;
             bool foundKey = false;
@@ -1160,12 +1183,7 @@ void processInput(){
     }
 }
 
-typedef struct
-{
-    float left_phase;
-    float right_phase;
-}   
-paTestData;
+
 
 static int patestCallback( const void *inputBuffer, void *outputBuffer,
                            unsigned long framesPerBuffer,
@@ -1181,18 +1199,19 @@ static int patestCallback( const void *inputBuffer, void *outputBuffer,
     
     for( i=0; i<framesPerBuffer; i++ )
     {
-         *out = data->left_phase;  /* left */
-         out++;
-         *out = data->right_phase;  /* right */
-         out++;
-        /* Generate simple sawtooth phaser that ranges between -1.0 and 1.0. */
-        data->left_phase += 0.01f;
-        /* When signal reaches top, drop back down. */
-        if( data->left_phase >= 1.0f ) data->left_phase -= 2.0f;
-        /* higher pitch so we can distinguish left and right. */
-        data->right_phase += 0.03f;
-        if( data->right_phase >= 1.0f ) data->right_phase -= 2.0f;
+        if(data->playing && data->loaded){
+            *out = data->buffer[data->samplePointer];  /* left */
+            out++;
+            *out = data->buffer[data->samplePointer];  /* right */
+            out++;
+            //increment pointer
+            data->samplePointer++;
+            if(data->samplePointer == data->samples){
+                data->playing = false;
+            }
+        }
     }
+    printf("callback function\n");
     return 0;
 }
 
@@ -1249,7 +1268,6 @@ void main() {
         Pa_Terminate();
         exit(1);
     }
-    static paTestData data;
     PaStream *stream;
     /* Open an audio I/O stream. */
     err = Pa_OpenDefaultStream( &stream,
@@ -1312,22 +1330,24 @@ void main() {
             //updateSignal(buffer);
             drawGUI();
 		    read(seqfd, &midipacket, sizeof(midipacket));
-            
+            bool foundMidi = false;
             for(int i = 0; i < 6; i++){
-                if(midipacket[i] == 144){
+                if(midipacket[i] == 144 && !foundMidi){
                     printf("byte 0: %d, byte 1: %d, byte 2: %d\n", midipacket[i], midipacket[i+1], midipacket[i+2]);
                     processSpiInput(masterInput.keyPointer);
                     processSpiInput(midipacket[i+1]-24);
                     processSpiInput(SPI_MODULE_ENV | SPI_GATE);
                     processSpiInput(midipacket[i+2]);
-                    if(midipacket[i+2] != 0) PlaySound(wavSound);
+                    if(midipacket[i+2] != 0) PlayWavSound();
+                    foundMidi = true;
                 }
             }
         //}
     }
     UnloadTexture(texture);     // Unload texture
-    // Pa_StopStream(stream);
-    // Pa_Terminate();
+    Pa_StopStream(stream);
+    Pa_Terminate();
+    UnloadWaveSamples(data.buffer);
     CloseAudioDevice();
     CloseWindow();
 }
