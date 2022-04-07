@@ -8,14 +8,6 @@ class AudioModel(models.Model):
     def __str__(self):
         return self.name
 
-class SynthModel(models.Model):
-    name = models.CharField(unique=True,max_length=16)
-    synFile = models.FileField()
-    photo = models.ImageField()
-
-    def __str__(self):
-        return self.name
-
 class ConfigModel(models.Model):
     # id exists by default
     name        = models.CharField(max_length=16)
@@ -33,6 +25,16 @@ class ConfigModel(models.Model):
     oscType     = models.IntegerField(default=0)
     effectType  = models.IntegerField(default=0)
     lfoTarget   = models.IntegerField(default=0)
+
+    def __str__(self):
+        return self.name
+
+class ImageModel(models.Model):
+    image = models.BinaryField(blank=True)
+    config = models.OneToOneField( ConfigModel,
+        on_delete=models.CASCADE,
+        primary_key=True,
+    )
 
     def __str__(self):
         return self.name

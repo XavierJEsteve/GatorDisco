@@ -4,8 +4,8 @@ from django.shortcuts import redirect, render
 from django.http import HttpResponse
 from django.core.files.storage import FileSystemStorage
 from django.utils.datastructures import MultiValueDictKeyError
-from .forms import AudioForm, SynthForm
-from .models import AudioModel, SynthModel, ConfigModel
+from .forms import AudioForm, ConfigForm
+from .models import AudioModel, ConfigModel
 
 # Primarily for dbOperations
 from django.conf import settings
@@ -28,6 +28,8 @@ def index(request,action=-1,id=-1):
         if request.method == 'POST':
                 # AUDIO FILE UPLOAD
                 audioform = AudioForm(request.POST, request.FILES)
+
+
                 if audioform.is_valid():
                         audioform.save()
                 try:
@@ -37,7 +39,8 @@ def index(request,action=-1,id=-1):
                         # fs.save(uploaded_file.name, uploaded_file)
                         print(uploaded_file.name, uploaded_file)
                         # Save audio file to db
-                        AudioModel(name=uploaded_file.name,file=uploaded_file).save()
+                        A = AudioModel(name=uploaded_file.name,file=uploaded_file)
+                        A.save()
 
                         return redirect('index')
                         
@@ -48,11 +51,13 @@ def index(request,action=-1,id=-1):
                 #         pass
         else:
                 audioform = AudioForm()
+                configform = ConfigForm()
 
         context = {
+                'audioform'     : audioform,
                 'audio_rows'    : audio_rows,
                 'config_rows'   : config_rows,
-                'audioform'     : audioform
+                'configform'    : configform
         }
         return render(request, 'index.html', context)
 

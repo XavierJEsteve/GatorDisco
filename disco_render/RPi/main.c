@@ -127,7 +127,7 @@ Sound wavSound;
 sqlite3* dbDisco;
 int configPointer = 1; // 1 <= configPOinter <= numConfigs
 int numConfigs;
-char* configNames[NUM_CONFIGS+1]= {"DEBUG","Conf1","Conf2","Conf3","Conf4","Conf5","Conf6","Conf7","Conf8","Conf9","Conf10"}; 
+// char* configNames[NUM_CONFIGS+1]= {"DEBUG","Conf1","Conf2","Conf3","Conf4","Conf5","Conf6","Conf7","Conf8","Conf9","Conf10"}; 
 
 // File handling
 GuiFileDialogState fileDialogState;
@@ -184,7 +184,7 @@ void drawWaveform(float* signal,int width,int height,int x, int y){
 }
 drawConfigDisplay(){
     DrawRectangle(1050,50,SCREEN_WIDTH/8,SCREEN_HEIGHT/10,WHITE);
-    DrawText(configNames[configPointer],1070,80,20,RED);
+    DrawText("Config Nav",1070,80,20,RED);
 }
 void buildGuiSections(){
     //build oscillator section
