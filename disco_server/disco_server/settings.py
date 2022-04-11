@@ -85,10 +85,11 @@ WSGI_APPLICATION = 'disco_server.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'NAME': BASE_DIR / 'dbspot/gdiscoDb.sqlite3',
+        'HOST' : 'localhost'
     }
 }
-
+print(DATABASES['default']['NAME'])
 
 # Password validation
 # https://docs.djangoproject.com/en/3.2/ref/settings/#auth-password-validators
