@@ -4,28 +4,28 @@
 
 #include "Effect4.h"
 #include <stdio.h>
+#include <math.h>
 
-static float phaseBuffer[4096];
-static int PHASEBUFFERSIZE_MASK = 4095;
-static unsigned int p = 4095;          //default max phase
-static int feedback = 0 ; //default half phase volume
+#define SAMPLE_RATE 48000
+#define PI 3.14159265358979323846f
+#define MIN_FREQ 0.2
+#define MAX_FREQ 5
+#define BUFFER_SIZE 4096
+
+static float inputBuffer[BUFFER_SIZE];
+static float outputBuffer[BUFFER_SIZE];
+
+static float phase = 0;
+static float frequency = 0;
+static float mix = 0;
+
+static int bufferPointer = 0;
 static int printCounter = 0;
 
-
-void updateEffect4Params(float time, float feedbackLine)
+void updateEffect4Params(float freq, float delayMix)
 {
-    //return;
-    //update phase shift with time
-    if(time*0.085 > 0.085)
-        p  = (48000 * 0.085);
-    else
-        p  = (48000 * time * 0.085);
-
-    if(0 < feedbackLine*5 && feedbackLine*5 < 5)
-        feedback = (int)(5*feedbackLine);
-    if(printCounter == 0){
-        printf("Time: %f, feedback: %d\n\n", time, feedback);
-    }
+    mix = delayMix * 0.5;
+    frequency = MIN_FREQ + (MAX_FREQ - MIN_FREQ) * freq;
 }
 
 /*
@@ -45,32 +45,40 @@ float cascade(float liveData, float buffData, float shift, int fback, int head, 
 
 float processEffect4(float sampleIn)
 {
-    //printf("processing effect 4\n");
-
-    float computedPhase;
-    float bufferdata;
-
-    static int phaseHead = 0;
-    static int phaseTail = 0;
-    static int phasePointer = 0;
-
-    phasePointer = (phaseTail - p) & PHASEBUFFERSIZE_MASK;
-
-    bufferdata = phaseBuffer[phasePointer];
-    
-    computedPhase = bufferdata;
-    //computedPhase = cascade(sampleIn, bufferdata, p, feedback, phaseHead, phaseTail, phasePointer);
-    
-    phaseBuffer[phaseHead] = computedPhase;          //send to buffer
-
-    phaseHead = ((phaseHead + 1) & PHASEBUFFERSIZE_MASK);       //increment head head= head + 2 & BUFFERSIZE(0x7FFFF)
-    phaseTail = (phaseTail + 1) & PHASEBUFFERSIZE_MASK;         // increment tail pointer
-
     printCounter++;
-    if(printCounter == 10000){
-        printf("computed phase: %f\n", computedPhase);
-        printCounter = 0;
+    //determine delay value
+    //printf("determine delay value\n");
+    phase += frequency / SAMPLE_RATE;
+    if(phase > 1) phase -= 1;
+    float sin_value = sinf(phase * 2 * PI);
+    //original delay = SAMPLE_RATE / w0 (25 hz, 50 hz, 100 hz, etc.)
+    int w0 = 50;
+    int delay = SAMPLE_RATE/w0 + sin_value*10;
+    
+    //store current input
+    //printf("determine delay value\n");
+    inputBuffer[bufferPointer] = sampleIn;
+
+    //increment pointer
+    bufferPointer++;
+    bufferPointer %= BUFFER_SIZE;
+
+    //obtain previous input
+    int prevPointer = bufferPointer - delay;
+    if(prevPointer < 0) prevPointer += BUFFER_SIZE;
+    float prevInput = inputBuffer[prevPointer];
+
+    //obtain previous output
+    float prevOutput = outputBuffer[prevPointer];
+
+    // y(k)=dx(k)−x(k−1)+dy(k−1) ---- for each stage, d = 0.5, substitute -1 for calculated delay value
+
+    float output = mix*sampleIn - prevInput + mix*prevOutput;
+    
+    if(output > 1 || output < -1){
+        printf("output: %f\nprevOutput: %f\nprevInput: %f\nmix: %f\n",output,prevOutput,prevInput,mix);
     }
-    return computedPhase;
-    //return sampleIn;
+    
+    outputBuffer[bufferPointer] = output;
+    return output;
 }
