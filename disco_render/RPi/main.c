@@ -145,12 +145,136 @@ Texture texture = { 1 };
 int screenshotTarget = 0;
 bool screenshotNeeded = false;
 
+Synth synth;
 
 void processSpiInput(int byte){
-    printf("sent byte: %d\n", byte);
-    spi_buffer[0] = byte;
-    wiringPiSPIDataRW(CHANNEL, spi_buffer, 1);
+    //spi_buffer[0] = byte;
+    //wiringPiSPIDataRW(CHANNEL, spi_buffer, 1);
+    //printf("Current Byte: %d\n", spiHandler.byte);
+    if(spiHandler.byte == 0 && (byte >> 7) == 1){
+        spiHandler.module = (byte >> 4) & 7;
+        spiHandler.param = byte & 15;
+        spiHandler.byte++;
+        //printf("Module: %d, Param: %d, Byte: %d\n\n", spiHandler.module,spiHandler.param,spiHandler.byte);
+    }
+    else if(byte >> 7 == 0 && spiHandler.byte > 0){
+        if(spiHandler.module == 0){ // oscillator
+            if(spiHandler.param == 0){ // oscSelect
+                for(int i = 0; i < 4; i++){
+                    synth.osc[i].oscType = byte;
+                    synth.osc[i].phase = 0;
+                    synth.osc[i].phase2 = 0;
+                }
+            }
+            else if(spiHandler.param == 1) // oscParam1
+                for(int i = 0; i < 4; i++)
+                    synth.osc[i].param1 = (float)byte / 128;
+            else if(spiHandler.param == 2) // oscParam2
+                for(int i = 0; i < 4; i++)
+                    synth.osc[i].param2 = (float)byte / 128;
+            else if(spiHandler.param == 3) // wav frequency
+                for(int i = 0; i < 4; i++)
+                    synth.osc[i].wavFrequency = synth.keys[0].freq_table[byte];
+            spiHandler.byte = 0;
+        }
+        else if(spiHandler.module == 1){ // keyboard
+            //printf("enter keyboard branch\n");
+            if(spiHandler.param == 0)
+                //printf("get keyboard key\n");
+                if(spiHandler.byte == 1){ // get key
+                    bool keyInUse = false;
+                    for(int i = 0; i < 4; i++){ //check if key is already being played/occupying a channel
+                        if(synth.keys[i].key == byte && !keyInUse){
+                            //if(byte > 16) printf("octave running\n");
+                            synth.keyIndex = i;
+                            keyInUse = true;
+                            synth.keys[synth.keyIndex].key = byte;
+                        }
+                    }
+                    if(!keyInUse){
+                        synth.keyIndex++;
+                        synth.keyIndex %= 4;
+                        synth.keys[synth.keyIndex].key = byte;
+                    }
+                    //printf("CHANNEL: %d KEY: %d ", synth.keyIndex,synth.keys[synth.keyIndex].key);
+                    spiHandler.byte++;
+                }
+                else if(spiHandler.byte == 2){ // get gate
+                    synth.env[synth.keyIndex].gate = byte;
+                    spiHandler.byte = 0;
+                    //printf("GATE: %d\n\n", synth.env[synth.keyIndex].gate);
+                }
+                else spiHandler.byte = 0;
+            else if(spiHandler.param == 1) {//select octave
+                printf("CHANGING OCTAVE\n");
+                for(int i = 0; i < 4; i++){
+                    synth.keys[i].octave = (float)byte / 128;
+                }
+                spiHandler.byte = 0;
+            }
+        } 
+        else if(spiHandler.module == 2){ // LFO
+            if(spiHandler.param == 0) // lfo speed
+            synth.lfo.speed = (float)byte / 128;
+            else if(spiHandler.param == 1) // lfo value
+            synth.lfo.val = (float)byte / 128;
+            else if(spiHandler.param == 2){ // lfo target
+                synth.lfo.target = byte;
+                synth.lfo.output = synth.lfo.targets[synth.lfo.target];
+            }
+            spiHandler.byte = 0;
+        }
+        else if(spiHandler.module == 3){ // envelope
+            if(spiHandler.param == 0) // attack
+                for(int i = 0; i < 4; i++)
+                    synth.env[i].attack = (float)byte / 128;
+            else if(spiHandler.param == 1) // decay
+                for(int i = 0; i < 4; i++)
+                    synth.env[i].decay = (float)byte / 128;
+            else if(spiHandler.param == 2) // sustain
+                for(int i = 0; i < 4; i++)
+                    synth.env[i].sustain = (float)byte / 128;
+            else if(spiHandler.param == 3) // release
+                for(int i = 0; i < 4; i++)
+                    synth.env[i].release = (float)byte / 128;
+            spiHandler.byte = 0;
+        }
+        else if(spiHandler.module == 4){ // effects
+            if(spiHandler.param == SPI_FX_SEL)
+            synth.fx.effectType = byte;
+            else if(spiHandler.param == SPI_FX_PARAM1)
+            synth.fx.param1 = (float)byte / 128;
+            else if(spiHandler.param == SPI_FX_PARAM2)
+            synth.fx.param2 = (float)byte / 128;
+            spiHandler.byte = 0;
+        }
+        else if(spiHandler.module == 5){ // EQ
+            // fCenter update
+            if(spiHandler.byte == 1){
+                synth.filter.fCenter = (float)byte / 128;
+                spiHandler.byte++;
+            }
+            // gain update
+            else if(spiHandler.byte == 2){
+                synth.filter.gain = (float)byte / 128;
+                spiHandler.byte++;
+            }
+            // qFactor update
+            else if(spiHandler.byte == 3){
+                synth.filter.qFactor = (float)byte / 128;
+                //update filter
+                float Fcenter = (synth.filter.EQ[spiHandler.param].low * synth.filter.fCenter) + synth.filter.EQ[spiHandler.param].low;
+                float Gain = (30 * synth.filter.gain) + -15.0;
+                float Q = (9.9f * synth.filter.qFactor) + 0.1f;
+                synth.filter.updateFlag = true;
+                updateParameters(&synth.filter.EQ[spiHandler.param],Gain,Fcenter,Q);
+                synth.filter.updateFlag = false;
+                spiHandler.byte = 0;
+            }
+        }
+    }
 }
+
 
 typedef struct
 {
@@ -196,15 +320,15 @@ void updateSignal(float* signal){
 */
 void drawWaveform(float* signal,int width,int height,int x, int y){
     DrawRectangle(x, y, width, height, WHITE);
-    int offset = (int)(synth.osc.phase * (SAMPLE_RATE/synth.osc.frequency));
-    int loop = (int)1.0 * (SAMPLE_RATE/synth.osc.frequency);
+    int offset = (int)(synth.osc[0].phase * (SAMPLE_RATE/synth.osc[0].frequency));
+    int loop = (int)1.0 * (SAMPLE_RATE/synth.osc[0].frequency);
     if (loop > STREAM_BUFFER_SIZE) loop = STREAM_BUFFER_SIZE;
     int start = (STREAM_BUFFER_SIZE-offset)%loop;
     Vector2 prev;
     prev.x = x;
     prev.y = (height/2)+0.5*(int)(signal[0]*100)+y;
     for(int i = 1; i < width - 1; i++){
-        int index = (start + (int)(500*i/(synth.osc.frequency))%loop)%STREAM_BUFFER_SIZE;
+        int index = (start + (int)(500*i/(synth.osc[0].frequency))%loop)%STREAM_BUFFER_SIZE;
         Vector2 current;
         current.x = i+x;
         current.y = (height/2)+0.5*(int)(signal[index]*100)+y;
@@ -1091,11 +1215,16 @@ void clearKeyPress(){
         printf("clear key press %d\n", clearPressCounter);
         clearPressCounter++;
         for(int i = 0; i < 17; i++){
+            if(keys[i].pressed == true){
+                processSpiInput(masterInput.keyPointer);
+                processSpiInput(i + 12*octave);
+                if(octave != 0)
+                printf("octave command\n");
+                processSpiInput(0);
+            }
             keys[i].pressed = false;
         }
         masterInput.keyPressed = false;
-        processSpiInput(SPI_MODULE_ENV | SPI_GATE);
-        processSpiInput(0);
     }
 }
 void processInput(){
@@ -1132,11 +1261,9 @@ void processInput(){
                         if(!checkBlack){
                             if(masterInput.x > tempKey.xPos && masterInput.x < tempKey.xPos + WHITE_KEY_WIDTH){
                                 if(masterInput.keyIndex != i + 12*octave){
-                                    //processSpiInput(SPI_MODULE_ENV | SPI_GATE);
-                                    //processSpiInput(0);
-                                    // processSpiInput(masterInput.keyPointer);
-                                    // processSpiInput(masterInput.keyIndex);
-                                    // processSpiInput(0);
+                                    processSpiInput(masterInput.keyPointer);
+                                    processSpiInput(masterInput.keyIndex);
+                                    processSpiInput(0);
                                     masterInput.keyIndex = i +12*octave;
                                 }
                                 foundKey = true;
@@ -1145,11 +1272,9 @@ void processInput(){
                         else{
                             if(masterInput.x > tempKey.xPos && masterInput.x < tempKey.xPos + WHITE_KEY_WIDTH*0.75){
                                 if(masterInput.keyIndex != i + 12*octave){
-                                    //processSpiInput(SPI_MODULE_ENV | SPI_GATE);
-                                    //processSpiInput(0);
-                                    // processSpiInput(masterInput.keyPointer);
-                                    // processSpiInput(masterInput.keyIndex);
-                                    // processSpiInput(0);
+                                    processSpiInput(masterInput.keyPointer);
+                                    processSpiInput(masterInput.keyIndex);
+                                    processSpiInput(0);
                                     masterInput.keyIndex = i +12*octave;
                                 }
                                 foundKey = true;
@@ -1161,7 +1286,7 @@ void processInput(){
             //*masterInput.key = keyIndex;
             processSpiInput(masterInput.keyPointer);
             processSpiInput(masterInput.keyIndex);
-            processSpiInput(SPI_MODULE_ENV | SPI_GATE);
+            //processSpiInput(SPI_MODULE_ENV | SPI_GATE);
             processSpiInput(1);
             keys[masterInput.keyIndex - 12*octave].pressed = true;
         }
@@ -1210,16 +1335,22 @@ static int patestCallback( const void *inputBuffer, void *outputBuffer,
     for( i=0; i<framesPerBuffer; i++ )
     {
         if(data->playing && data->loaded){
-            *out = data->buffer[data->samplePointer];  /* left */
-            out++;
-            *out = data->buffer[data->samplePointer];  /* right */
-            out++;
+            //update wav input to synth
+            for(int i = 0; i < 4; i++){
+                synth.osc[i].wavInput = data->buffer[data->samplePointer];
+            }
             //increment pointer
             data->samplePointer++;
             if(data->samplePointer == data->samples){
                 data->playing = false;
             }
         }
+        //update output
+        float synthOutput = updateSynth(&synth);
+        *out = synthOutput;
+        out++;
+        *out = synthOutput;
+        out++;
     }
     // printf("callback function\n");
     return 0;
@@ -1240,6 +1371,8 @@ void main() {
     GuiSetStyle(DEFAULT, TEXT_SIZE, 16);
     // Text formatting with variables (sprintf style)    const char *TextFormat(const char *text, ...);                                                  
         
+    initSynth(&synth);
+    
     //spi config
     int fd, result;
     // CHANNEL insicates chip select,
@@ -1350,7 +1483,7 @@ void main() {
                     printf("byte 0: %d, byte 1: %d, byte 2: %d\n", midipacket[i], midipacket[i+1], midipacket[i+2]);
                     processSpiInput(masterInput.keyPointer);
                     processSpiInput(midipacket[i+1]-24);
-                    processSpiInput(SPI_MODULE_ENV | SPI_GATE);
+                    //processSpiInput(SPI_MODULE_ENV | SPI_GATE);
                     processSpiInput(midipacket[i+2]);
                     if(midipacket[i+2] != 0) PlayWavSound();
                     foundMidi = true;
