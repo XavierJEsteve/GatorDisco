@@ -115,12 +115,12 @@ Wave wavSound;
 void processSpiInput(int byte){
     //spi_buffer[0] = byte;
     //wiringPiSPIDataRW(CHANNEL, spi_buffer, 1);
-    printf("Current Byte: %d\n", spiHandler.byte);
+    //printf("Current Byte: %d\n", spiHandler.byte);
     if(spiHandler.byte == 0 && (byte >> 7) == 1){
         spiHandler.module = (byte >> 4) & 7;
         spiHandler.param = byte & 15;
         spiHandler.byte++;
-        printf("Module: %d, Param: %d, Byte: %d\n\n", spiHandler.module,spiHandler.param,spiHandler.byte);
+        //printf("Module: %d, Param: %d, Byte: %d\n\n", spiHandler.module,spiHandler.param,spiHandler.byte);
     }
     else if(byte >> 7 == 0 && spiHandler.byte > 0){
         if(spiHandler.module == 0){ // oscillator
@@ -161,13 +161,13 @@ void processSpiInput(int byte){
                         synth.keyIndex %= 4;
                         synth.keys[synth.keyIndex].key = byte;
                     }
-                    printf("CHANNEL: %d KEY: %d ", synth.keyIndex,synth.keys[synth.keyIndex].key);
+                    //printf("CHANNEL: %d KEY: %d ", synth.keyIndex,synth.keys[synth.keyIndex].key);
                     spiHandler.byte++;
                 }
                 else if(spiHandler.byte == 2){ // get gate
                     synth.env[synth.keyIndex].gate = byte;
                     spiHandler.byte = 0;
-                    printf("GATE: %d\n\n", synth.env[synth.keyIndex].gate);
+                    //printf("GATE: %d\n\n", synth.env[synth.keyIndex].gate);
                 }
                 else spiHandler.byte = 0;
             else if(spiHandler.param == 1) {//select octave

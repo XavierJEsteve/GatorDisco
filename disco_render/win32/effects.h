@@ -5,6 +5,7 @@
 #include "Effects/BitCrush.h"
 #include "Effects/PitchShift.h"
 #include "Effects/Effect5.h"
+#include "Effects/Effect4.h"
 
 #define NUM_EFFECTS 6
 typedef struct{

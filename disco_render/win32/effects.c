@@ -17,8 +17,8 @@ void updateEffects(Effects* fx){
         *fx->output = ProcessSampleRateReduction(fx->input);
     }
     else if(fx->effectType == 4){ //effect 4
-        updateEffect5Params(fx->param1, fx->param2);
-        *fx->output = processEffect5(fx->input);
+        updateEffect4Params(fx->param1, fx->param2);
+        *fx->output = processEffect4(fx->input);
     }
     else if(fx->effectType == 5){ //effect 5
         updateEffect5Params(fx->param1, fx->param2);
