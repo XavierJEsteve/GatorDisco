@@ -1336,6 +1336,7 @@ static int patestCallback( const void *inputBuffer, void *outputBuffer,
     {
         if(data->playing && data->loaded){
             //update wav input to synth
+            /*
             for(int i = 0; i < 4; i++){
                 synth.osc[i].wavInput = data->buffer[data->samplePointer];
             }
@@ -1344,11 +1345,10 @@ static int patestCallback( const void *inputBuffer, void *outputBuffer,
             if(data->samplePointer == data->samples){
                 data->playing = false;
             }
+            */
         }
         //update output
         float synthOutput = updateSynth(&synth);
-        *out = synthOutput;
-        out++;
         *out = synthOutput;
         out++;
     }
@@ -1417,26 +1417,53 @@ void main() {
     }
     PaStream *stream;
     /* Open an audio I/O stream. */
-    err = Pa_OpenDefaultStream( &stream,
-                                0,          /* no input channels */
-                                2,          /* stereo output */
-                                paFloat32,  /* 32 bit floating point output */
-                                SAMPLE_RATE,
-                                256,        /* frames per buffer, i.e. the number
-                                                   of sample frames that PortAudio will
-                                                   request from the callback. Many apps
-                                                   may want to use
-                                                   paFramesPerBufferUnspecified, which
-                                                   tells PortAudio to pick the best,
-                                                   possibly changing, buffer size.*/
-                                patestCallback, /* this is your callback function */
-                                &data ); /*This is a pointer that will be passed to
-                                                   your callback*/
-    if( err != paNoError ){
+    
+    // err = Pa_OpenDefaultStream( &stream,
+    //                             0,          /* no input channels */
+    //                             1,          /* stereo output */
+    //                             paFloat32,  /* 32 bit floating point output */
+    //                             SAMPLE_RATE,
+    //                             256,        /* frames per buffer, i.e. the number
+    //                                                of sample frames that PortAudio will
+    //                                                request from the callback. Many apps
+    //                                                may want to use
+    //                                                paFramesPerBufferUnspecified, which
+    //                                                tells PortAudio to pick the best,
+    //                                                possibly changing, buffer size.*/
+    //                             patestCallback, /* this is your callback function */
+    //                             &data ); /*This is a pointer that will be passed to
+    //                                                your callback*/
+    // if( err != paNoError ){
+    //     printf(  "PortAudio error: %s\n", Pa_GetErrorText( err ) );
+    //     Pa_Terminate();
+    //     exit(1);
+    // }
+    
+    //new open default stream code
+    int defaultIn = Pa_GetDefaultInputDevice();
+    int defaultOut = Pa_GetDefaultOutputDevice();
+
+    PaStreamParameters inParam;
+    inParam.channelCount = 0;
+    inParam.device = defaultIn;
+    inParam.sampleFormat = paFloat32;
+    inParam.suggestedLatency = 0;
+
+    PaStreamParameters outParam;
+    outParam.channelCount = 1;
+    outParam.device = defaultOut;
+    outParam.sampleFormat = paFloat32;
+    outParam.suggestedLatency = 0;
+
+    err = Pa_OpenStream(&stream, 0, &outParam, 48000, paFramesPerBufferUnspecified, paNoFlag, patestCallback, &data);
+    if (err != paNoError) {
         printf(  "PortAudio error: %s\n", Pa_GetErrorText( err ) );
         Pa_Terminate();
         exit(1);
+        return;
     }
+
+   /***********************/
 
     err = Pa_StartStream( stream );
     if( err != paNoError ){
@@ -1477,16 +1504,23 @@ void main() {
             //updateSignal(buffer);
             drawGUI();
 		    read(seqfd, &midipacket, sizeof(midipacket));
-            bool foundMidi = false;
+            //bool foundMidi = false;
+            
             for(int i = 0; i < 6; i++){
-                if(midipacket[i] == 144 && !foundMidi){
-                    printf("byte 0: %d, byte 1: %d, byte 2: %d\n", midipacket[i], midipacket[i+1], midipacket[i+2]);
+                if(midipacket[i] == 144){
+                    //printf("byte 0: %d, byte 1: %d, byte 2: %d\n", midipacket[i], midipacket[i+1], midipacket[i+2]);
                     processSpiInput(masterInput.keyPointer);
                     processSpiInput(midipacket[i+1]-24);
                     //processSpiInput(SPI_MODULE_ENV | SPI_GATE);
                     processSpiInput(midipacket[i+2]);
                     if(midipacket[i+2] != 0) PlayWavSound();
-                    foundMidi = true;
+                    //foundMidi = true;
+                    if(midipacket[i+2]==0){
+                        printf("note off: %d\n", midipacket[i+1]);
+                    }
+                    else{
+                        printf("note on: %d\n", midipacket[i+1]);
+                    }
                 }
             }
         //}
