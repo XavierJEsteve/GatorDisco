@@ -131,7 +131,7 @@ def download_config(request, config_id=None):
         data = json_serializer.getvalue()
 
         response = HttpResponse(data,content_type='application/json')
-        response['Content-Disposition'] = ('attatchment; filename=gatorSynth.json')
+        response['Content-Disposition'] = ('attatchment; filename='+config[0].name +'.json')
         return response
 
 def download_audio(request, audio_id=None):

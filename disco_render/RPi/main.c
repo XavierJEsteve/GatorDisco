@@ -131,13 +131,14 @@ SpiHandler spiHandler;
 
 // Static Database 
 sqlite3* dbDisco;
-int configPointer = 1; // 1 <= configPOinter <= numConfigs
+int configPointer = 0; // 1 <= configPOinter <= numConfigs
 int numConfigs;
-// char* configNames[NUM_CONFIGS+1]= {"DEBUG","Conf1","Conf2","Conf3","Conf4","Conf5","Conf6","Conf7","Conf8","Conf9","Conf10"}; 
+char NAME[20];
+// char* configNames[NUM_CONFIGS+1]= {"DEFAULT","Conf1","Conf2","Conf3","Conf4","Conf5","Conf6","Conf7","Conf8","Conf9","Conf10"}; 
 
 // File handling
 GuiFileDialogState fileDialogState;
-char* wavDirectory = "/home/pi/GatorDisco/disco_server/fileshare/media/wavs/";
+char* wavDirectory = "/home/pi/GatorDisco/disco_server/media/wavs/";
 char fileNameToLoad[512] = { 0 };
 Texture texture = { 1 };
 
@@ -213,7 +214,8 @@ void drawWaveform(float* signal,int width,int height,int x, int y){
 }
 drawConfigDisplay(){
     DrawRectangle(1050,50,SCREEN_WIDTH/8,SCREEN_HEIGHT/10,WHITE);
-    DrawText("Config Nav",1070,80,20,RED);
+    // DrawText("Config Nav",1070,80,20,RED);
+    DrawText(TextFormat("%s",NAME),1070,80,20,RED);
 }
 void buildGuiSections(){
     //build oscillator section
@@ -571,6 +573,8 @@ void loadConfig(int dir){
         
         name = sqlite3_column_text(stmt,1);
         printf("Loading config: %s\n", name);
+        strcpy(NAME,name);
+
         
         // OSC params
         sliders[0].value = (float)sqlite3_column_int(stmt,2)/127;
@@ -627,7 +631,7 @@ void changeOsc(int p){
     sliders[1].name = oscParam1Names[oscTypePointer];
     sliders[2].name = oscParam2Names[oscTypePointer];
     if(oscTypePointer == 2){
-        loadWavSound("wavs/piano.wav",36);
+        loadWavSound(fileNameToLoad,36);
     }
 }
 void changeMode(int input){
@@ -1226,14 +1230,16 @@ void main() {
     SetTargetFPS(60);
     InitAudioDevice();
     initMasterInput();
-    loadWavSound("wavs/piano.wav",36);
+    loadWavSound("wavs/airsynth.wav",36);
     buildKeys();
     buildSliders();
     buildBandGUIs();
     buildButtons();
     buildEQButtons();
     buildGuiSections();
-    
+    GuiSetStyle(DEFAULT, TEXT_SIZE, 16);
+    // Text formatting with variables (sprintf style)    const char *TextFormat(const char *text, ...);                                                  
+        
     //spi config
     int fd, result;
     // CHANNEL insicates chip select,
@@ -1255,7 +1261,9 @@ void main() {
     }
 
 	
-    fileDialogState = InitGuiFileDialog(3*SCREEN_HEIGHT/4, 3*SCREEN_HEIGHT/4, wavDirectory, false);
+    fileDialogState = InitGuiFileDialog(3*SCREEN_HEIGHT/4, 3*SCREEN_HEIGHT/4, "/home/pi/GatorDisco/disco_server/fileshare/media/wavs/", false);
+    
+    strcpy(fileDialogState.dirPathText, wavDirectory);
     // Choose an extenstion to filter by
     char* filterExt = ".wav";
     // strcpy(fileDialogState.filterExt,filterExt);
@@ -1320,7 +1328,7 @@ void main() {
 
                 strcpy(fileNameToLoad, TextFormat("%s/%s", fileDialogState.dirPathText, fileDialogState.fileNameText));
                 printf("%s\n",fileNameToLoad);
-                // loadWavSound(fileNameToLoad, 36);
+                loadWavSound(fileNameToLoad, 36);
             }
 
             fileDialogState.SelectFilePressed = false;
