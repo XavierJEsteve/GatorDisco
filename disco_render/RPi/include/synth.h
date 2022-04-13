@@ -12,7 +12,7 @@
 
 #define MAX_ATTACK_TIME 3
 #define MAX_DECAY_TIME 5
-#define NUM_OSCILLATORS 4
+#define NUM_OSCILLATORS 5
 #define NUM_LFO_TARGETS 3
 #define SAMPLE_RATE 48000
 #define MAX_LFO_SPEED 20
@@ -32,6 +32,8 @@ void updateKeyboard(Keyboard* keys);
 typedef struct{
     //inputs
     int oscType;
+    float wavInput;
+    float wavFrequency;
     /*
     0:  PULSE WAVE
     1:  SAWTOOTH
@@ -82,7 +84,7 @@ typedef struct{
 void updateEnvelope(Envelope* env);
 typedef struct{
     //inputs
-    float input;
+    float input[4];
     float fCenter;
     float gain;
     float qFactor;
@@ -94,10 +96,11 @@ typedef struct{
 } Filter;
 void updateFilter(Filter* filter);
 typedef struct{
-    Keyboard keys;
-    Oscillator osc;
+    int keyIndex;
+    Keyboard keys[4];
+    Oscillator osc[4];
     LFO lfo;
-    Envelope env;
+    Envelope env[4];
     Effects fx;
     Filter filter;
     float output;
