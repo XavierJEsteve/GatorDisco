@@ -319,15 +319,15 @@ void updateSignal(float* signal){
 */
 void drawWaveform(float* signal,int width,int height,int x, int y){
     DrawRectangle(x, y, width, height, WHITE);
-    int offset = (int)(synth.osc.phase * (SAMPLE_RATE/synth.osc.frequency));
-    int loop = (int)1.0 * (SAMPLE_RATE/synth.osc.frequency);
+    int offset = (int)(synth.osc[0].phase * (SAMPLE_RATE/synth.osc[0].frequency));
+    int loop = (int)1.0 * (SAMPLE_RATE/synth.osc[0].frequency);
     if (loop > STREAM_BUFFER_SIZE) loop = STREAM_BUFFER_SIZE;
     int start = (STREAM_BUFFER_SIZE-offset)%loop;
     Vector2 prev;
     prev.x = x;
     prev.y = (height/2)+0.5*(int)(signal[0]*100)+y;
     for(int i = 1; i < width - 1; i++){
-        int index = (start + (int)(500*i/(synth.osc.frequency))%loop)%STREAM_BUFFER_SIZE;
+        int index = (start + (int)(500*i/(synth.osc[0].frequency))%loop)%STREAM_BUFFER_SIZE;
         Vector2 current;
         current.x = i+x;
         current.y = (height/2)+0.5*(int)(signal[index]*100)+y;
@@ -1211,11 +1211,16 @@ void clearKeyPress(){
         printf("clear key press %d\n", clearPressCounter);
         clearPressCounter++;
         for(int i = 0; i < 17; i++){
+            if(keys[i].pressed == true){
+                processSpiInput(masterInput.keyPointer);
+                processSpiInput(i + 12*octave);
+                if(octave != 0)
+                printf("octave command\n");
+                processSpiInput(0);
+            }
             keys[i].pressed = false;
         }
         masterInput.keyPressed = false;
-        processSpiInput(SPI_MODULE_ENV | SPI_GATE);
-        processSpiInput(0);
     }
 }
 void processInput(){
@@ -1252,11 +1257,9 @@ void processInput(){
                         if(!checkBlack){
                             if(masterInput.x > tempKey.xPos && masterInput.x < tempKey.xPos + WHITE_KEY_WIDTH){
                                 if(masterInput.keyIndex != i + 12*octave){
-                                    //processSpiInput(SPI_MODULE_ENV | SPI_GATE);
-                                    //processSpiInput(0);
-                                    // processSpiInput(masterInput.keyPointer);
-                                    // processSpiInput(masterInput.keyIndex);
-                                    // processSpiInput(0);
+                                    processSpiInput(masterInput.keyPointer);
+                                    processSpiInput(masterInput.keyIndex);
+                                    processSpiInput(0);
                                     masterInput.keyIndex = i +12*octave;
                                 }
                                 foundKey = true;
@@ -1265,11 +1268,9 @@ void processInput(){
                         else{
                             if(masterInput.x > tempKey.xPos && masterInput.x < tempKey.xPos + WHITE_KEY_WIDTH*0.75){
                                 if(masterInput.keyIndex != i + 12*octave){
-                                    //processSpiInput(SPI_MODULE_ENV | SPI_GATE);
-                                    //processSpiInput(0);
-                                    // processSpiInput(masterInput.keyPointer);
-                                    // processSpiInput(masterInput.keyIndex);
-                                    // processSpiInput(0);
+                                    processSpiInput(masterInput.keyPointer);
+                                    processSpiInput(masterInput.keyIndex);
+                                    processSpiInput(0);
                                     masterInput.keyIndex = i +12*octave;
                                 }
                                 foundKey = true;
@@ -1281,7 +1282,7 @@ void processInput(){
             //*masterInput.key = keyIndex;
             processSpiInput(masterInput.keyPointer);
             processSpiInput(masterInput.keyIndex);
-            processSpiInput(SPI_MODULE_ENV | SPI_GATE);
+            //processSpiInput(SPI_MODULE_ENV | SPI_GATE);
             processSpiInput(1);
             keys[masterInput.keyIndex - 12*octave].pressed = true;
         }
@@ -1331,7 +1332,9 @@ static int patestCallback( const void *inputBuffer, void *outputBuffer,
     {
         if(data->playing && data->loaded){
             //update wav input to synth
-            synth.osc->wavInput = data->buffer[data->samplePointer];
+            for(int i = 0; i < 4; i++){
+                synth.osc[i].wavInput = data->buffer[data->samplePointer];
+            }
             //increment pointer
             data->samplePointer++;
             if(data->samplePointer == data->samples){
@@ -1471,7 +1474,7 @@ void main() {
                     printf("byte 0: %d, byte 1: %d, byte 2: %d\n", midipacket[i], midipacket[i+1], midipacket[i+2]);
                     processSpiInput(masterInput.keyPointer);
                     processSpiInput(midipacket[i+1]-24);
-                    processSpiInput(SPI_MODULE_ENV | SPI_GATE);
+                    //processSpiInput(SPI_MODULE_ENV | SPI_GATE);
                     processSpiInput(midipacket[i+2]);
                     if(midipacket[i+2] != 0) PlayWavSound();
                     foundMidi = true;
